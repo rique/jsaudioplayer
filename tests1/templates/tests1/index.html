@@ -1,0 +1,50 @@
+
+
+<p> Hello  </p>
+
+<script>
+
+function blob2uint(blob){
+    return new Response(blob).arrayBuffer().then(buffer=>{
+        uint=[...new Uint8Array(buffer)];
+        console.log("Uint8Array",uint);
+        return uint;
+    });
+}
+
+navigator.mediaDevices.getUserMedia({ 
+    audio: {  
+    "mandatory": {
+                "googEchoCancellation": "false",
+                "googAutoGainControl": "false",
+                "googNoiseSuppression": "false",
+                "googHighpassFilter": "false"
+            },
+            "optional": [] 
+        }
+    })
+  .then(stream => {
+    console.log("We're in!");
+    const mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.start();
+
+    const audioChunks = [];
+    mediaRecorder.addEventListener("dataavailable", event => {
+      audioChunks.push(event.data);
+      let l = blob2uint(event.data);
+      console.log('audioChunks', l);
+    });
+
+    mediaRecorder.addEventListener("stop", () => {
+      const audioBlob = new Blob(audioChunks);
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      console.log("STOPPED", audioUrl, audio);
+      audio.play();
+    });
+
+    setTimeout(() => {
+      mediaRecorder.stop();
+    }, 20000);
+});
+</script>

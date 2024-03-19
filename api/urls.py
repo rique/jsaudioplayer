@@ -1,0 +1,10 @@
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    path("file-browser", views.fileBrowser, name="filebrowser"),
+    path("add-track", views.addTrack, name="addtrack"),
+    path("load-track-list", views.loadTrackList, name="loadtracklist"),
+]
+

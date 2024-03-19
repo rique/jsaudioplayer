@@ -1,0 +1,7 @@
+.venv/
+.git/
+static/
+!static/.keep
+db.sqlite3
+
+
