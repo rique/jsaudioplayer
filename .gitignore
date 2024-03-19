@@ -3,5 +3,5 @@
 static/
 !static/.keep
 db.sqlite3
-
+*/**/__pycache__/
 
