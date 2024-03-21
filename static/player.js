@@ -1,3 +1,42 @@
+// slideUp(litsItemUl, listItemsElem, maxHeight, 40);
+const slideUp = function (elem, parentElem, maxHeight, step, currentHeight, cb) {
+    let style = elem.style,
+        parentStyle = parentElem.style;
+    if (typeof currentHeight === 'undefined')
+        currentHeight = 0;
+
+    if (currentHeight < maxHeight) {
+        currentHeight += step;
+        parentStyle.maxHeight = style.maxHeight = (currentHeight).toString() + 'px' ;
+        return requestAnimationFrame(slideUp.bind(this, elem, parentElem, maxHeight, step, currentHeight));
+    }
+
+    parentStyle.maxHeight = style.maxHeight = (maxHeight).toString() + 'px';
+    if (typeof cb === 'function')
+        return cb();
+};
+
+
+// slideDown(litsItemUl, listItemsElem, maxHeight, 40);
+const slideDown = function (elem, parentElem, startHeight, step, currentHeight, cb) {
+    let style = elem.style,
+        parentStyle = parentElem.style;
+    currentHeight = typeof currentHeight  === 'number' ? currentHeight : startHeight;
+
+    if (currentHeight > 0) {
+        currentHeight -= step;
+        parentStyle.maxHeight = style.maxHeight = (currentHeight).toString() + 'px' ;
+        return requestAnimationFrame(slideDown.bind(this, elem, parentElem, startHeight, step, currentHeight, cb));
+    }
+
+    style.maxHeight = (startHeight).toString() + 'px';
+    parentStyle.maxHeight = '0px';
+
+    if (typeof cb === 'function')
+        return cb();
+};
+
+
 const readCookie = function (name) {
     var nameEQ = name + "=";
     var ca = document.cookie.split(';');
@@ -32,6 +71,10 @@ const Api = function() {
 Api.prototype = {
     getXhrPost(url) {
         this.xhr.open('POST', url, true);
+        return this.xhr; 
+    },
+    getXhrGet(url) {
+        this.xhr.open('GET', url, true);
         return this.xhr; 
     },
     browseFiles(baseDir, callback) {
@@ -77,27 +120,101 @@ Api.prototype = {
             console.log('xhr', xhr.status);
             callback(JSON.parse(xhr.response));
         }
+    },
+    loadBGImages(callback) {
+        let xhr = this.getXhrGet(`${this.url}/load-bg-img`);
+        xhr.send();
+
+        xhr.onload = () => {
+            console.log('xhr', xhr.status);
+            callback(JSON.parse(xhr.response));
+        }
     }
 };
 
-/*
-track_name = models.CharField(max_length=256)
-    track_uuid = models.CharField(max_length=36)
-    track_original_path = models.CharField(max_length=256)
-    track_date_added = models.DateTimeField(auto_now_add=True)
-*/
+
 const Track = function(trackInfo) {
     this.trackName = trackInfo.track_name;
     this.trackUUid = trackInfo.track_uuid;
     this.trackOriginalPath = trackInfo.track_original_path;
     this.trackDuration = undefined;
 }
-
-track.prototype = {
+Track.prototype = {
     setTrackDuration(duration) {
         this.trackDuration = duration;
     }
 };
+
+
+const TrackList = function(tracklist) {
+    this.tracklist = tracklist || [];
+    this.trackIndex = 0;
+    this.tracksNumber = this.tracklist.length;
+    if (this.tracklist.length > 0)
+        this.currentTrack = this.tracklist[this.trackIndex];
+    else
+        this.currentTrack = null;
+}
+TrackList.prototype = {
+    getTrackLis() {
+        return this.tracklist;
+    },
+    setTrackList(tracklist) {
+        this.tracklist = tracklist;
+        this.trackIndex = 0;
+        this.tracksNumber = tracklist.length;
+        this.currentTrack = this.tracklist[this.trackIndex];
+    },
+    addTrackToList(track) {
+        this.tracklist.push(track);
+        ++this.tracksNumber;
+    },
+    getCurrentTrack() {
+        if (this.currentTrack != null)
+            return this.currentTrack;
+        if (this.tracksNumber > 0)
+            return this.tracklist[this.trackIndex];
+        return null;
+    },
+    advanceTrack() {
+        this._advanceTrackIndex();
+        this._setCurrentTrack();
+        console.log('advance', this.trackIndex, this.currentTrack, this.tracksNumber);
+        return this.getCurrentTrack(); 
+    },
+    regressTrack() {
+        this._regressTrackIndex();
+        this._setCurrentTrack();
+        return this.getCurrentTrack();
+    },
+    isLastTrack() {
+        return this.trackIndex == (this.tracksNumber - 1);
+    },
+    resetTrackListIndex() {
+        this.trackIndex = 0;
+        this._setCurrentTrack();
+    },
+    setTrackIndex(indexVal) {
+        this.trackIndex = indexVal;
+    },
+    _setCurrentTrack() {
+        this.currentTrack = this.tracklist[this.trackIndex];
+    },
+    _advanceTrackIndex() {
+        console.log('INDEX ADVANCE 1', this.trackIndex, this.tracksNumber - 1);
+        if (this.trackIndex < (this.tracksNumber - 1))
+            ++this.trackIndex;
+        else
+            this.trackIndex = 0;
+        console.log('INDEX ADVANCE 2', this.trackIndex, this.tracksNumber - 1);
+    },
+    _regressTrackIndex() {
+        if (this.trackIndex > 0)
+            --this.trackIndex;
+        else
+            this.trackIndex = this.tracksNumber - 1;
+    },
+}
 
 
 const AudioPlayer = function(tracklist, api) {
@@ -107,7 +224,6 @@ const AudioPlayer = function(tracklist, api) {
     }
         
     this.tracklist = tracklist;
-    this.currentTrack = tracklist[0];
     
     this.repeat = true;
     this.repeatElem = document.querySelector('#repeat-button a');
@@ -124,8 +240,6 @@ const AudioPlayer = function(tracklist, api) {
 
     this.progressBarDiv = document.getElementById('prog-bar');
 
-    this.c = 0;
-    this.max = tracklist.length;
     this.audioEle = new Audio();
     this.jsmediatags = window.jsmediatags;
     this.api = api;
@@ -133,8 +247,10 @@ const AudioPlayer = function(tracklist, api) {
 
 AudioPlayer.prototype = {
     init() {
-        this.loadID3Tags(this.currentTrack);
-        this.audioEle.src = "/static/" + this.currentTrack;
+        let currentTrack = this.tracklist.getCurrentTrack();
+        console.log('this.tracklist', this.tracklist, currentTrack);
+        this.loadID3Tags(currentTrack.trackUUid);
+        this.audioEle.src = `/static/${currentTrack.trackUUid}.mp3`;
         this.audioEle.autoplay = false;
         this.audioEle.preload = "auto";
         this.audioEle.onloadedmetadata = this.onAudioLoaded.bind(this);
@@ -172,18 +288,17 @@ AudioPlayer.prototype = {
         }.bind(this));
 
         this.api.loadTrackList(function(res) {
-            for (trackinfo of res['tracklist']) {
-                this.tracklist.push(`${trackinfo.track_uuid}.mp3`);
-                ++this.max;
+            for (trackInfo of res['tracklist']) {
+                this.tracklist.addTrackToList(new Track(trackInfo));  // `${trackinfo.track_uuid}.mp3`
             }
         }.bind(this));
     },
     setTrackList(tracklist) {
         this.tracklist = tracklist;
     },
-    setPlayerSong(song) {
-        this.currentTrack = song;
-        this.audioEle.src = `/static/${song}`;
+    setPlayerSong(track) {
+        this.currentTrack = track;
+        this.audioEle.src = `/static/${track.trackUUid}.mp3`;
         this.audioEle.onloadedmetadata = this.onAudioLoaded.bind(this);
         this.audioEle.play();
     },
@@ -198,33 +313,31 @@ AudioPlayer.prototype = {
         this.audioEle.currentTime = 0;
     },
     next() {
-        ++this.c;
-        if (this.c >= this.max)
-            this.c = 0;
-        let song = this.tracklist[this.c];
-        console.log('playing song', song);
-
-        this.loadID3Tags(song);
-        this.setPlayerSong(song);
+        this.tracklist.advanceTrack();
+        this.setCurrentTrackFromTrackList();
     },
     prev() {
-        --this.c;
-        if (this.c < 0)
-            this.c = this.max - 1;
-        let song = this.tracklist[this.c];
-        console.log('playing song', song);
-
-        this.loadID3Tags(song);
-
-        this.setPlayerSong(song);
+        if (this.audioEle.currentTime > 3.6)
+            return this.audioEle.currentTime = 0;
+        
+        this.tracklist.regressTrack();
+        this.setCurrentTrackFromTrackList();
     },
     btnRepeat() {
         this.repeat = !this.repeat;
         console.log('repeat', this.repeat);
     },
+    setCurrentTrackFromTrackList() {
+        let track = this.tracklist.getCurrentTrack();
+        console.log('playing song', track);
+
+        this.loadID3Tags(track.trackUUid);
+        this.setPlayerSong(track);
+    },
     onAudioLoaded(evt) {
         let audioElem = evt.target;
         console.log('duration', audioElem.duration);
+        this.tracklist.getCurrentTrack().setTrackDuration(audioElem.duration);
         this.progressBar(audioElem);
     },
     progressBar(audioELem) {
@@ -239,22 +352,18 @@ AudioPlayer.prototype = {
         }
     },
     onAudioEnded() {
-        ++this.c;
-        if (this.c >= this.max) {
+        if (this.tracklist.isLastTrack()) {
             if (!this.repeat)
-                return  console.log('End of session'); 
-            this.c = 0;
+                return  console.log('End of session');
+            this.tracklist.resetTrackListIndex();
+        } else {
+            this.tracklist.advanceTrack();
         }
 
-        let song = this.tracklist[this.c];
-        console.log('playing song', song);
-
-        this.loadID3Tags(song);
-        this.setPlayerSong(song);
-       
+        this.setCurrentTrackFromTrackList();
     },
     loadID3Tags(song) {
-        this.jsmediatags.read(`http://localhost:8888/static/${song}`, {
+        this.jsmediatags.read(`http://localhost:8888/static/${song}.mp3`, {
             onSuccess: this.manageTags.bind(this),
             onError(error) {
                 console.error(':(', error);
@@ -281,7 +390,7 @@ AudioPlayer.prototype = {
         let imgData = data.map((x) => String.fromCharCode(x)); 
         this.albumImg.src = `data:${format};base64,${window.btoa(imgData.join(''))}`;
     }
-}
+};
 
 
 const FileBrowser = function(player, api) {
@@ -328,7 +437,7 @@ FileBrowser.prototype = {
         let fileName = target.innerText.trim();
         console.log('filename', fileName);
         this.api.addTrack(fileName, this.baseDir + fileName, function(res) {
-            this.player.tracklist.push(res['mp3']);
+            this.player.tracklist.addTrackToList(new Track(res['track']));
             this.player.max++;
         }.bind(this));
     },
@@ -365,18 +474,28 @@ FileBrowser.prototype = {
 
 (function(window, document) {
     let max = 5;
-    let tracklist = [];
-    for (let i = 0; i <= max; ++i)
-        tracklist.push(`audio${i}.mp3`);
-    
-    const api = new Api(); 
-    const audioPlayer = new AudioPlayer(tracklist, api);
-    audioPlayer.init();
-    // audioPlayer.loadTrackList();
+    const tracklist = new TrackList();
+    for (let i = 0; i <= max; ++i) {
+        tracklist.addTrackToList(new Track({
+            track_name: `audio${i}.mp3`,
+            track_uuid: `audio${i}`,
+            track_original_path: '' 
+        }));
+    }
 
-    const fileBrowser = new FileBrowser(audioPlayer, api);
-    document.querySelector('#file-browser-aaction button').addEventListener('click', fileBrowser.loadFileBrowser.bind(fileBrowser));
-    
+    const imgList = [];
+    const api = new Api();
+    const audioPlayer = new AudioPlayer(tracklist, api);
+    api.loadBGImages(function(res) {
+        imgList.push(...res['img_list']);
+        audioPlayer.init();
+        const fileBrowser = new FileBrowser(audioPlayer, api);
+        document.querySelector('#file-browser-aaction button').addEventListener('click', fileBrowser.loadFileBrowser.bind(fileBrowser));
+        console.log('imgList1', imgList);
+        draw(0, true, 0);
+    });
+
+
     const audioCtx = new AudioContext();
     const audioSourceNode = audioCtx.createMediaElementSource(audioPlayer.audioEle);
 
@@ -394,32 +513,82 @@ FileBrowser.prototype = {
     const canvas = document.createElement("canvas");
     
     canvas.width = window.innerWidth - 36;
-    canvas.height = window.innerHeight - 360;
+    canvas.height = window.innerHeight - 254;
     canvas.style.display = 'block';
     canvas.style.margin = 'auto';
-    
+
     document.body.appendChild(canvas);
     
     const canvasCtx = canvas.getContext("2d");
     canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+    let curImg = 'img1.jpg';
+    let background = new Image();
+    background.src = `http://localhost:8888/static/${curImg}`;
 
-    function draw() {
+    // Make sure the image is loaded first otherwise nothing will draw.
+    background.onload = function() {
+        console.log('img loaded', background.width, background.height, canvas.width, canvas.height);
+        let width, height, x, y = 0;
+        //let coef = (canvas.width / background.width) * .8;
+        let coef = (canvas.height / background.height) * 1.05;
+        width =  background.width * coef;
+        height = background.height * coef;
+        x = parseInt((canvas.width / 2) - (width / 2));
+        canvasCtx.globalAlpha = .1;
+        canvasCtx.drawImage(background, x, y, width, height);
+        canvasCtx.globalAlpha = 1;
+    }
+
+    function draw(c, d, i) {
+        if (d)
+            c += .75;
+        else
+            c -= .75;
+        if (c >= 2328)
+            d = false;
+        else if (c == 0) {
+            d = true;
+            curImg = `imgb/${imgList[i]}`
+            background.src = `http://localhost:8888/static/${curImg}`;
+            ++i;
+            if (i >= imgList.length)
+                i = 0;
+        }
         //Schedule next redraw
-        requestAnimationFrame(draw);
+        requestAnimationFrame(function() {
+            draw(c, d, i);
+        });
 
         //Get spectrum data
         analyserNode.getFloatFrequencyData(dataArray);
 
         //Draw black background
-        canvasCtx.fillStyle = "rgb(0 0 0)";
+        canvasCtx.fillStyle = "#181717";//"rgba(0,0,0,1)";
         canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        let width, height, x, y = 0;
+        // let coef = (canvas.width / background.width) * .8;
+        let coef = (canvas.height / background.height) * (1.05 + (c / 3008));
+        width =  background.width * coef;
+        height = background.height * coef;
+        let alphaVal = c;
 
+        if (alphaVal >= 610)
+            alphaVal = 610;
+        else if (alphaVal <= 0)
+            alphaVal = 0
+
+        canvasCtx.globalAlpha = alphaVal / 1000;
+        x = parseInt((canvas.width / 2) - (width / 2));
+        canvasCtx.drawImage(background, x, y, width, height);
+        canvasCtx.globalAlpha = 1;
         //Draw spectrum
         const barWidth = (canvas.width / bufferLength) * 2.5;
         let posX = 0;
         for (let i = 0; i < bufferLength; i++) {
             const barHeight = (dataArray[i] + 140) * 2;
-            canvasCtx.fillStyle = `rgb(${Math.floor(barHeight + 100)} 50 50)`;
+            //${Math.floor(255 - (barHeight + 60))} - ${parseInt(50 * Math.random())}
+            canvasCtx.fillStyle = `rgb(${Math.floor(barHeight + 100)}, 50, ${parseInt(50)}, 0.66)`;
             canvasCtx.fillRect(
                 posX,
                 canvas.height - barHeight * 2,
@@ -428,8 +597,12 @@ FileBrowser.prototype = {
             );
             posX += barWidth + 1;
         }
+
+        /*background.onload = function() {
+            
+        }*/
     }
 
-    draw();
+    
 
 })(this, document);
