@@ -3,6 +3,7 @@
 static/*
 !static/.keep
 !static/*.js
+!static/*.css
 db.sqlite3
 */**/__pycache__/
 

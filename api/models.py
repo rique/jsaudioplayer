@@ -26,3 +26,13 @@ class Playlist(models.Model):
     playlist_name = models.CharField(max_length=256)
     tracks = models.ManyToManyField(Tracks)
     playlist_type = models.CharField(max_length=12, choices=PLAYLIST_TYPES, default="USER")
+
+
+class TrackInfo(models.Model):
+    track_title = models.CharField(max_length=256)
+    track_artist = models.CharField(max_length=256)
+    track_album = models.CharField(max_length=256)
+    track_duration = models.FloatField()
+    track_minutes = models.IntegerField()
+    track_seconds = models.IntegerField()
+    
