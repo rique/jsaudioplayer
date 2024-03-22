@@ -18,23 +18,43 @@ const slideUp = function (elem, parentElem, maxHeight, step, currentHeight, cb) 
 
 
 // slideDown(litsItemUl, listItemsElem, maxHeight, 40);
-const slideDown = function (elem, parentElem, startHeight, step, currentHeight, cb) {
+const slideDown = function (elem, parentElem, targetHeight, step, currentHeight, cb) {
     let style = elem.style,
         parentStyle = parentElem.style;
-    currentHeight = typeof currentHeight  === 'number' ? currentHeight : startHeight;
+    currentHeight = typeof currentHeight  === 'number' ? currentHeight : targetHeight;
 
     if (currentHeight > 0) {
         currentHeight -= step;
         parentStyle.maxHeight = style.maxHeight = (currentHeight).toString() + 'px' ;
-        return requestAnimationFrame(slideDown.bind(this, elem, parentElem, startHeight, step, currentHeight, cb));
+        return requestAnimationFrame(slideDown.bind(this, elem, parentElem, targetHeight, step, currentHeight, cb));
     }
 
-    style.maxHeight = (startHeight).toString() + 'px';
+    style.maxHeight = (targetHeight).toString() + 'px';
     parentStyle.maxHeight = '0px';
 
     if (typeof cb === 'function')
         return cb();
 };
+
+
+const whileMousePressed = (element, cb) => {
+    let mouseID = -1;
+    const mousedown = (evt) => {
+        if (mouseID == -1)
+            mouseID = setInterval(cb, 100);
+    }
+
+    const mouseup = (evt) => {
+        if (mouseID != -1) {
+            clearInterval(mouseID);
+            mouseID = -1;
+        }
+    }
+
+    element.addEventListener("mousedown", mousedown);
+    element.addEventListener("mouseup", mouseup);
+    element.addEventListener("mouseout", mouseup);
+}
 
 
 const readCookie = function (name) {
@@ -142,6 +162,18 @@ const Track = function(trackInfo) {
 Track.prototype = {
     setTrackDuration(duration) {
         this.trackDuration = duration;
+    },
+    getTrackDuration(formated) {
+        if (formated)
+            return this.formatTrackDuration();
+        return this.trackDuration;
+    },
+    formatTrackDuration() {
+        if (typeof this.trackDuration === 'undefined')
+            return;
+        let secs = parseInt(this.trackDuration % 60).toString(),
+            mins = parseInt(this.trackDuration / 60).toString();
+        return `${mins.padStart(2, '0')}:${secs.padStart(2, '0')}`
     }
 };
 
@@ -222,21 +254,30 @@ const AudioPlayer = function(tracklist, api) {
         console.error('No tracklist provided');
         throw 'No tracklist provided';
     }
-        
+
     this.tracklist = tracklist;
     
-    this.repeat = true;
+    this.volumeStep = .02;
+
+    //0 -> no repeat; 1 -> repeat all; 2 -> repeat one; 
+    this.repeatMode = 1;
     this.repeatElem = document.querySelector('#repeat-button a');
+    this.repeatElemGlyph = document.querySelector('#repeat-button a .fa-repeat');
+    this.repeatOneElem = document.querySelector('#repeat-button a .repeat-one');
 
     this.albumImg = document.getElementById('album-art');
     this.titleTrack = document.getElementById('track-title');
-    this.titleAlbum = document.getElementById('album-title');
+    this.artistName = document.getElementById('artist-name');
 
     this.playBtn = document.getElementById('play-button');
     this.pauseBtn = document.getElementById('pause-button');
     this.stopBtn = document.getElementById('stop-button');
     this.prevBtn = document.getElementById('prev-button');
     this.nextBtn = document.getElementById('next-button');
+    this.volUpBtn = document.querySelector('span.vol-up');
+    this.volDownBtn = document.querySelector('span.vol-down');
+
+    this.volumeVal = document.querySelector('span.vol-val');
 
     this.progressBarDiv = document.getElementById('prog-bar');
 
@@ -283,14 +324,17 @@ AudioPlayer.prototype = {
 
         this.repeatElem.addEventListener('click', function(evt) {
             evt.preventDefault();
-            evt.target.classList.toggle('repeat-active');
+            // evt.target.classList.toggle('repeat-active');
+            console.log('evt.target', evt.target, evt.currentTarget);
             this.btnRepeat();
         }.bind(this));
 
+        whileMousePressed(this.volUpBtn, this.increasVolume.bind(this));
+        whileMousePressed(this.volDownBtn, this.decreasVolume.bind(this));
+        this._setRepeatBtnStyle();
         this.api.loadTrackList(function(res) {
-            for (trackInfo of res['tracklist']) {
-                this.tracklist.addTrackToList(new Track(trackInfo));  // `${trackinfo.track_uuid}.mp3`
-            }
+            for (trackInfo of res['tracklist'])
+                this.tracklist.addTrackToList(new Track(trackInfo));
         }.bind(this));
     },
     setTrackList(tracklist) {
@@ -324,8 +368,29 @@ AudioPlayer.prototype = {
         this.setCurrentTrackFromTrackList();
     },
     btnRepeat() {
-        this.repeat = !this.repeat;
-        console.log('repeat', this.repeat);
+        // this.repeat = !this.repeat;
+        if (this.repeatMode >= 2)
+            this.repeatMode = 0;
+        else
+            ++this.repeatMode;
+        this._setRepeatBtnStyle();
+    },
+    setVolume(volume) {
+        if (volume > 1)
+            volume = 1;
+        else if (volume < 0)
+            volume = 0;
+
+        this.audioEle.volume = volume;
+        this.volumeVal.innerText = Math.round(volume * 100).toString();
+    },
+    increasVolume() {
+        let volume = this.audioEle.volume + this.volumeStep;
+        this.setVolume(volume); 
+    },
+    decreasVolume() {
+        let volume = this.audioEle.volume - this.volumeStep;
+        this.setVolume(volume);
     },
     setCurrentTrackFromTrackList() {
         let track = this.tracklist.getCurrentTrack();
@@ -336,7 +401,7 @@ AudioPlayer.prototype = {
     },
     onAudioLoaded(evt) {
         let audioElem = evt.target;
-        console.log('duration', audioElem.duration);
+        console.log('duration', audioElem.duration, 'volume', audioElem.volume);
         this.tracklist.getCurrentTrack().setTrackDuration(audioElem.duration);
         this.progressBar(audioElem);
     },
@@ -346,18 +411,19 @@ AudioPlayer.prototype = {
         if (totalTime >= currentTime) {
             let percentProg = (currentTime / totalTime) * 100;
             this.progressBarDiv.style.width = `${percentProg.toFixed(2)}%`;
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 this.progressBar(audioELem);
-            }, 100);
+            });
         }
     },
     onAudioEnded() {
         if (this.tracklist.isLastTrack()) {
-            if (!this.repeat)
+            if (!this.repeatMode >= 1)
                 return  console.log('End of session');
-            this.tracklist.resetTrackListIndex();
-        } else {
-            this.tracklist.advanceTrack();
+            if (this.repeatMode == 1)
+                this.tracklist.resetTrackListIndex();
+        } else if (this.repeatMode != 2) {
+             this.tracklist.advanceTrack();
         }
 
         this.setCurrentTrackFromTrackList();
@@ -375,8 +441,23 @@ AudioPlayer.prototype = {
             return;
         
         let tags = tag.tags;
-        this.titleTrack.innerText = tags.title;
-        this.titleAlbum.innerText = tags.album;
+        let currentTrack = this.tracklist.getCurrentTrack();
+
+        let title = tags.title;
+        if (typeof title === 'undefined' || title.length == 0)
+            title = currentTrack.trackName;
+        
+        if (tags.album)
+            title += ` ~ ${tags.album}`
+        
+        let artist = tags.artist;
+        if (!artist)
+            artist = 'N/A';
+        
+        let trackTime = currentTrack.getTrackDuration(true); 
+
+        this.titleTrack.innerText = `${title} - [${trackTime}]`;
+        this.artistName.innerText = tags.artist;
 
         if (!tags.hasOwnProperty('picture'))
             return this.albumImg.src = "/static/albumart.jpg";
@@ -389,6 +470,18 @@ AudioPlayer.prototype = {
         
         let imgData = data.map((x) => String.fromCharCode(x)); 
         this.albumImg.src = `data:${format};base64,${window.btoa(imgData.join(''))}`;
+    },
+    _setRepeatBtnStyle() {
+        if (this.repeatMode == 0) {
+            this.repeatOneElem.classList.remove('repeat-active');
+            this.repeatElemGlyph.classList.remove('repeat-active');
+        } else if (this.repeatMode == 1) {
+            this.repeatOneElem.classList.remove('repeat-active');
+            this.repeatElemGlyph.classList.add('repeat-active');
+        } else if (this.repeatMode == 2) {
+            this.repeatOneElem.classList.add('repeat-active');
+            this.repeatElemGlyph.classList.add('repeat-active');
+        }
     }
 };
 
@@ -490,7 +583,7 @@ FileBrowser.prototype = {
         imgList.push(...res['img_list']);
         audioPlayer.init();
         const fileBrowser = new FileBrowser(audioPlayer, api);
-        document.querySelector('#file-browser-aaction button').addEventListener('click', fileBrowser.loadFileBrowser.bind(fileBrowser));
+        document.querySelector('#file-browser-action button').addEventListener('click', fileBrowser.loadFileBrowser.bind(fileBrowser));
         console.log('imgList1', imgList);
         draw(0, true, 0);
     });
@@ -513,7 +606,7 @@ FileBrowser.prototype = {
     const canvas = document.createElement("canvas");
     
     canvas.width = window.innerWidth - 36;
-    canvas.height = window.innerHeight - 254;
+    canvas.height = window.innerHeight - 204;
     canvas.style.display = 'block';
     canvas.style.margin = 'auto';
 
@@ -583,7 +676,7 @@ FileBrowser.prototype = {
         canvasCtx.drawImage(background, x, y, width, height);
         canvasCtx.globalAlpha = 1;
         //Draw spectrum
-        const barWidth = (canvas.width / bufferLength) * 2.5;
+        const barWidth = (canvas.width / bufferLength) * 1; //2.2;
         let posX = 0;
         for (let i = 0; i < bufferLength; i++) {
             const barHeight = (dataArray[i] + 140) * 2;

@@ -1,3 +1,7 @@
+* {
+    margin: 0;
+    padding: 0;
+}
 body {
     margin: 0;
     padding: 0;
@@ -15,33 +19,41 @@ ul {
 
 #player {
     padding: 0 8px 0 8px;
-    width: 98%;
+    width: 98.5%;
     height: auto;
     margin: auto;
 
 }
 #foto-box, #album-art {
     width: 100px;
+    padding-top: 12px;
 }
 
 #track-box {
-    width: 260px;
+    width: 66.66%;
 }
 
 #foto-box, #track-box {
-    padding: 0 6px 6px 0;
-    display: inline-block;
-    vertical-align: middle;
-}
-
-.inlne-block {
+    padding: 6px 6px 6px 0;
     display: inline-block;
     vertical-align: top;
 }
 
+#track-box p {
+    padding: 10px 0 10px 6px;
+    font-size: 16px;
+    color: #fff;
+}
+
+.inline-block {
+    display: inline-block;
+    vertical-align: bottom;
+}
+
 .action-cnt {
     width: 100px;
-    height: 100px;
+    height: auto;
+    padding: 12px 12px 6px 0;
 }
 
 .action-cnt a {
@@ -50,6 +62,7 @@ ul {
 
 .action-cnt a, .action-cnt img {
     width: 40px;
+    position: relative;
  }
 
 .action-cnt .fa-solid {
@@ -60,15 +73,29 @@ ul {
 }
 
 .action-cnt .fa-solid:hover {
-    color: #bc6161;
-}
-
-.action-cnt {
-    color: #fff;
+    color: #d23939;
 }
 
 .action-cnt a .fa-repeat.repeat-active {
     color: #bf1616;
+}
+
+
+.action-cnt a .repeat-one.repeat-active {
+    display: block;
+}
+
+.action-cnt a .repeat-one {
+    display: none;
+    position: absolute;
+    background: transparent;
+    top: 8px;
+    left: 7px;
+    text-align: center;
+    font-size: 8px;
+    color: rgb(184, 41, 41);
+    font-weight: bold;
+    height: 10px;
 }
 
 #progress {
@@ -76,6 +103,7 @@ ul {
     height: 3px;
     cursor: pointer;
     background: #181717;
+    margin-top: 14px;
 }
 
 #progress:hover, #prog-bar:hover {
@@ -142,7 +170,36 @@ li.fa-solid.fa-file {
     color: #68d5d9
 }
 
-#file-browser-aaction button {
+#file-browser-action {
+    width: 202px;
+    padding: 0 0 20px 0;
+}
+
+#volume-control {
+    width: 520px;
+    font-size: 18px;
+    padding: 0 0 20px 0;
+}
+
+#volume-control span {
+    display: inline-block;
+    text-align: center;
+    vertical-align: bottom;
+    width: 36px;
+}
+
+#volume-control .fa-plus,
+#volume-control .fa-minus {
+    font-size: 24px;
+    cursor: pointer;
+}
+
+#volume-control .vol-val {
+    font-size: 20px;
+    margin-left: 6px;
+}
+
+#file-browser-action button {
     border: 0;
     padding: 7px;
     border-radius: 4px;
@@ -150,4 +207,9 @@ li.fa-solid.fa-file {
     color: #fff;
     font-size: 16px;
     font-family: Arial, Helvetica, sans-serif;
+    cursor: pointer;
+}
+
+#file-browser-action button:hover {
+    background: #056da5;
 }
