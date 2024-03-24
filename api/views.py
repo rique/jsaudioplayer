@@ -88,15 +88,15 @@ def loadTrackList(request):
 @csrf_exempt
 def loadBGImages(request):
 
-    img_dir = '/home/enriaue/git/js_audio/tests_audio1/static/imgb/'
+    img_dir = './static/imge/'
     # img_dir = '/home/enriaue/git/js_audio/tests_audio1/static/imge/'
     r = subprocess.run('grep --help|grep include', shell=True, capture_output=True)
     print('grep version :', r.stdout.decode())
-    res = subprocess.run(f'cd "{img_dir}" && ls | grep -i --include=*.{{jpg,png}} "" | sort -R', shell=True, capture_output=True, check=False)
+    res = subprocess.run(f'find -L "{img_dir}" -type f | grep -i --include=*.{{jpg,jpeg,png}} "" | sort -R', shell=True, capture_output=True, check=False)
     print('stderr', res.stderr.decode(), res.stdout.decode())
     res_str = res.stdout.decode().strip()
 
-    return JsonResponse(data={"success": True, 'img_list': res_str.split('\n')})
+    return JsonResponse(data={"success": True, 'img_list': [r.replace('./', '') for r in res_str.split('\n')]})
 
 
 @csrf_exempt

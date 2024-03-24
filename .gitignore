@@ -6,4 +6,5 @@ static/*
 !static/*.css
 db.sqlite3
 */**/__pycache__/
+.vscode/
 

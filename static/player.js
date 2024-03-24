@@ -37,14 +37,51 @@ const slideDown = function (elem, parentElem, targetHeight, step, currentHeight,
 };
 
 
-const whileMousePressed = (element, cb) => {
-    let mouseID = -1;
+const whileMousePressedAndMove = (element, cb, doMouseout) => {    
+    if (typeof doMouseout === 'undefined')
+        doMouseout = false;
+
+    let mouseID = -1, mouseMoveID = -1;
+    
     const mousedown = (evt) => {
-        if (mouseID == -1)
-            mouseID = setInterval(cb, 100);
+        mouseID = 1;
+        cb.bind(cb, evt, true)();
     }
 
+    const mousemove = (evt) => {
+        if (mouseID != -1) {
+            mouseMoveID = 2;
+            cb.bind(cb, evt, true)();
+        }
+    };
+
     const mouseup = (evt) => {
+        if (mouseID != -1) {
+            mouseID = -1;
+            cb.bind(cb, evt, false)();
+        }
+    }
+
+    element.addEventListener("mousedown", mousedown);
+    document.addEventListener('mousemove', mousemove);
+    document.addEventListener("mouseup", mouseup);
+
+    if (doMouseout)
+        element.addEventListener('mouseout', mouseup);
+};
+
+const whileMousePressed = (element, cb, interval) => {
+    if (typeof interval === 'undefined')
+        interval = 100;
+    
+    let mouseID = -1;
+    
+    const mousedown = (evt) => {
+        if (mouseID == -1)
+            mouseID = setInterval(cb.bind(cb, evt), interval);
+    }
+
+    const mouseup = () => {
         if (mouseID != -1) {
             clearInterval(mouseID);
             mouseID = -1;
@@ -246,7 +283,7 @@ TrackList.prototype = {
         else
             this.trackIndex = this.tracksNumber - 1;
     },
-}
+};
 
 
 const AudioPlayer = function(tracklist, api) {
@@ -265,6 +302,8 @@ const AudioPlayer = function(tracklist, api) {
     this.repeatElemGlyph = document.querySelector('#repeat-button a .fa-repeat');
     this.repeatOneElem = document.querySelector('#repeat-button a .repeat-one');
 
+    this.disableProgress = false;
+
     this.albumImg = document.getElementById('album-art');
     this.titleTrack = document.getElementById('track-title');
     this.artistName = document.getElementById('artist-name');
@@ -279,13 +318,13 @@ const AudioPlayer = function(tracklist, api) {
 
     this.volumeVal = document.querySelector('span.vol-val');
 
-    this.progressBarDiv = document.getElementById('prog-bar');
+    this.progressBarDiv = document.getElementById('progress');
+    this.subProgressBarDiv = document.getElementById('prog-bar');
 
     this.audioEle = new Audio();
     this.jsmediatags = window.jsmediatags;
     this.api = api;
 }
-
 AudioPlayer.prototype = {
     init() {
         let currentTrack = this.tracklist.getCurrentTrack();
@@ -296,7 +335,7 @@ AudioPlayer.prototype = {
         this.audioEle.preload = "auto";
         this.audioEle.onloadedmetadata = this.onAudioLoaded.bind(this);
         this.audioEle.onended = this.onAudioEnded.bind(this);
-        
+
         this.playBtn.addEventListener('click', function(evt) {
             evt.preventDefault();
             this.play();
@@ -324,27 +363,47 @@ AudioPlayer.prototype = {
 
         this.repeatElem.addEventListener('click', function(evt) {
             evt.preventDefault();
-            // evt.target.classList.toggle('repeat-active');
-            console.log('evt.target', evt.target, evt.currentTarget);
             this.btnRepeat();
         }.bind(this));
 
-        whileMousePressed(this.volUpBtn, this.increasVolume.bind(this));
-        whileMousePressed(this.volDownBtn, this.decreasVolume.bind(this));
+        whileMousePressed(this.volUpBtn, this.increasVolume.bind(this), 84);
+        whileMousePressed(this.volDownBtn, this.decreasVolume.bind(this), 84);
+        whileMousePressedAndMove(this.progressBarDiv, this.seek.bind(this));
+        whileMousePressedAndMove(this.subProgressBarDiv, this.seek.bind(this));
+
         this._setRepeatBtnStyle();
+
         this.api.loadTrackList(function(res) {
             for (trackInfo of res['tracklist'])
                 this.tracklist.addTrackToList(new Track(trackInfo));
         }.bind(this));
     },
+    seek(evt, mouseUp) {
+        let progressBarDiv =  this.progressBarDiv,
+            widthPixel = (evt.clientX - 2) - progressBarDiv.offsetLeft,
+            totalWidth = progressBarDiv.offsetWidth;
+            percentWidth = (widthPixel / totalWidth);
+        
+        this.disableProgress = mouseUp;
+
+        if (!mouseUp)
+            this.audioEle.currentTime = this.tracklist.getCurrentTrack().trackDuration * percentWidth;
+        
+        requestAnimationFrame(() => {
+            this.subProgressBarDiv.style.width = `${percentWidth  * 100}%`;
+        });
+    },
     setTrackList(tracklist) {
         this.tracklist = tracklist;
     },
-    setPlayerSong(track) {
+    setPlayerSong(track, autoPlay) {
+        console.log('autoPlay', autoPlay, track);
         this.currentTrack = track;
         this.audioEle.src = `/static/${track.trackUUid}.mp3`;
         this.audioEle.onloadedmetadata = this.onAudioLoaded.bind(this);
-        this.audioEle.play();
+        if (autoPlay === true)
+            this.audioEle.play();
+
     },
     play() {
         this.audioEle.play();
@@ -358,14 +417,14 @@ AudioPlayer.prototype = {
     },
     next() {
         this.tracklist.advanceTrack();
-        this.setCurrentTrackFromTrackList();
+        this.setCurrentTrackFromTrackList(true);
     },
     prev() {
         if (this.audioEle.currentTime > 3.6)
             return this.audioEle.currentTime = 0;
         
         this.tracklist.regressTrack();
-        this.setCurrentTrackFromTrackList();
+        this.setCurrentTrackFromTrackList(true);
     },
     btnRepeat() {
         // this.repeat = !this.repeat;
@@ -392,12 +451,12 @@ AudioPlayer.prototype = {
         let volume = this.audioEle.volume - this.volumeStep;
         this.setVolume(volume);
     },
-    setCurrentTrackFromTrackList() {
+    setCurrentTrackFromTrackList(autoPlay) {
         let track = this.tracklist.getCurrentTrack();
         console.log('playing song', track);
 
         this.loadID3Tags(track.trackUUid);
-        this.setPlayerSong(track);
+        this.setPlayerSong(track, autoPlay);
     },
     onAudioLoaded(evt) {
         let audioElem = evt.target;
@@ -408,25 +467,34 @@ AudioPlayer.prototype = {
     progressBar(audioELem) {
         let currentTime = audioELem.currentTime,
             totalTime = audioELem.duration;
-        if (totalTime >= currentTime) {
+        if (totalTime >= currentTime && !this.disableProgress) {
             let percentProg = (currentTime / totalTime) * 100;
-            this.progressBarDiv.style.width = `${percentProg.toFixed(2)}%`;
-            requestAnimationFrame(() => {
-                this.progressBar(audioELem);
-            });
+            this.subProgressBarDiv.style.width = `${percentProg.toFixed(2)}%`;
         }
+        requestAnimationFrame(() => {
+            this.progressBar(audioELem);
+        });
     },
     onAudioEnded() {
+        let autoPlay;
         if (this.tracklist.isLastTrack()) {
-            if (!this.repeatMode >= 1)
-                return  console.log('End of session');
-            if (this.repeatMode == 1)
-                this.tracklist.resetTrackListIndex();
-        } else if (this.repeatMode != 2) {
-             this.tracklist.advanceTrack();
+            if (!this.repeatMode >= 1) {
+                console.log('End of session');
+                this.tracklist.advanceTrack();
+                autoPlay = false;
+            }
+            else {
+                autoPlay = true;
+                if (this.repeatMode == 1)
+                    this.tracklist.resetTrackListIndex();
+            }
+        } else  {
+            if (this.repeatMode != 2)
+                this.tracklist.advanceTrack();
+             autoPlay = true;
         }
 
-        this.setCurrentTrackFromTrackList();
+        this.setCurrentTrackFromTrackList(autoPlay);
     },
     loadID3Tags(song) {
         this.jsmediatags.read(`http://localhost:8888/static/${song}.mp3`, {
@@ -451,6 +519,7 @@ AudioPlayer.prototype = {
             title += ` ~ ${tags.album}`
         
         let artist = tags.artist;
+        
         if (!artist)
             artist = 'N/A';
         
@@ -498,7 +567,6 @@ const FileBrowser = function(player, api) {
     this.player = player;
     this.overlayDiv.addEventListener('click', this.closeFileBrowser.bind(this));
 }
-
 FileBrowser.prototype = {
     closeFileBrowser(evt) {
         if (evt.target != evt.currentTarget)
@@ -511,6 +579,7 @@ FileBrowser.prototype = {
         let target = evt.target;
         let folderName = target.innerText.trim();
         console.log('foldername', folderName);
+        
         if (folderName == '..') {
             let baseDirArray = this.baseDir.split('/');
             baseDirArray.splice((baseDirArray.length - 2), 1);
@@ -518,6 +587,7 @@ FileBrowser.prototype = {
         } else {
             this.baseDir += folderName;
         }
+
         console.log('baseDir', this.baseDir);
         clearElementInnerHTML(this.folderListBox);
         clearElementInnerHTML(this.fileListBox);
@@ -579,6 +649,7 @@ FileBrowser.prototype = {
     const imgList = [];
     const api = new Api();
     const audioPlayer = new AudioPlayer(tracklist, api);
+
     api.loadBGImages(function(res) {
         imgList.push(...res['img_list']);
         audioPlayer.init();
@@ -587,7 +658,6 @@ FileBrowser.prototype = {
         console.log('imgList1', imgList);
         draw(0, true, 0);
     });
-
 
     const audioCtx = new AudioContext();
     const audioSourceNode = audioCtx.createMediaElementSource(audioPlayer.audioEle);
@@ -634,15 +704,15 @@ FileBrowser.prototype = {
 
     function draw(c, d, i) {
         if (d)
-            c += .75;
+            c += 1;
         else
-            c -= .75;
+            c -= 1;
         if (c >= 2328)
             d = false;
         else if (c == 0) {
             d = true;
-            curImg = `imgb/${imgList[i]}`
-            background.src = `http://localhost:8888/static/${curImg}`;
+            curImg = encodeURI(`${imgList[i]}`);
+            background.src = `http://localhost:8888/${curImg}`;
             ++i;
             if (i >= imgList.length)
                 i = 0;
@@ -656,7 +726,7 @@ FileBrowser.prototype = {
         analyserNode.getFloatFrequencyData(dataArray);
 
         //Draw black background
-        canvasCtx.fillStyle = "#181717";//"rgba(0,0,0,1)";
+        canvasCtx.fillStyle = "#181717";
         canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
         
         let width, height, x, y = 0;
@@ -681,7 +751,7 @@ FileBrowser.prototype = {
         for (let i = 0; i < bufferLength; i++) {
             const barHeight = (dataArray[i] + 140) * 2;
             //${Math.floor(255 - (barHeight + 60))} - ${parseInt(50 * Math.random())}
-            canvasCtx.fillStyle = `rgb(${Math.floor(barHeight + 100)}, 50, ${parseInt(50)}, 0.66)`;
+            canvasCtx.fillStyle = `rgb(${Math.floor((barHeight / 1.4) + 140)}, 50, 50, 0.66)`;
             canvasCtx.fillRect(
                 posX,
                 canvas.height - barHeight * 2,

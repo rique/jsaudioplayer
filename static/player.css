@@ -7,7 +7,7 @@ body {
     padding: 0;
     background: #181717;
     font-family:  Arial, Helvetica, sans-serif!important;
-    color: #fff
+    color: #f6f6f6
 }
 
 ul {
@@ -29,6 +29,11 @@ ul {
     padding-top: 12px;
 }
 
+#cotrols {
+    width: 28.7%;
+    height: auto;
+}
+
 #track-box {
     width: 66.66%;
 }
@@ -42,7 +47,7 @@ ul {
 #track-box p {
     padding: 10px 0 10px 6px;
     font-size: 16px;
-    color: #fff;
+    color: #f6f6f6;
 }
 
 .inline-block {
@@ -68,7 +73,7 @@ ul {
 .action-cnt .fa-solid {
     font-size: 26px;
     text-align: center;
-    color: #fff;
+    color: #f6f6f6;
     padding: 4px 0 0;
 }
 
@@ -88,14 +93,14 @@ ul {
 .action-cnt a .repeat-one {
     display: none;
     position: absolute;
-    background: transparent;
-    top: 8px;
-    left: 7px;
+    background: #181717;
+    top: 9px;
+    left: 8px;
     text-align: center;
-    font-size: 8px;
-    color: rgb(184, 41, 41);
+    font-size: 5px;
+    color: #bf1616;
     font-weight: bold;
-    height: 10px;
+    height: 16px;
 }
 
 #progress {
@@ -107,8 +112,7 @@ ul {
 }
 
 #progress:hover, #prog-bar:hover {
-    height: 6px;
-    /*background: rgb(255, 75, 75);*/
+    height: 10px;
 }
 
 #prog-bar {
