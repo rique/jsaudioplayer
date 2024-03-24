@@ -103,21 +103,56 @@ ul {
     height: 16px;
 }
 
-#progress {
-    width: 100%;
-    height: 3px;
+#progress, #main-volume-bar {
     cursor: pointer;
     background: #181717;
-    margin-top: 14px;
 }
 
+#progress {
+    width: 100%;
+    margin-top: 14px;
+    height: 3px;
+}
+
+#main-volume-bar {
+    width: 70%;
+    margin-top: 10px;
+    height: 1px;
+}
+
+#main-volume-bar:hover, #main-volume-bar.volume-action {
+    border: 1px solid rgba(200, 200, 200, 0.15);
+}
+
+#volume-bar-container {
+    background: transparent;
+    width: 100%;
+}
+
+#volume-bar-container, 
 #progress:hover, #prog-bar:hover {
     height: 10px;
 }
 
-#prog-bar {
+#main-volume-bar:hover, #volume-bar:hover, #volume-bar-container:hover #volume-bar {
+    height: 5px;
+}
+
+/*#volume-bar-container, #progress:hover, #prog-bar:hover,
+#main-volume-bar:hover, #volume-bar:hover, #volume-bar-container:hover #volume-bar {
+    height: 10px;
+}*/
+
+#prog-bar, #volume-bar {
     height: 100%;
+}
+
+#prog-bar {
     background: rgb(250, 50, 50);
+}
+
+#volume-bar {
+    background: rgb(216, 202, 202);
 }
 
 #vu-meters {
@@ -180,7 +215,7 @@ li.fa-solid.fa-file {
 }
 
 #volume-control {
-    width: 520px;
+    width: 100%;
     font-size: 18px;
     padding: 0 0 20px 0;
 }

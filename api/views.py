@@ -88,8 +88,7 @@ def loadTrackList(request):
 @csrf_exempt
 def loadBGImages(request):
 
-    img_dir = './static/imge/'
-    # img_dir = '/home/enriaue/git/js_audio/tests_audio1/static/imge/'
+    img_dir = './static/imga/'
     r = subprocess.run('grep --help|grep include', shell=True, capture_output=True)
     print('grep version :', r.stdout.decode())
     res = subprocess.run(f'find -L "{img_dir}" -type f | grep -i --include=*.{{jpg,jpeg,png}} "" | sort -R', shell=True, capture_output=True, check=False)

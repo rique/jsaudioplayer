@@ -1,5 +1,5 @@
 // slideUp(litsItemUl, listItemsElem, maxHeight, 40);
-const slideUp = function (elem, parentElem, maxHeight, step, currentHeight, cb) {
+const slideUp = (elem, parentElem, maxHeight, step, currentHeight, cb) => {
     let style = elem.style,
         parentStyle = parentElem.style;
     if (typeof currentHeight === 'undefined')
@@ -8,7 +8,7 @@ const slideUp = function (elem, parentElem, maxHeight, step, currentHeight, cb) 
     if (currentHeight < maxHeight) {
         currentHeight += step;
         parentStyle.maxHeight = style.maxHeight = (currentHeight).toString() + 'px' ;
-        return requestAnimationFrame(slideUp.bind(this, elem, parentElem, maxHeight, step, currentHeight));
+        return requestAnimationFrame(slideUp.bind(undefined, elem, parentElem, maxHeight, step, currentHeight));
     }
 
     parentStyle.maxHeight = style.maxHeight = (maxHeight).toString() + 'px';
@@ -18,7 +18,7 @@ const slideUp = function (elem, parentElem, maxHeight, step, currentHeight, cb) 
 
 
 // slideDown(litsItemUl, listItemsElem, maxHeight, 40);
-const slideDown = function (elem, parentElem, targetHeight, step, currentHeight, cb) {
+const slideDown = (elem, parentElem, targetHeight, step, currentHeight, cb) => {
     let style = elem.style,
         parentStyle = parentElem.style;
     currentHeight = typeof currentHeight  === 'number' ? currentHeight : targetHeight;
@@ -26,7 +26,7 @@ const slideDown = function (elem, parentElem, targetHeight, step, currentHeight,
     if (currentHeight > 0) {
         currentHeight -= step;
         parentStyle.maxHeight = style.maxHeight = (currentHeight).toString() + 'px' ;
-        return requestAnimationFrame(slideDown.bind(this, elem, parentElem, targetHeight, step, currentHeight, cb));
+        return requestAnimationFrame(slideDown.bind(undefined, elem, parentElem, targetHeight, step, currentHeight, cb));
     }
 
     style.maxHeight = (targetHeight).toString() + 'px';
@@ -124,7 +124,6 @@ const Api = function() {
     this.xhr = new XMLHttpRequest();
     this.csrftoken = readCookie('csrftoken');
 }
-
 Api.prototype = {
     getXhrPost(url) {
         this.xhr.open('POST', url, true);
@@ -195,6 +194,7 @@ const Track = function(trackInfo) {
     this.trackUUid = trackInfo.track_uuid;
     this.trackOriginalPath = trackInfo.track_original_path;
     this.trackDuration = undefined;
+    this.currentTime = 0;
 }
 Track.prototype = {
     setTrackDuration(duration) {
@@ -205,11 +205,31 @@ Track.prototype = {
             return this.formatTrackDuration();
         return this.trackDuration;
     },
+    setCurrentTime(val) {
+        this.currentTime = val;
+    },
+    getCurrentTime(formated) {
+        if (formated)
+            return this.formatCurrentTime();
+        return this.currentTime;
+    },
+    getTimeRemaining(formated) {
+        let remainigTime = this.trackDuration - this.currentTime;
+        if (formated)
+            return this._formatTime(remainigTime);
+        return remainigTime;
+    },
     formatTrackDuration() {
         if (typeof this.trackDuration === 'undefined')
             return;
-        let secs = parseInt(this.trackDuration % 60).toString(),
-            mins = parseInt(this.trackDuration / 60).toString();
+        return this._formatTime(this.trackDuration);
+    },
+    formatCurrentTime() {
+        return this._formatTime(this.currentTime);
+    },
+    _formatTime(millisecTime) {
+        let secs = parseInt(millisecTime % 60).toString(),
+            mins = parseInt(millisecTime / 60).toString();
         return `${mins.padStart(2, '0')}:${secs.padStart(2, '0')}`
     }
 };
@@ -219,10 +239,14 @@ const TrackList = function(tracklist) {
     this.tracklist = tracklist || [];
     this.trackIndex = 0;
     this.tracksNumber = this.tracklist.length;
-    if (this.tracklist.length > 0)
+    
+    if (this.tracklist.length > 0) {
         this.currentTrack = this.tracklist[this.trackIndex];
-    else
+        this.trackIndexMax = this.tracksNumber - 1;
+    } else {
         this.currentTrack = null;
+        this.trackIndexMax = 0;
+    }
 }
 TrackList.prototype = {
     getTrackLis() {
@@ -232,11 +256,13 @@ TrackList.prototype = {
         this.tracklist = tracklist;
         this.trackIndex = 0;
         this.tracksNumber = tracklist.length;
-        this.currentTrack = this.tracklist[this.trackIndex];
+        this.trackIndexMax = this.tracksNumber - 1;
+        this.currentTrack = this.getCurrentTrack();
     },
     addTrackToList(track) {
         this.tracklist.push(track);
         ++this.tracksNumber;
+        this.trackIndexMax = this.tracksNumber - 1;
     },
     getCurrentTrack() {
         if (this.currentTrack != null)
@@ -245,19 +271,18 @@ TrackList.prototype = {
             return this.tracklist[this.trackIndex];
         return null;
     },
-    advanceTrack() {
+    nextTrack() {
         this._advanceTrackIndex();
         this._setCurrentTrack();
-        console.log('advance', this.trackIndex, this.currentTrack, this.tracksNumber);
         return this.getCurrentTrack(); 
     },
-    regressTrack() {
+    previousTrack() {
         this._regressTrackIndex();
         this._setCurrentTrack();
         return this.getCurrentTrack();
     },
     isLastTrack() {
-        return this.trackIndex == (this.tracksNumber - 1);
+        return this.trackIndex == this.trackIndexMax;
     },
     resetTrackListIndex() {
         this.trackIndex = 0;
@@ -270,18 +295,18 @@ TrackList.prototype = {
         this.currentTrack = this.tracklist[this.trackIndex];
     },
     _advanceTrackIndex() {
-        console.log('INDEX ADVANCE 1', this.trackIndex, this.tracksNumber - 1);
-        if (this.trackIndex < (this.tracksNumber - 1))
+        console.log('INDEX ADVANCE 1', this.trackIndex, this.trackIndexMax);
+        if (this.trackIndex < this.trackIndexMax)
             ++this.trackIndex;
         else
             this.trackIndex = 0;
-        console.log('INDEX ADVANCE 2', this.trackIndex, this.tracksNumber - 1);
+        console.log('INDEX ADVANCE 2', this.trackIndex, this.trackIndexMax);
     },
     _regressTrackIndex() {
         if (this.trackIndex > 0)
             --this.trackIndex;
         else
-            this.trackIndex = this.tracksNumber - 1;
+            this.trackIndex = this.trackIndexMax;
     },
 };
 
@@ -295,7 +320,7 @@ const AudioPlayer = function(tracklist, api) {
     this.tracklist = tracklist;
     
     this.volumeStep = .02;
-
+    this.isPaused = true;
     //0 -> no repeat; 1 -> repeat all; 2 -> repeat one; 
     this.repeatMode = 1;
     this.repeatElem = document.querySelector('#repeat-button a');
@@ -304,12 +329,17 @@ const AudioPlayer = function(tracklist, api) {
 
     this.disableProgress = false;
 
+    this.playPauseBtn = document.querySelector('.player-action .fa-solid');
+
     this.albumImg = document.getElementById('album-art');
     this.titleTrack = document.getElementById('track-title');
     this.artistName = document.getElementById('artist-name');
 
+    this.mainVolumeBarElem = document.getElementById('main-volume-bar');
+    this.volumeBarElem = document.getElementById('volume-bar');
+
     this.playBtn = document.getElementById('play-button');
-    this.pauseBtn = document.getElementById('pause-button');
+    // this.pauseBtn = document.getElementById('pause-button');
     this.stopBtn = document.getElementById('stop-button');
     this.prevBtn = document.getElementById('prev-button');
     this.nextBtn = document.getElementById('next-button');
@@ -321,7 +351,7 @@ const AudioPlayer = function(tracklist, api) {
     this.progressBarDiv = document.getElementById('progress');
     this.subProgressBarDiv = document.getElementById('prog-bar');
 
-    this.audioEle = new Audio();
+    this.audioElem = new Audio();
     this.jsmediatags = window.jsmediatags;
     this.api = api;
 }
@@ -330,21 +360,24 @@ AudioPlayer.prototype = {
         let currentTrack = this.tracklist.getCurrentTrack();
         console.log('this.tracklist', this.tracklist, currentTrack);
         this.loadID3Tags(currentTrack.trackUUid);
-        this.audioEle.src = `/static/${currentTrack.trackUUid}.mp3`;
-        this.audioEle.autoplay = false;
-        this.audioEle.preload = "auto";
-        this.audioEle.onloadedmetadata = this.onAudioLoaded.bind(this);
-        this.audioEle.onended = this.onAudioEnded.bind(this);
+        this.audioElem.src = `/static/${currentTrack.trackUUid}.mp3`;
+        this.audioElem.autoplay = false;
+        this.audioElem.preload = "auto";
+        this.audioElem.onloadedmetadata = this.onAudioLoaded.bind(this);
+        this.audioElem.onended = this.onAudioEnded.bind(this);
+        this.audioElem.ontimeupdate = (e) => {
+            this.tracklist.getCurrentTrack().setCurrentTime(e.target.currentTime);
+        };
 
         this.playBtn.addEventListener('click', function(evt) {
             evt.preventDefault();
-            this.play();
+            this.playPause();
         }.bind(this));
 
-        this.pauseBtn.addEventListener('click', function(evt) {
+        /*this.pauseBtn.addEventListener('click', function(evt) {
             evt.preventDefault();
             this.pause();
-        }.bind(this));
+        }.bind(this));*/
 
         this.stopBtn.addEventListener('click', function(evt) {
             evt.preventDefault();
@@ -366,10 +399,28 @@ AudioPlayer.prototype = {
             this.btnRepeat();
         }.bind(this));
 
+        this.progressBarDiv.addEventListener('mouseenter', (evt) => {
+            percentWidth = this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv) * 100;
+            this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(255, 143, 143, 0.52) ${percentWidth}%, #181717 ${percentWidth}%)`;
+        });
+
+        this.progressBarDiv.addEventListener('mousemove', (evt) => {
+            percentWidth = (this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv) * 100).toFixed(2);
+            this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(255, 143, 143, 0.52) ${percentWidth}%, #181717 ${percentWidth}%)`;
+        });
+
+        this.progressBarDiv.addEventListener('mouseleave', (evt) => {
+            this.progressBarDiv.style.background = "#181717";
+        
+        });
+
         whileMousePressed(this.volUpBtn, this.increasVolume.bind(this), 84);
         whileMousePressed(this.volDownBtn, this.decreasVolume.bind(this), 84);
+
         whileMousePressedAndMove(this.progressBarDiv, this.seek.bind(this));
         whileMousePressedAndMove(this.subProgressBarDiv, this.seek.bind(this));
+        whileMousePressedAndMove(this.mainVolumeBarElem, this.changeVolume.bind(this));
+        whileMousePressedAndMove(this.volumeBarElem, this.changeVolume.bind(this));
 
         this._setRepeatBtnStyle();
 
@@ -379,55 +430,73 @@ AudioPlayer.prototype = {
         }.bind(this));
     },
     seek(evt, mouseUp) {
-        let progressBarDiv =  this.progressBarDiv,
-            widthPixel = (evt.clientX - 2) - progressBarDiv.offsetLeft,
-            totalWidth = progressBarDiv.offsetWidth;
-            percentWidth = (widthPixel / totalWidth);
+        percentWidth = this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv);
         
         this.disableProgress = mouseUp;
 
         if (!mouseUp)
-            this.audioEle.currentTime = this.tracklist.getCurrentTrack().trackDuration * percentWidth;
+            this.audioElem.currentTime = this.tracklist.getCurrentTrack().trackDuration * percentWidth;
         
-        requestAnimationFrame(() => {
-            this.subProgressBarDiv.style.width = `${percentWidth  * 100}%`;
-        });
+        this._updateProgressBar(percentWidth  * 100, this.progressBar.bind(this, this.audioElem));
     },
+    changeVolume(evt, mouseUp) {
+        if (!mouseUp)
+            this.mainVolumeBarElem.classList.remove('volume-action');
+        else
+            this.mainVolumeBarElem.classList.add('volume-action');
+
+        this.setVolume(
+            this._getPercentageWidthFromMousePosition(evt.clientX, this.mainVolumeBarElem)
+        );
+    },
+    
     setTrackList(tracklist) {
         this.tracklist = tracklist;
     },
     setPlayerSong(track, autoPlay) {
-        console.log('autoPlay', autoPlay, track);
         this.currentTrack = track;
-        this.audioEle.src = `/static/${track.trackUUid}.mp3`;
-        this.audioEle.onloadedmetadata = this.onAudioLoaded.bind(this);
+        this.audioElem.src = `/static/${track.trackUUid}.mp3`;
+        this.audioElem.onloadedmetadata = this.onAudioLoaded.bind(this);
         if (autoPlay === true)
-            this.audioEle.play();
+            this.audioElem.play();
+    },
+    playPause() {
+        if (this.isPaused)
+            this.play();
+        else
+            this.pause();
 
+        return this.isPaused;
     },
     play() {
-        this.audioEle.play();
+        this.isPaused = false;
+        this.playPauseBtn.classList.replace('fa-play', 'fa-pause');
+        this.audioElem.play();
     },
     pause() {
-        this.audioEle.pause();
+        this.isPaused = true;
+        this.playPauseBtn.classList.replace('fa-pause', 'fa-play');
+        this.audioElem.pause();
     },
     stop() {
-        this.audioEle.pause();
-        this.audioEle.currentTime = 0;
+        this.pause();
+        this.audioElem.currentTime = 0;
     },
     next() {
-        this.tracklist.advanceTrack();
-        this.setCurrentTrackFromTrackList(true);
+        this.tracklist.nextTrack();
+        this.setCurrentTrackFromTrackList(false);
+        this.play();
     },
     prev() {
-        if (this.audioEle.currentTime > 3.6)
-            return this.audioEle.currentTime = 0;
-        
-        this.tracklist.regressTrack();
-        this.setCurrentTrackFromTrackList(true);
+        if (this.audioElem.currentTime > 3.6) {
+            this.audioElem.currentTime = 0;
+        } else {
+            this.tracklist.previousTrack();
+            this.setCurrentTrackFromTrackList(false);
+        }
+        this.play();
     },
     btnRepeat() {
-        // this.repeat = !this.repeat;
         if (this.repeatMode >= 2)
             this.repeatMode = 0;
         else
@@ -440,15 +509,15 @@ AudioPlayer.prototype = {
         else if (volume < 0)
             volume = 0;
 
-        this.audioEle.volume = volume;
-        this.volumeVal.innerText = Math.round(volume * 100).toString();
+        this.audioElem.volume = volume;
+        this._updateVolumeBar(volume);
     },
     increasVolume() {
-        let volume = this.audioEle.volume + this.volumeStep;
+        let volume = this.audioElem.volume + this.volumeStep;
         this.setVolume(volume); 
     },
     decreasVolume() {
-        let volume = this.audioEle.volume - this.volumeStep;
+        let volume = this.audioElem.volume - this.volumeStep;
         this.setVolume(volume);
     },
     setCurrentTrackFromTrackList(autoPlay) {
@@ -457,6 +526,13 @@ AudioPlayer.prototype = {
 
         this.loadID3Tags(track.trackUUid);
         this.setPlayerSong(track, autoPlay);
+    },
+    updateTrackTime() {
+        const trackTimeElem = document.getElementById('time-track');
+        if (!trackTimeElem)
+            return;
+        const currentTrack = this.tracklist.getCurrentTrack();
+        trackTimeElem.innerText = currentTrack.getTimeRemaining(true);
     },
     onAudioLoaded(evt) {
         let audioElem = evt.target;
@@ -467,20 +543,18 @@ AudioPlayer.prototype = {
     progressBar(audioELem) {
         let currentTime = audioELem.currentTime,
             totalTime = audioELem.duration;
+        this.updateTrackTime();
         if (totalTime >= currentTime && !this.disableProgress) {
             let percentProg = (currentTime / totalTime) * 100;
-            this.subProgressBarDiv.style.width = `${percentProg.toFixed(2)}%`;
+            this._updateProgressBar(percentProg.toFixed(2), this.progressBar.bind(this, audioELem));
         }
-        requestAnimationFrame(() => {
-            this.progressBar(audioELem);
-        });
     },
     onAudioEnded() {
         let autoPlay;
         if (this.tracklist.isLastTrack()) {
             if (!this.repeatMode >= 1) {
                 console.log('End of session');
-                this.tracklist.advanceTrack();
+                this.tracklist.nextTrack();
                 autoPlay = false;
             }
             else {
@@ -490,7 +564,7 @@ AudioPlayer.prototype = {
             }
         } else  {
             if (this.repeatMode != 2)
-                this.tracklist.advanceTrack();
+                this.tracklist.nextTrack();
              autoPlay = true;
         }
 
@@ -520,12 +594,12 @@ AudioPlayer.prototype = {
         
         let artist = tags.artist;
         
-        if (!artist)
+        if (typeof artist === 'undefined' || artist.length == 0)
             artist = 'N/A';
         
         let trackTime = currentTrack.getTrackDuration(true); 
 
-        this.titleTrack.innerText = `${title} - [${trackTime}]`;
+        this.titleTrack.innerHTML = `${title} - [<span id="time-track">${trackTime}</span>]`;
         this.artistName.innerText = tags.artist;
 
         if (!tags.hasOwnProperty('picture'))
@@ -551,6 +625,31 @@ AudioPlayer.prototype = {
             this.repeatOneElem.classList.add('repeat-active');
             this.repeatElemGlyph.classList.add('repeat-active');
         }
+    },
+    _updateVolumeBar(volume) {
+        toHundredVolume = volume * 100;
+        this.volumeVal.innerText = Math.round(toHundredVolume).toString();
+
+        requestAnimationFrame(() => {
+            this.volumeBarElem.style.width = `${toHundredVolume}%`;
+        });
+    },
+    _updateProgressBar(progress, cb) {
+        requestAnimationFrame(() => {
+            if (progress > 100)
+                progress = 100;
+            this.subProgressBarDiv.style.width = `${progress}%`;
+            if (typeof cb === 'function')
+                cb();
+        });
+    },
+    _getPercentageWidthFromMousePosition(clientX, element, margin) {
+        if (typeof margin === 'undefined')
+            margin = 0;
+        let widthPixel = (clientX - margin) - element.offsetLeft,
+            totalWidth = element.offsetWidth;
+
+        return widthPixel / totalWidth;
     }
 };
 
@@ -635,7 +734,7 @@ FileBrowser.prototype = {
 };
 
 
-(function(window, document) {
+(function(window, document, undefined) {
     let max = 5;
     const tracklist = new TrackList();
     for (let i = 0; i <= max; ++i) {
@@ -660,7 +759,7 @@ FileBrowser.prototype = {
     });
 
     const audioCtx = new AudioContext();
-    const audioSourceNode = audioCtx.createMediaElementSource(audioPlayer.audioEle);
+    const audioSourceNode = audioCtx.createMediaElementSource(audioPlayer.audioElem);
 
     //Create analyser node
     const analyserNode = audioCtx.createAnalyser();
@@ -679,7 +778,12 @@ FileBrowser.prototype = {
     canvas.height = window.innerHeight - 204;
     canvas.style.display = 'block';
     canvas.style.margin = 'auto';
-
+    
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth - 36;
+        canvas.height = window.innerHeight - 204;
+    });
+    
     document.body.appendChild(canvas);
     
     const canvasCtx = canvas.getContext("2d");
