@@ -12,7 +12,8 @@ from django.conf import settings
 from .models import Tracks
 
 from mutagen.id3 import ID3
-
+from mutagen.mp3 import MP3
+from base64 import b64encode
 
 # Create your views here.
 
@@ -30,6 +31,36 @@ def addTrack(request):
     
     
     track_original_path = params['track_original_path']
+    audio = ID3(track_original_path)
+    mp3_file = MP3(track_original_path)
+    keys = audio.keys()
+    
+    title = ''
+    if 'TIT2' in keys:
+        title = audio.get('TIT2').text[0]
+    
+    artist = ''
+    if 'TPE1' in keys:
+        artist = audio.get('TPE1').text[0]
+    
+    album = ''
+    if 'TALB' in keys:
+        album = audio.get('TALB').text[0]
+    
+    apict = ''
+    pic_format = ''
+    if 'APIC:' in keys:
+        apict = b64encode(audio.get('APIC:').data).decode('ASCII')
+        pic_format = audio.get('APIC:').mime
+    else:
+        for k in keys:
+            if k.startswith('APIC:'):
+                APIC = audio.get(k)
+                if APIC.mime:
+                    apict = b64encode(APIC.data).decode('ASCII')
+                    pic_format = APIC.mime
+                    break
+
     track_uuid = str(uuid4())
 
     res = subprocess.run(f'ln -s "{track_original_path}" "{settings.BASE_DIR}/static/{track_uuid}.mp3"', shell=True, capture_output=True)
@@ -39,7 +70,13 @@ def addTrack(request):
     track.track_uuid = track_uuid
     track.save()
 
-    return JsonResponse(data={'success': True, 'track': track.__dict__})
+    return JsonResponse(data={'success': True, 'track': track.__dict__, 'ID3': {
+        'title': title,
+        'artist': artist,
+        'album': album,
+        'picture': {'data': apict, 'format': pic_format},
+        'duration': mp3_file.info.length
+    }})
 
 
 
@@ -77,7 +114,43 @@ def loadTrackList(request):
         return JsonResponse(data={'success': False, 'code': 'wrong_method'}, status=405, reason="Method Not Allowed")
     
     tracks = Tracks.objects.filter().all()
-    tracklist = [trk.__dict__ for trk in tracks]
+    tracklist = []
+
+    for trk in tracks:
+        audio = ID3(f'./static/{trk.track_uuid}.mp3')
+        mp3_file = MP3(f'./static/{trk.track_uuid}.mp3')
+        keys = audio.keys()
+        
+        title = ''
+        if 'TIT2' in keys:
+            title = audio.get('TIT2').text[0]
+        artist = ''
+        if 'TPE1' in keys:
+            artist = audio.get('TPE1').text[0]
+        album = ''
+        if 'TALB' in keys:
+            album = audio.get('TALB').text[0];
+        apict = ''
+        pic_format = ''
+        if 'APIC:' in keys:
+            apict = b64encode(audio.get('APIC:').data).decode('ASCII')
+            pic_format = audio.get('APIC:').mime
+        else:
+            for k in keys:
+                if k.startswith('APIC:'):
+                    APIC = audio.get(k)
+                    if APIC.mime:
+                        apict = b64encode(APIC.data).decode('ASCII')
+                        pic_format = APIC.mime
+                        break
+
+        tracklist.append({'track': trk.__dict__, 'ID3': {
+            'title': title,
+            'artist': artist,
+            'album': album,
+            'picture': {'data': apict, 'format': pic_format},
+            'duration': mp3_file.info.length
+        } })
 
     return JsonResponse(data={
         'success': True,
@@ -89,10 +162,7 @@ def loadTrackList(request):
 def loadBGImages(request):
 
     img_dir = './static/imga/'
-    r = subprocess.run('grep --help|grep include', shell=True, capture_output=True)
-    print('grep version :', r.stdout.decode())
     res = subprocess.run(f'find -L "{img_dir}" -type f | grep -i --include=*.{{jpg,jpeg,png}} "" | sort -R', shell=True, capture_output=True, check=False)
-    print('stderr', res.stderr.decode(), res.stdout.decode())
     res_str = res.stdout.decode().strip()
 
     return JsonResponse(data={"success": True, 'img_list': [r.replace('./', '') for r in res_str.split('\n')]})

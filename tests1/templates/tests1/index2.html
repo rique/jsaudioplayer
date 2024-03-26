@@ -11,12 +11,13 @@
       <div id="foto-box">
         <img src="/static/albumart.jpg" id="album-art">  
       </div><div id="track-box">
-        <p id="track-title">Hello 2</p>
+        <p id="track-title"><span id="name-track">Hello 2</span><span id="name-album"></span><span id="time-track"></span></p>
         <p id="artist-name">Hello 3</p>
       </div>
       <div id="cotrols" class="inline-block">
         <div id="file-browser-action">
-          <button>Browse File</button>
+          <button class="open-file-browser">Browse File</button>
+          <button class="open-tracklist-browser">View tracks</button>
         </div>
         <div id="volume-control">
           VOL : <span class="vol-up">
@@ -78,19 +79,30 @@
     
   </div>
 </div>
-<div class="cnt-overlay">
-  <div class="file-browser">
+<div style="display: none;" class="cnt-overlay">
+  <div style="display: none;" class="file-browser">
     <div class="base-path"></div>
     <ul class="folder-list">
-      <!--<li class="fld-itm"><i class="fa-solid fa-folder"></i> folder1</li>
-      <li class="fld-itm"><i class="fa-solid fa-folder"></i> folder2</li>
-      <li class="fld-itm"><i class="fa-solid fa-folder"></i> folder3</li>-->
     </ul>
     <ul class="file-list">
-      <!--<li class="fle-itm"><i class="fa-solid fa-file"></i> file1</li>
-      <li class="fle-itm"><i class="fa-solid fa-file"></i> file1</li>
-      <li class="fle-itm"><i class="fa-solid fa-file"></i> file1</li>-->
     </ul>
+  </div>
+  <div style="display: none;" class="track-browser">
+    <div class="tracklist-head">
+        <p class="tracklist-title">Track list</p>
+    </div>
+    <div class="tracklist-content-div">
+      <table class="tracklist-content">
+        <thead>
+          <tr>
+            <th class="small-cell">N°</th><th>Title</th><th>Artist</th><th>Album</th><th>Duration</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 {% endblock %}

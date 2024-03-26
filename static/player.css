@@ -50,6 +50,14 @@ ul {
     color: #f6f6f6;
 }
 
+#time-track {
+    cursor: pointer;
+}
+
+#time-track:hover {
+    color: #ff4949;
+}
+
 .inline-block {
     display: inline-block;
     vertical-align: bottom;
@@ -171,16 +179,28 @@ ul {
     display: none;
 }
 
-.cnt-overlay .file-browser {
+.cnt-overlay .file-browser, 
+.cnt-overlay .track-browser {
     position: relative;
-    width: 710px;
-    height: 600px;
-    top: 25%;
-    left: 36%;
+    width: 56%;
+    height: 58%;
     background: #282626;
-    border-radius: 5px;
+    border-radius: 6px;
     padding: 16px;
     overflow: auto;
+    display: none;
+    margin: 10% auto 0 auto;
+}
+
+.cnt-overlay .track-browser {
+    overflow: hidden!important;
+}
+
+.cnt-overlay .track-browser .tracklist-content-div {
+    overflow: scroll;
+    height: 92.4%;
+    width: auto;
+    margin: auto;
 }
 
 .base-path {
@@ -201,6 +221,60 @@ ul {
     color: #fff;
 }
 
+.track-browser td, .track-browser th {
+    width: 23.15%;
+    padding: 4px;
+    border: 1px solid transparent;
+}
+
+.track-browser td.small-cell, .track-browser th.small-cell {
+    width: 5%;
+}
+
+.track-browser td {
+    cursor: pointer;
+}
+
+.track-browser tr.tr-white {
+    background: transparent;
+}
+
+.track-browser tr.tr-blue {
+    background: #bbe3fc;
+}
+
+.track-browser tbody tr:hover {
+    background: #0ca2ff;
+    color: #f7f8f8;
+}
+
+.track-browser tbody td:hover {
+    background: #016bb7;
+}
+
+.track-browser table {
+    border: 1px solid black;
+    background: #f7f8f8;
+    color: #302d2d;
+    user-select: none;
+}
+
+.tracklist-head {
+    height: 7%;
+    text-align: center;
+    font-size: 22px;
+}
+
+tr.currently-playing {
+    background: #9ab3ff!important;
+}
+
+tr.currently-playing:hover {
+    background: #4a77ff!important;
+    color: #f7f8f8!important;
+}
+
+
 li.fa-solid.fa-folder {
     color: #f0f000
 }
@@ -210,7 +284,7 @@ li.fa-solid.fa-file {
 }
 
 #file-browser-action {
-    width: 202px;
+    width: 100%;
     padding: 0 0 20px 0;
 }
 
