@@ -89,7 +89,8 @@ ul {
     color: #d23939;
 }
 
-.action-cnt a .fa-repeat.repeat-active {
+.action-cnt a .fa-repeat.repeat-active,
+#shuffle-button.repeat-active .fa-shuffle {
     color: #bf1616;
 }
 
@@ -182,10 +183,10 @@ ul {
 .cnt-overlay .file-browser, 
 .cnt-overlay .track-browser {
     position: relative;
-    width: 56%;
-    height: 58%;
+    width: 62%;
+    height: 62%;
     background: #282626;
-    border-radius: 6px;
+    border-radius: 10px;
     padding: 16px;
     overflow: auto;
     display: none;
@@ -222,9 +223,19 @@ ul {
 }
 
 .track-browser td, .track-browser th {
-    width: 23.15%;
+    width: 29%;
     padding: 4px;
     border: 1px solid transparent;
+}
+
+.track-actions {
+    display: block;
+    text-align: center;
+}
+
+.track-actions:hover {
+    border: 1px solid #252525;
+    background: #11a4ff;
 }
 
 .track-browser td.small-cell, .track-browser th.small-cell {

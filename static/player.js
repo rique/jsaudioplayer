@@ -37,6 +37,21 @@ const slideDown = (elem, parentElem, targetHeight, step, currentHeight, cb) => {
 };
 
 
+const shuffle = (array) => {
+    for (let i = array.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+
+const getFormatedDate = () => {
+    const d = new Date();
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
+}
+
+
 const whileMousePressedAndMove = (element, cb, doMouseout) => {    
     if (typeof doMouseout === 'undefined')
         doMouseout = false;
@@ -119,6 +134,46 @@ const clearElementInnerHTML = (element) => {
 };
 
 
+const OneEvent = function(callback) {
+    this.callback = callback;
+}
+OneEvent.prototype = {
+    trigger(args) {
+        this.callback(...args);
+    }
+};
+
+
+const ListEvents = function() {
+    this._eventsRegistered = [];
+};
+ListEvents.prototype = {
+    onEventRegister(callback, eventKey) {
+        this._eventsRegistered.push({'eventKey': eventKey,  'event': new OneEvent(callback)});
+    },
+    trigger(eventKey, args) {
+        args = args || [];
+        this._onEventTrigger(eventKey, args);
+    },
+    _onEventTrigger(eventKey, args) {
+        const evts = this._eventsRegistered.filter(evt => evt.eventKey == eventKey);
+        if (evts.length == 0)
+            return;
+        for (let i = 0; i < evts.length; ++i) {
+            evts[i].event.trigger(args);
+        }
+    },
+    _checkEventKey(eventKey) {
+        const indx = this._eventsRegistered.findIndex(evt => evt.eventKey == eventKey);
+        if (indx != -1) {
+            console.error(`Event ${eventKey} already register`);
+            throw `Event ${eventKey} already register`;
+        }
+
+    },
+};
+
+
 const Api = function() {
     this.url = 'http://localhost:8888/api';
     this.xhr = new XMLHttpRequest();
@@ -187,6 +242,7 @@ Api.prototype = {
         }
     }
 };
+
 
 const ID3Tags = function(tags) {
     this.jsmediatags = window.jsmediatags;
@@ -293,7 +349,7 @@ Track.prototype = {
     },
     formatTrackDuration() {
         if (typeof this.trackDuration === 'undefined') {
-            if (this.id3Tags === null) 
+            if (this.id3Tags === null)
                 return;
             this.duration = this.id3Tags.duration;
         }
@@ -330,49 +386,13 @@ Track.prototype = {
     },
 };
 
-const OneEvent = function(callback) {
-    this.callback = callback;
-}
-OneEvent.prototype = {
-    trigger() {
-        this.callback();
-    }
-}
-
-const ListEvents = function() {
-    this._eventsRegistered = [];
-};
-ListEvents.prototype = {
-    onEventRegister(callback, eventKey) {
-        this._eventsRegistered.push({'eventKey': eventKey,  'event': new OneEvent(callback)});
-    },
-    trigger(eventKey) {
-        this._onEventTrigger(eventKey);
-    },
-    _onEventTrigger(eventKey) {
-        const evts = this._eventsRegistered.filter(evt => evt.eventKey == eventKey);
-        if (evts.length == 0)
-            return;
-        for (let i = 0; i < evts.length; ++i) {
-            evts[i]['event'].trigger();
-        }
-    },
-    _checkEventKey(eventKey) {
-        const indx = this._eventsRegistered.findIndex(evt => evt.eventKey == eventKey);
-        if (indx != -1) {
-            console.error(`Event ${eventKey} already register`);
-            throw `Event ${eventKey} already register`;
-        }
-
-    },
-};
 
 const TrackList = function(tracklist) {
     this.tracklist = tracklist || [];
     this.trackIndex = 0;
     this.tracksNumber = this.tracklist.length;
     this.trackListEvents = new ListEvents();
-
+    this.isShuffle = false;
     if (this.tracklist.length > 0) {
         this.currentTrack = this.tracklist[this.trackIndex];
         this.trackIndexMax = this.tracksNumber - 1;
@@ -383,15 +403,9 @@ const TrackList = function(tracklist) {
 }
 TrackList.prototype = {
     getTrackList() {
+        if (this.isShuffle)
+            return this.tracklistShuffle;
         return this.tracklist;
-    },
-    loadTracksID3Tags(cb) {
-        for (let i = 0; i < this.tracklist.length; ++i) {
-            let track = this.tracklist[i];
-            track.loadTrackID3Tags();
-        }
-        if (typeof cb === 'function')
-            cb(this.tracklist);
     },
     setTrackList(tracklist) {
         this.tracklist = tracklist;
@@ -400,8 +414,13 @@ TrackList.prototype = {
         this.trackIndexMax = this.tracksNumber - 1;
         this.currentTrack = this.getCurrentTrack();
     },
+    getTracksNumber() {
+        return this.tracksNumber;
+    },
     addTrackToList(track) {
         this.tracklist.push(track);
+        if (this.isShuffle)
+            this.tracklistShuffle.push(track);
         ++this.tracksNumber;
         this.trackIndexMax = this.tracksNumber - 1;
     },
@@ -409,13 +428,13 @@ TrackList.prototype = {
         if (this.currentTrack != null)
             return this.currentTrack;
         if (this.tracksNumber > 0)
-            return this.tracklist[this.trackIndex];
+            return this.getTrackList()[this.trackIndex];
         return null;
     },
     nextTrack() {
         this._advanceTrackIndex();
         this._setCurrentTrack();
-        return this.getCurrentTrack(); 
+        return this.getCurrentTrack();
     },
     previousTrack() {
         this._regressTrackIndex();
@@ -433,16 +452,30 @@ TrackList.prototype = {
         this.trackIndex = indexVal;
         if (setCurTrack === true)
             this._setCurrentTrack();
-        this.trackListEvents.trigger('onIndexCahnge');
+        this.trackListEvents.trigger('onIndexChange');
     },
     getTrackIndexByTrack(track) {
-        return this.tracklist.findIndex(trk => trk.trackUUid == track.trackUUid);
+        return this.getTrackList().findIndex(trk => trk.trackUUid == track.trackUUid);
     },
     onTrackIndexChange(cb) {
-        this.trackListEvents.onEventRegister(cb, 'onIndexCahnge');
+        this.trackListEvents.onEventRegister(cb, 'onIndexChange');
+    },
+    shuffle(conserveCurrentTrack) {
+        if (this.isShuffle) {
+            this.tracklistShuffle = undefined;
+            this.isShuffle = false;
+            this.setTrackIndex(this.tracklist.findIndex(trk => trk.trackUUid == this.getCurrentTrack().trackUUid), true);
+        } else {
+            let trackIndex;
+            if (conserveCurrentTrack === true)
+                trackIndex = this.trackIndex;
+            this.tracklistShuffle = this._shuffle([...this.tracklist], trackIndex);
+            this.isShuffle = true;
+            this.setTrackIndex(0, true);
+        }
     },
     _setCurrentTrack() {
-        this.currentTrack = this.tracklist[this.trackIndex];
+        this.currentTrack = this.getTrackList()[this.trackIndex];
     },
     _advanceTrackIndex() {
         if (this.trackIndex < this.trackIndexMax)
@@ -458,6 +491,18 @@ TrackList.prototype = {
             this.trackIndex = this.trackIndexMax;
         console.log('INDEX REGRESS', this.trackIndex, this.trackIndexMax);
     },
+    _shuffle(tracklist, trackIndex) {
+        let track;
+        if (!isNaN(trackIndex))
+            track = tracklist.splice(trackIndex, 1)[0];
+        for (let i = tracklist.length - 1; i > 0; i--) {
+            let j = Math.floor(Math.random() * (i + 1));
+            [tracklist[i], tracklist[j]] = [tracklist[j], tracklist[i]];
+        }
+        if (track)
+            tracklist.splice(0, 0, track);
+        return tracklist;
+    }
 };
 
 
@@ -470,7 +515,7 @@ const AudioPlayer = function(tracklist, api) {
     this.tracklist = tracklist;
     this.audioPlayerEvents = new ListEvents();
 
-    this.volumeStep = .02;
+    this.volumeStep = 0.02;
     this.isPaused = true;
     //0 -> no repeat; 1 -> repeat all; 2 -> repeat one; 
     this.repeatMode = 1;
@@ -500,6 +545,7 @@ const AudioPlayer = function(tracklist, api) {
     this.stopBtn = document.getElementById('stop-button');
     this.prevBtn = document.getElementById('prev-button');
     this.nextBtn = document.getElementById('next-button');
+    this.shuffleBtn = document.getElementById('shuffle-button');
     this.volUpBtn = document.querySelector('span.vol-up');
     this.volDownBtn = document.querySelector('span.vol-down');
 
@@ -518,8 +564,8 @@ AudioPlayer.prototype = {
         this.audioElem.preload = "auto";
         this.audioElem.onloadedmetadata = this.onAudioLoaded.bind(this);
         this.audioElem.onended = this.onAudioEnded.bind(this);
-        this.audioElem.ontimeupdate = (e) => {
-            this.tracklist.getCurrentTrack().setCurrentTime(e.target.currentTime);
+        this.audioElem.ontimeupdate = (evt) => {
+            this.tracklist.getCurrentTrack().setCurrentTime(evt.target.currentTime);
         };
 
         this.playBtn.addEventListener('click', function(evt) {
@@ -546,6 +592,8 @@ AudioPlayer.prototype = {
             evt.preventDefault();
             this.btnRepeat();
         }.bind(this));
+
+        this.shuffleBtn.addEventListener('click', this.shuffle.bind(this));
 
         this.progressBarDiv.addEventListener('mouseenter', (evt) => {
             percentWidth = this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv) * 100;
@@ -589,12 +637,10 @@ AudioPlayer.prototype = {
     },
     seek(evt, mouseUp) {
         percentWidth = this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv);
-        
         this.disableProgress = mouseUp;
 
         if (!mouseUp)
             this.audioElem.currentTime = this.tracklist.getCurrentTrack().trackDuration * percentWidth;
-        
         this._updateProgressBar(percentWidth  * 100, this.progressBar.bind(this, this.audioElem));
     },
     changeVolume(evt, mouseUp) {
@@ -616,7 +662,11 @@ AudioPlayer.prototype = {
     setTrackList(tracklist) {
         this.tracklist = tracklist;
     },
+    getTrackList() {
+        return this.tracklist;
+    },
     setPlayerSong(track, autoPlay) {
+        console.log('setPlayerSong', track, autoPlay);
         this.currentTrack = track;
         this.currentTrack.isPlaying = autoPlay;
         this.audioElem.src = `/static/${track.trackUUid}.mp3`;
@@ -685,6 +735,18 @@ AudioPlayer.prototype = {
         this.audioElem.volume = volume;
         this._updateVolumeBar(volume);
     },
+    shuffle(evt) {
+        evt.preventDefault();
+        console.log('shuffle!', this.isPaused);
+        this.tracklist.shuffle(!this.isPaused);
+        if (this.isPaused)
+            this.setCurrentTrackFromTrackList(false);
+        this._setShuffleBtnStyle(this.tracklist.isShuffle);
+        this.audioPlayerEvents.trigger('onShuffle');
+    },
+    onShuffle(cb) {
+        this.audioPlayerEvents.onEventRegister(cb, 'onShuffle');
+    },
     increasVolume() {
         let volume = this.audioElem.volume + this.volumeStep;
         this.setVolume(volume); 
@@ -703,7 +765,6 @@ AudioPlayer.prototype = {
     updateTrackTime() {
         const currentTrack = this.tracklist.getCurrentTrack();
         let formatedTrackTime;
-        
         if (this.displayTrackTimeMode == 0)
             formatedTrackTime = currentTrack.getTrackDuration(true);
         else if (this.displayTrackTimeMode == 1)
@@ -801,6 +862,11 @@ AudioPlayer.prototype = {
             this.repeatElemGlyph.classList.add('repeat-active');
         }
     },
+    _setShuffleBtnStyle(isShuffle) {
+        if (!isShuffle)
+            return this.shuffleBtn.classList.remove('repeat-active');
+        return this.shuffleBtn.classList.add('repeat-active');
+    },
     _updateVolumeBar(volume) {
         toHundredVolume = volume * 100;
         this.volumeVal.innerText = Math.round(toHundredVolume).toString();
@@ -841,7 +907,8 @@ const FileBrowser = function(player, api) {
     this.historyIndex = 0;
     this.player = player;
     this.overlayDiv.addEventListener('click', this.closeFileBrowser.bind(this));
-}
+    this.folderBrowserEvent = new ListEvents();
+};
 FileBrowser.prototype = {
     closeFileBrowser(evt) {
         if (evt.target != evt.currentTarget)
@@ -860,9 +927,8 @@ FileBrowser.prototype = {
             let baseDirArray = this.baseDir.split('/');
             baseDirArray.splice((baseDirArray.length - 2), 1);
             this.baseDir = baseDirArray.join('/');
-        } else {
+        } else
             this.baseDir += folderName;
-        }
 
         console.log('baseDir', this.baseDir);
         clearElementInnerHTML(this.folderListBox);
@@ -876,15 +942,14 @@ FileBrowser.prototype = {
         let fileName = target.innerText.trim();
         console.log('filename', fileName);
         this.api.addTrack(fileName, this.baseDir + fileName, function(res) {
-            let track = new Track(trackInfo['track'], trackInfo['ID3']),
-                id3Tags = trackInfo['ID3'];
+            let track = new Track(res['track'], res['ID3']),
+                id3Tags = res['ID3'];
             track.setTrackDuration(id3Tags.duration);
             this.player.tracklist.addTrackToList(track);
-            this.player.max++;
+            this.folderBrowserEvent.trigger('onSongAdded', [track, this.player.getTrackList().getTracksNumber()]);
         }.bind(this));
     },
     fileBrowserCB(res) {
-        console.log("res", res);
         this.overlayDiv.style.display = 'block';
         this.fileExplorerBox.style.display = 'block';
         this.basePathBox.innerText = res['base_dir'];
@@ -911,8 +976,14 @@ FileBrowser.prototype = {
     },
     loadFileBrowser() {
         this.api.browseFiles(this.baseDir, this.fileBrowserCB.bind(this))
-    }
+    },
+    onSongAdded(cb) {
+        this.folderBrowserEvent.onEventRegister((track, idx) => {
+            cb(track, idx);
+        }, 'onSongAdded');
+    },
 };
+
 
 const TrackListBrowser = function(tracklist, player) {
     this.overlayDiv = document.querySelector('.cnt-overlay');
@@ -924,6 +995,7 @@ const TrackListBrowser = function(tracklist, player) {
     this.player = player;
     this.loaded = false;
     this.player.onPlayerSongChange(this.setCurrentPlayingTrack.bind(this));
+    this.player.onShuffle(this.unload.bind(this));
     this.itemsPerPage = 20;
     this.overlayDiv.addEventListener('click', this.closeTrackExplorer.bind(this));
 };
@@ -937,11 +1009,16 @@ TrackListBrowser.prototype = {
     setTrackList(tracklist) {
         this.tracklist = tracklist;
     },
+    addTrackToList(track, idx) {
+        this._makeTracklistHTML(track, idx, idx % 2 == 0);
+    },
     load() {
         if (!this.loaded) {
             this.displayTracklList(0);
             this.loaded = true;
         }
+        this.trackExplorerBox.style.display = 'block';
+        this.overlayDiv.style.display = 'block';
     },
     displayTracklList(pageNumbre) {
         let tracklist = this.tracklist.getTrackList();
@@ -950,9 +1027,6 @@ TrackListBrowser.prototype = {
             let track = tracklist[x];
             this._makeTracklistHTML(track, x, x % 2 == 0)
         }
-
-        this.trackExplorerBox.style.display = 'block';
-        this.overlayDiv.style.display = 'block';
     },
     playSongFromTracklist(trackIndex) {
         this.tracklist.setTrackIndex(trackIndex, true);
@@ -971,11 +1045,12 @@ TrackListBrowser.prototype = {
         const currentlyPlaying = document.querySelector('tr.currently-playing');
         if (currentlyPlaying)
             currentlyPlaying.classList.remove('currently-playing');
-        for (const el of this.tableBodyElem.children) {
-            console.log('el', el);
-            if (el.dataset.trackId != trackUUid)
+        const trELements = this.tableBodyElem.children;
+        for (let i = 0; i < trELements.length; ++i) {
+            let tr = trELements[i];
+            if (tr.dataset.trackId != trackUUid)
                 continue;
-            el.classList.add('currently-playing');
+            tr.classList.add('currently-playing');
             break;
         };
     },
@@ -1004,9 +1079,9 @@ TrackListBrowser.prototype = {
         tdArtist.innerHTML = track.getArtist();
         tdAlbum.innerHTML = track.getAlbum();
         tdDuration.innerHTML = track.formatTrackDuration();
-        tdAction.innerHTML = `<span data-track-id="${trackUUid}" class="track-actions">&hellip;</span>`;
+        tdAction.innerHTML = `<span data-track-id="${trackUUid}" class="track-actions"><i class="fa-solid fa-ellipsis"></i></span>`;
         tdNumber.classList.add('small-cell');
-        // tdAction.classList.add('small-cell');
+        tdDuration.classList.add('small-cell');
         tr.appendChild(tdNumber);
         tr.appendChild(tdTitle);
         tr.appendChild(tdArtist);
@@ -1016,13 +1091,36 @@ TrackListBrowser.prototype = {
 
         this.tableBodyElem.appendChild(tr);
     },
-    _unload() {
-        if (this.loaded) {
-            clearElementInnerHTML(this.tableBodyElem);
-            this.loaded = false;
-        }
+    unload() {
+        clearElementInnerHTML(this.tableBodyElem);
+        this.loaded = false;
+        this.trackExplorerBox.style.display = 'none';
+        this.overlayDiv.style.display = 'none';
     }
 };
+
+
+const Drawing = function(canvas) {
+    this.canvas = canvas; //document.createElement("canvas");
+};
+Drawing.prototype = {
+    setUp() {
+        this.canvas.width = window.innerWidth - 36;
+        this.canvas.height = window.innerHeight - 204;
+        this.canvas.style.display = 'block';
+        this.canvas.style.margin = 'auto';
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth - 36;
+            canvas.height = window.innerHeight - 204;
+        });
+        
+        document.body.appendChild(canvas);
+        this.canvasCtx = canvas.getContext("2d");
+        canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+    },
+};
+
 
 (function(window, document, undefined) {
     const tracklist = new TrackList();
@@ -1035,13 +1133,12 @@ TrackListBrowser.prototype = {
         imgList.push(...res['img_list']);
         audioPlayer.init();
         const fileBrowser = new FileBrowser(audioPlayer, api);
-        
+        fileBrowser.onSongAdded(trackListBrowser.addTrackToList.bind(trackListBrowser))
         document.querySelector('#file-browser-action button.open-file-browser').addEventListener('click', fileBrowser.loadFileBrowser.bind(fileBrowser));
         document.querySelector('#file-browser-action button.open-tracklist-browser').addEventListener('click', (evt) => {
             trackListBrowser.setTrackList(tracklist);
             trackListBrowser.load();
         });
-        console.log('imgList1', imgList);
         draw(0, true, 0);
     });
 
@@ -1079,10 +1176,9 @@ TrackListBrowser.prototype = {
     let background = new Image();
     background.src = `http://localhost:8888/static/${curImg}`;
 
-    // Make sure the image is loaded first otherwise nothing will draw.
     background.onload = function() {
         console.log('img loaded', background.width, background.height, canvas.width, canvas.height);
-        let width, height, x, y = 0;
+        let width = 0, height = 0, x = 0, y = 0;
         //let coef = (canvas.width / background.width) * .8;
         let coef = (canvas.height / background.height) * 1.05;
         width =  background.width * coef;
@@ -1139,11 +1235,11 @@ TrackListBrowser.prototype = {
         //Draw spectrum
         const barWidth = (canvas.width / bufferLength) * 1; //2.2;
         let posX = 0, posY = 0;
+        const dateText = getFormatedDate();
         for (let i = 0; i < bufferLength; i++) {
             let audioValue = dataArray[i];
             const barHeight = (audioValue + 140) * 2;
             posY = canvas.height - barHeight * 2 
-            //${Math.floor(255 - (barHeight + 60))} - ${parseInt(50 * Math.random())}
             canvasCtx.fillStyle = `rgb(${Math.floor((barHeight / 1.4) + 140)}, 50, 50, 0.66)`;
             canvasCtx.fillRect(
                 posX,
@@ -1151,6 +1247,10 @@ TrackListBrowser.prototype = {
                 barWidth,
                 barHeight * 2,
             );
+            canvasCtx.font = "26px sans-serif";
+            canvasCtx.textAlign = 'left';
+            canvasCtx.fillStyle = `#f1f1f1`;
+            canvasCtx.fillText(dateText, 10, 36);
             /*canvasCtx.font = "15px sans-serif";
             canvasCtx.textAlign = 'center';
             canvasCtx.fillStyle = `#f1f1f1`;
@@ -1158,7 +1258,4 @@ TrackListBrowser.prototype = {
             posX += barWidth + 1;
         }
     };
-
-    
-
 })(this, document);
