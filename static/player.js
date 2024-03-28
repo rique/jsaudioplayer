@@ -364,6 +364,7 @@ Track.prototype = {
 
 const TrackList = function(tracklist) {
     this.tracklist = tracklist || [];
+    this.tracklistShuffle = [];
     this.trackIndex = 0;
     this.tracksNumber = this.tracklist.length;
     this.tracklistTotalDuration = 0;
@@ -403,7 +404,6 @@ TrackList.prototype = {
         this.addToTrackListTotalDuration(track.getTrackDuration());
     },
     addToQueue(track) {
-        console.log('addToQueue', track)
         this.addedToQueue.push(track);
         this.trackListEvents.trigger('onAddedToQueue');
     },
@@ -455,9 +455,9 @@ TrackList.prototype = {
         this.trackIndex = 0;
         this._setCurrentTrack();
     },
-    setTrackIndex(indexVal, setCurTrack) {
+    setTrackIndex(indexVal, doSetCurTrack) {
         this.trackIndex = indexVal;
-        if (setCurTrack === true)
+        if (doSetCurTrack === true)
             this._setCurrentTrack();
         this.trackListEvents.trigger('onIndexChange');
     },
@@ -469,9 +469,9 @@ TrackList.prototype = {
     },
     shuffle(conserveCurrentTrack) {
         if (this.isShuffle) {
-            this.tracklistShuffle = undefined;
+            this.tracklistShuffle = [];
             this.isShuffle = false;
-            this.setTrackIndex(this.tracklist.findIndex(trk => trk.trackUUid == this.getCurrentTrack().trackUUid), true);
+            this.setTrackIndex(this.getTrackIndexByTrack(this.getCurrentTrack()));
         } else {
             let trackIndex;
             if (conserveCurrentTrack === true)
@@ -487,11 +487,10 @@ TrackList.prototype = {
     addToTrackListTotalDuration(duration) {
         this.tracklistTotalDuration += duration;
     },
-    getTrackListTotalDuration() {
+    getTrackListTotalDuration(formated) {
+        if (formated) 
+            return this._formatTime(this.tracklistTotalDuration);
         return this.tracklistTotalDuration;
-    },
-    getFormatedTracklistDuration() {
-        return this._formatTime(this.getTrackListTotalDuration());
     },
     _setCurrentTrack() {
         this.currentTrack = this.getTrackList()[this.trackIndex];
@@ -589,49 +588,20 @@ const AudioPlayer = function(tracklist, api) {
 };
 AudioPlayer.prototype = {
     init() {
-        this.audioElem.autoplay = false;
-        this.audioElem.preload = "auto";
-        this.audioElem.onloadedmetadata = this.onAudioLoaded.bind(this);
-        this.audioElem.onended = this.onAudioEnded.bind(this);
-        this.audioElem.ontimeupdate = (evt) => {
-            this.tracklist.getCurrentTrack().setCurrentTime(evt.target.currentTime);
-        };
+        this._setUpPlayer();
 
-        this.playBtn.addEventListener('click', function(evt) {
-            evt.preventDefault();
-            this.playPause();
-        }.bind(this));
-
-        this.stopBtn.addEventListener('click', function(evt) {
-            evt.preventDefault();
-            this.stop();
-        }.bind(this));
-
-        this.prevBtn.addEventListener('click', function(evt) {
-            evt.preventDefault();
-            this.prev();
-        }.bind(this));
-
-        this.nextBtn.addEventListener('click', function(evt) {
-            evt.preventDefault();
-            this.next();
-        }.bind(this));
-
-        this.repeatElem.addEventListener('click', function(evt) {
-            evt.preventDefault();
-            this.btnRepeat();
-        }.bind(this));
+        this._setUpPlayerControls();
 
         this.shuffleBtn.addEventListener('click', this.shuffle.bind(this));
 
         this.progressBarDiv.addEventListener('mouseenter', (evt) => {
             percentWidth = this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv) * 100;
-            this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(255, 143, 143, 0.52) ${percentWidth}%, #181717 ${percentWidth}%)`;
+            this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(3, 207, 252, 0.6) ${percentWidth}%, #181717 ${percentWidth}%)`;
         });
 
-        this.progressBarDiv.addEventListener('mousemove', (evt) => {
+        this.progressBarDiv.addEventListener('mousemove', (evt) => {//3, 207, 252 - 255, 143, 143
             percentWidth = (this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv) * 100).toFixed(2);
-            this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(255, 143, 143, 0.52) ${percentWidth}%, #181717 ${percentWidth}%)`;
+            this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(3, 207, 252, 0.6) ${percentWidth}%, #181717 ${percentWidth}%)`;
         });
 
         this.progressBarDiv.addEventListener('mouseleave', () => {
@@ -701,7 +671,7 @@ AudioPlayer.prototype = {
         this.currentTrack = track;
         this.currentTrack.isPlaying = autoPlay;
         this.audioElem.src = `/static/${track.trackUUid}.mp3`;
-        this.audioElem.onloadedmetadata = this.onAudioLoaded.bind(this);
+        this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
         this.audioPlayerEvents.trigger('playerSongChange');
         if (autoPlay === true)
             return this.play();
@@ -811,7 +781,7 @@ AudioPlayer.prototype = {
         
         this.timeTrackElem.innerText = ` - [${formatedTrackTime}]`;
     },
-    onAudioLoaded(evt) {
+    audioLoaded(evt) {
         let audioElem = evt.target;
         console.log('duration', audioElem.duration, 'volume', audioElem.volume);
         this.progressBar(audioElem);
@@ -825,7 +795,7 @@ AudioPlayer.prototype = {
             this._updateProgressBar(percentProg.toFixed(2), this.progressBar.bind(this, audioELem));
         }
     },
-    onAudioEnded() {
+    audioEnded() {
         let autoPlay, hasQueue = this.tracklist.hasQueue();
         if (this.tracklist.isLastTrack() && !hasQueue) {
             if (!this.repeatMode >= 1) {
@@ -848,6 +818,41 @@ AudioPlayer.prototype = {
     },
     loadID3Tags(track) {
         this._manageTags(track.getID3Tags());
+    },
+    _setUpPlayer() {
+        this.audioElem.autoplay = false;
+        this.audioElem.preload = "auto";
+        this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
+        this.audioElem.onended = this.audioEnded.bind(this);
+        this.audioElem.ontimeupdate = (evt) => {
+            this.tracklist.getCurrentTrack().setCurrentTime(evt.target.currentTime);
+        };
+    },
+    _setUpPlayerControls() {
+        this.playBtn.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            this.playPause();
+        });
+
+        this.stopBtn.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            this.stop();
+        });
+
+        this.prevBtn.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            this.prev();
+        });
+
+        this.nextBtn.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            this.next();
+        });
+
+        this.repeatElem.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            this.btnRepeat();
+        });
     },
     _manageTags(tags) {
         let currentTrack = this.tracklist.getCurrentTrack();
@@ -1121,7 +1126,7 @@ TrackListBrowser.prototype = {
         const nbTracksElem = document.querySelector('.tracklist-info-cnt .tracklist-info-nb .nb-tracks');
         const totalDurationElem = document.querySelector('.tracklist-info-cnt .tracklist-info-duration .duration-tracks');
         nbTracksElem.innerText = this.tracklist.getTracksNumber();
-        totalDurationElem.innerText = this.tracklist.getFormatedTracklistDuration();
+        totalDurationElem.innerText = this.tracklist.getTrackListTotalDuration(true);
     },
     _makeTracklistHTML(track, x, isEven) {
         let tr = document.createElement('tr');
