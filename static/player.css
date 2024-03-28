@@ -26,7 +26,8 @@ ul {
 }
 #foto-box, #album-art {
     width: 100px;
-    padding-top: 12px;
+    margin-top: 5px;
+    border-radius: 4%;
 }
 
 #cotrols {
@@ -231,6 +232,8 @@ ul {
 .track-actions {
     display: block;
     text-align: center;
+    position: relative;
+    border-radius: 3px;
 }
 
 .track-actions:hover {
@@ -268,12 +271,80 @@ ul {
     background: #f7f8f8;
     color: #302d2d;
     user-select: none;
+    margin-bottom: 10px;
+}
+
+.tracklist-content-div {
+    height: 34px;
+    padding: 6px;
+    background: transparent;
+}
+
+.tracklist-content-div  .tracklist-info-cnt {
+	margin: 35px 0;
+	background: #282626;
+}
+
+.tracklist-content-div .tracklist-info-nb,
+.tracklist-content-div .tracklist-info-duration {
+    width: 50%;
+    display: inline-block;
+    text-align: center;
+}
+
+.tracklist-content-div .tracklist-info-nb .nb-tracks,
+.tracklist-content-div .tracklist-info-duration .duration-tracks {
+	margin: 0 14px 0 0;
+	display: inline-block;
 }
 
 .tracklist-head {
     height: 7%;
     text-align: center;
     font-size: 22px;
+}
+
+.tracklist-search {
+    width: 30%;
+    text-align: center;
+}
+
+.tracklist-title {
+    width: 70%;
+    text-align: left;
+}
+
+.tracklist-search .img-cnt {
+    width: 7%;
+    padding-top: 10px;
+    height: 25px;
+    cursor: pointer;
+}
+
+.tracklist-search .input-cnt {
+    width: 80%;
+    visibility: hidden;
+}
+
+.search-input {
+    width: 170px;
+    background: #f7f8f8;
+    color: #252525;
+    display: inline-block;
+    border-radius: 10px;
+    padding: 1px;
+    margin-left: -46%;
+    font-family: Arial, Helvetica, sans-serif;
+    padding: 1px;
+}
+
+.tracklist-search li, 
+.tracklist-search img {
+    color: #f7f8f8;
+}
+
+.tracklist-search img {
+    width: 24px;
 }
 
 tr.currently-playing {
@@ -337,3 +408,38 @@ li.fa-solid.fa-file {
 #file-browser-action button:hover {
     background: #056da5;
 }
+
+.action-menu-cnt {
+    position: absolute;
+    padding: 10px;
+    z-index: 200;
+    top: 101%;
+    left: -370%;
+    background: #444;
+    color: #eee;
+    width: 149px;
+    text-align: left;
+}
+
+.action-menu-cnt ul li {
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.action-menu-cnt ul {
+    width: 100%;
+}
+
+.action-menu-cnt ul li {
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.action-menu-cnt ul li:hover {
+    color: #53f7ff;
+}
+
+.action-menu-cnt .fa-solid.fa-ellipsis {
+    width: 100%;
+    height: 100%;
+  }

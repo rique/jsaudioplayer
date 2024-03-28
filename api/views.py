@@ -115,7 +115,8 @@ def loadTrackList(request):
     
     tracks = Tracks.objects.filter().all()
     tracklist = []
-
+    nb_tracks = len(tracks)
+    duration = 0
     for trk in tracks:
         audio = ID3(f'./static/{trk.track_uuid}.mp3')
         mp3_file = MP3(f'./static/{trk.track_uuid}.mp3')
@@ -143,7 +144,7 @@ def loadTrackList(request):
                         apict = b64encode(APIC.data).decode('ASCII')
                         pic_format = APIC.mime
                         break
-
+        duration += mp3_file.info.length
         tracklist.append({'track': trk.__dict__, 'ID3': {
             'title': title,
             'artist': artist,
@@ -152,9 +153,12 @@ def loadTrackList(request):
             'duration': mp3_file.info.length
         } })
 
+    print('duration', duration)
     return JsonResponse(data={
         'success': True,
-        'tracklist': tracklist
+        'nb_tracks': nb_tracks,
+        'total_duration': duration,
+        'tracklist': tracklist,
     })
 
 

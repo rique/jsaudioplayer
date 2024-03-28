@@ -47,8 +47,9 @@ const shuffle = (array) => {
 
 
 const getFormatedDate = () => {
-    const d = new Date();
-    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
+    const DateTime = luxon.DateTime;
+    const d = DateTime.now().setZone('Europe/Paris');
+    return d.setLocale('es').toLocaleString(DateTime.TIME_WITH_SECONDS);
 }
 
 
@@ -245,19 +246,12 @@ Api.prototype = {
 
 
 const ID3Tags = function(tags) {
-    this.jsmediatags = window.jsmediatags;
     this.tags = tags;
-    this.artist = false;
-    this.album = false;
-    this.title = false;
     this.picture = [];
 
     this._manageTags(tags);
 };
 ID3Tags.prototype = {
-    loadID3TagsFromTrack(track, cb) {
-        this._loadID3Tags(track.trackUUid, cb);
-    },
     getArtist() {
         return this.artist;
     },
@@ -270,37 +264,19 @@ ID3Tags.prototype = {
     getAlbumArt() {
         return this.picture;
     },
+    getDuration() {
+        return this.duration;
+    },
     getTags() {
         return this.tags;
     },
-    _loadID3Tags(song, cb) {
-        this.jsmediatags.read(`http://localhost:8888/static/${song}.mp3`, {
-            onSuccess: (tags) => {
-                this._manageTags.bind(this)(tags, cb);
-            },
-            onError(error) {
-                console.error(':(', error);
-            }
-        });
-    },
-    _manageTags(tags, cb) {
-
+    _manageTags(tags) {
         this.title = tags.title;
-        if (typeof this.title === 'undefined' || this.title.length == 0)
-            this.title = false;
-        
-        this.album = false;
-
-        if (tags.album)
-            this.album = tags.album;
-        
+        this.album = tags.album;
         this.artist = tags.artist;
-        
-        if (typeof this.artist === 'undefined' || this.artist.length == 0)
-            this.artist = false;
-        if (!tags.hasOwnProperty('picture'))
-            this.picture = false;
-        else {
+        this.duration = tags.duration;
+
+        if (tags.hasOwnProperty('picture')) {
             const { data, format } = tags.picture;
             let dataLen = data.length;
 
@@ -308,21 +284,16 @@ ID3Tags.prototype = {
                 return this.picture = false;
             this.picture = [data, format];
         }
-
-        if (typeof cb === 'function')
-            cb(this);
     }
 };
 
-const Track = function(trackInfo, ID3) {
+const Track = function(trackInfo) {
     this.trackName = trackInfo.track_name;
     this.trackUUid = trackInfo.track_uuid;
     this.trackOriginalPath = trackInfo.track_original_path;
     this.trackDuration = undefined;
     this.currentTime = 0;
     this.isPlaying = false;
-    this._id3TagsInstance = new ID3Tags(ID3);
-    this.id3Tags = ID3;
 };
 Track.prototype = {
     setTrackDuration(duration) {
@@ -349,9 +320,10 @@ Track.prototype = {
     },
     formatTrackDuration() {
         if (typeof this.trackDuration === 'undefined') {
-            if (this.id3Tags === null)
+            const id3Tags = this.getID3Tags();
+            if (!id3Tags)
                 return;
-            this.duration = this.id3Tags.duration;
+            this.duration = id3Tags.duration;
         }
         return this._formatTime(this.trackDuration);
     },
@@ -362,7 +334,10 @@ Track.prototype = {
         return this._id3TagsInstance.getArtist();
     },
     getTitle() {
-        return this._id3TagsInstance.getTitle();
+        const title = this._id3TagsInstance.getTitle();
+        if (typeof title === 'undefined' || title.length == '')
+            return this.trackName;
+        return title;
     },
     getAlbum() {
         return this._id3TagsInstance.getAlbum();
@@ -371,10 +346,10 @@ Track.prototype = {
         return this._id3TagsInstance.getAlbumArt();
     },
     getID3Tags() {
-        return this.id3Tags;
+        return this._id3TagsInstance.getTags();
     },
-    setID3Tags(tags) {
-        this.id3Tags = tags;
+    setID3Tags(id3Tags) {
+        this._id3TagsInstance = id3Tags;
     },
     _formatTime(millisecTime) {
         let secs = '0', mins = '0';
@@ -391,6 +366,7 @@ const TrackList = function(tracklist) {
     this.tracklist = tracklist || [];
     this.trackIndex = 0;
     this.tracksNumber = this.tracklist.length;
+    this.tracklistTotalDuration = 0;
     this.trackListEvents = new ListEvents();
     this.isShuffle = false;
     if (this.tracklist.length > 0) {
@@ -400,6 +376,7 @@ const TrackList = function(tracklist) {
         this.currentTrack = null;
         this.trackIndexMax = 0;
     }
+    this.addedToQueue = [];
 }
 TrackList.prototype = {
     getTrackList() {
@@ -423,6 +400,29 @@ TrackList.prototype = {
             this.tracklistShuffle.push(track);
         ++this.tracksNumber;
         this.trackIndexMax = this.tracksNumber - 1;
+        this.addToTrackListTotalDuration(track.getTrackDuration());
+    },
+    addToQueue(track) {
+        console.log('addToQueue', track)
+        this.addedToQueue.push(track);
+        this.trackListEvents.trigger('onAddedToQueue');
+    },
+    hasQueue() {
+        return this.addedToQueue.length > 0;
+    },
+    getQueue() {
+        return this.addedToQueue;
+    },
+    nextInQueue() {
+        if (this.addedToQueue.length == 0) {
+            console.error('No tracks left in queue');
+            return this.getCurrentTrack();
+        }
+        this.currentTrack = this.addedToQueue.splice(0, 1)[0];
+        return this.currentTrack;
+    },
+    onAddedToQueue(cb) {
+        this.trackListEvents.onEventRegister(cb, 'onAddedToQueue');
     },
     getCurrentTrack() {
         if (this.currentTrack != null)
@@ -430,6 +430,13 @@ TrackList.prototype = {
         if (this.tracksNumber > 0)
             return this.getTrackList()[this.trackIndex];
         return null;
+    },
+    getTrackByUUID(trackUUid) {
+        let tracks = this.tracklist.filter(trk => trk.trackUUid == trackUUid);
+        if (tracks.length == 0)
+            return;
+
+        return tracks[0];
     },
     nextTrack() {
         this._advanceTrackIndex();
@@ -474,6 +481,18 @@ TrackList.prototype = {
             this.setTrackIndex(0, true);
         }
     },
+    setTrackListTotalDuration(duration) {
+        this.tracklistTotalDuration = duration;
+    },
+    addToTrackListTotalDuration(duration) {
+        this.tracklistTotalDuration += duration;
+    },
+    getTrackListTotalDuration() {
+        return this.tracklistTotalDuration;
+    },
+    getFormatedTracklistDuration() {
+        return this._formatTime(this.getTrackListTotalDuration());
+    },
     _setCurrentTrack() {
         this.currentTrack = this.getTrackList()[this.trackIndex];
     },
@@ -502,6 +521,16 @@ TrackList.prototype = {
         if (track)
             tracklist.splice(0, 0, track);
         return tracklist;
+    },
+    _formatTime(secTime) {
+        console.log('secTime', secTime);
+        let secs = '0', mins = '0', houres = '0';
+        if (!isNaN(secTime)) {
+            houres = parseInt(secTime / 3600).toString();
+            secs = parseInt(secTime % 60).toString();
+            mins = parseInt((secTime % 3600) / 60).toString();
+        }
+        return `${houres.padStart(2, '0')}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')}`
     }
 };
 
@@ -626,12 +655,15 @@ AudioPlayer.prototype = {
         this._setRepeatBtnStyle();
 
         this.api.loadTrackList(function(res) {
-            for (trackInfo of res['tracklist']) {
-                let track = new Track(trackInfo['track'], trackInfo['ID3']),
-                    id3Tags = trackInfo['ID3'];
-                track.setTrackDuration(id3Tags.duration);
+            for (let i in res['tracklist']) {
+                let trackInfo = res['tracklist'][i];
+                let track = new Track(trackInfo['track']),
+                    id3Tags = new ID3Tags(trackInfo['ID3']);
+                track.setID3Tags(id3Tags);
+                track.setTrackDuration(id3Tags.getDuration());
                 this.tracklist.addTrackToList(track);
             }
+            // this.tracklist.setTrackListTotalDuration(res['total_duration']);
             this.setCurrentTrackFromTrackList(false);
         }.bind(this));
     },
@@ -666,7 +698,6 @@ AudioPlayer.prototype = {
         return this.tracklist;
     },
     setPlayerSong(track, autoPlay) {
-        console.log('setPlayerSong', track, autoPlay);
         this.currentTrack = track;
         this.currentTrack.isPlaying = autoPlay;
         this.audioElem.src = `/static/${track.trackUUid}.mp3`;
@@ -706,7 +737,8 @@ AudioPlayer.prototype = {
         this.audioElem.currentTime = 0;
     },
     next() {
-        this.tracklist.nextTrack();
+        if (!this.tracklist.hasQueue())
+            this.tracklist.nextTrack();
         this.setCurrentTrackFromTrackList(true);
         this.play();
     },
@@ -714,7 +746,8 @@ AudioPlayer.prototype = {
         if (this.audioElem.currentTime > 3.6) {
             this.audioElem.currentTime = 0;
         } else {
-            this.tracklist.previousTrack();
+            if (!this.tracklist.hasQueue())
+                this.tracklist.previousTrack();
             this.setCurrentTrackFromTrackList(true);
         }
         this.play();
@@ -756,7 +789,11 @@ AudioPlayer.prototype = {
         this.setVolume(volume);
     },
     setCurrentTrackFromTrackList(autoPlay) {
-        let track = this.tracklist.getCurrentTrack();
+        let track;
+        if (this.tracklist.hasQueue())
+            track = this.tracklist.nextInQueue();
+        else
+            track = this.tracklist.getCurrentTrack();
         console.log('playing song', track);
 
         this.loadID3Tags(track);
@@ -789,8 +826,8 @@ AudioPlayer.prototype = {
         }
     },
     onAudioEnded() {
-        let autoPlay;
-        if (this.tracklist.isLastTrack()) {
+        let autoPlay, hasQueue = this.tracklist.hasQueue();
+        if (this.tracklist.isLastTrack() && !hasQueue) {
             if (!this.repeatMode >= 1) {
                 console.log('End of session');
                 this.tracklist.nextTrack();
@@ -802,7 +839,7 @@ AudioPlayer.prototype = {
                     this.tracklist.resetTrackListIndex();
             }
         } else  {
-            if (this.repeatMode != 2)
+            if (this.repeatMode != 2 && !hasQueue)
                 this.tracklist.nextTrack();
              autoPlay = true;
         }
@@ -827,7 +864,7 @@ AudioPlayer.prototype = {
         
         if (!artist || typeof artist === 'undefined' || artist.length == 0)
             artist = 'N/A';
-        console.log('trackResult', title, artist, album);
+
         let trackTime = currentTrack.getTrackDuration(true); 
 
         this.timeTrackElem.innerText = ` - [${trackTime}]`;
@@ -845,8 +882,6 @@ AudioPlayer.prototype = {
         if (dataLen == 0)
             return this.albumImg.src = "/static/albumart.jpg";
         
-        // data.map((x) => String.fromCharCode(x)); 
-        // this.albumImg.src = `data:${format};base64,${window.btoa(imgData.join(''))}`;
         let imgData = data;
         this.albumImg.src = `data:${format};base64,${imgData}`;
     },
@@ -930,7 +965,6 @@ FileBrowser.prototype = {
         } else
             this.baseDir += folderName;
 
-        console.log('baseDir', this.baseDir);
         clearElementInnerHTML(this.folderListBox);
         clearElementInnerHTML(this.fileListBox);
         this.historyIndex++;
@@ -940,13 +974,15 @@ FileBrowser.prototype = {
     fileSelector(evt) {
         let target = evt.target;
         let fileName = target.innerText.trim();
+        let tracklist = this.player.tracklist;
         console.log('filename', fileName);
         this.api.addTrack(fileName, this.baseDir + fileName, function(res) {
-            let track = new Track(res['track'], res['ID3']),
-                id3Tags = res['ID3'];
-            track.setTrackDuration(id3Tags.duration);
-            this.player.tracklist.addTrackToList(track);
-            this.folderBrowserEvent.trigger('onSongAdded', [track, this.player.getTrackList().getTracksNumber()]);
+            let track = new Track(res['track']),
+                id3Tags = new ID3Tags(res['ID3']);
+            track.setID3Tags(id3Tags);//addToTrackListTotalDuration
+            track.setTrackDuration(id3Tags.getDuration());
+            tracklist.addTrackToList(track);
+            this.folderBrowserEvent.trigger('onSongAdded', [track, this.player.getTrackList().getTracksNumber() - 1]);
         }.bind(this));
     },
     fileBrowserCB(res) {
@@ -994,6 +1030,9 @@ const TrackListBrowser = function(tracklist, player) {
     this.tracklist = tracklist;
     this.player = player;
     this.loaded = false;
+    this.trackSearch = new TrackSearch(this.tracklist);
+    this.trackSearch.onSearchResult(this.searchTrack.bind(this));
+    this.trackSearch.onSearchVisibilityChange(this.restoreTracklistFromSearch.bind(this));
     this.player.onPlayerSongChange(this.setCurrentPlayingTrack.bind(this));
     this.player.onShuffle(this.unload.bind(this));
     this.itemsPerPage = 20;
@@ -1012,34 +1051,58 @@ TrackListBrowser.prototype = {
     addTrackToList(track, idx) {
         this._makeTracklistHTML(track, idx, idx % 2 == 0);
     },
-    load() {
+    load(kept) {
         if (!this.loaded) {
-            this.displayTracklList(0);
-            this.loaded = true;
+            this.loaded = this.displayTracklList(0);
         }
-        this.trackExplorerBox.style.display = 'block';
-        this.overlayDiv.style.display = 'block';
+        if (!kept === true) {
+            this.trackExplorerBox.style.display = 'block';
+            this.overlayDiv.style.display = 'block';
+        }
+    },
+    unload(keep) {
+        clearElementInnerHTML(this.tableBodyElem);
+        this.loaded = false;
+        if (keep !== true) {
+            this.trackExplorerBox.style.display = 'none';
+            this.overlayDiv.style.display = 'none';
+        }
+    },
+    reload(keep) {
+        this.unload(keep);
+        this.load(keep);
     },
     displayTracklList(pageNumbre) {
         let tracklist = this.tracklist.getTrackList();
-
+        if (tracklist.length == 0)
+            return false
         for (x = 0; x < tracklist.length; ++x) {
             let track = tracklist[x];
             this._makeTracklistHTML(track, x, x % 2 == 0)
         }
+
+        return true
     },
     playSongFromTracklist(trackIndex) {
         this.tracklist.setTrackIndex(trackIndex, true);
     },
-    tracklistCallback(res, tracklist) {
-        for (let trackInfo of res['tracklist'])
-            tracklist.addTrackToList(new Track(trackInfo));
-
-        this.setTrackList(tracklist.getTrackList());
-        this.displayTracklList(0);
-    },
     setCurrentPlayingTrack(track) {
         this._setCurrentrackStyle(track.trackUUid);
+    },
+    searchTrack(tracks) {
+        if (tracks.length == 0)
+            return;
+        this.unload(true);
+        for (x = 0; x < tracks.length; ++x) {
+            let track = tracks[x];
+            this._makeTracklistHTML(track, x, x % 2 == 0);
+        }
+        this.loaded = true;
+    },
+    restoreTracklistFromSearch(visible) {
+        if (!visible) {
+            this.reload(true);
+        }
     },
     _setCurrentrackStyle(trackUUid) {
         const currentlyPlaying = document.querySelector('tr.currently-playing');
@@ -1053,6 +1116,12 @@ TrackListBrowser.prototype = {
             tr.classList.add('currently-playing');
             break;
         };
+    },
+    _displayTracklistInfo() {
+        const nbTracksElem = document.querySelector('.tracklist-info-cnt .tracklist-info-nb .nb-tracks');
+        const totalDurationElem = document.querySelector('.tracklist-info-cnt .tracklist-info-duration .duration-tracks');
+        nbTracksElem.innerText = this.tracklist.getTracksNumber();
+        totalDurationElem.innerText = this.tracklist.getFormatedTracklistDuration();
     },
     _makeTracklistHTML(track, x, isEven) {
         let tr = document.createElement('tr');
@@ -1073,15 +1142,27 @@ TrackListBrowser.prototype = {
             tdArtist = document.createElement('td'),
             tdAlbum = document.createElement('td'),
             tdDuration = document.createElement('td'),
-            tdAction = document.createElement('td');
+            tdAction = document.createElement('td'),
+            spanAction = document.createElement('span'),
+            liEllipsis = document.createElement('li');
+        spanAction.dataset.trackId = trackUUid;
+        spanAction.classList.add('track-actions');
+        liEllipsis.className = 'fa-solid fa-ellipsis';
+
         tdNumber.innerHTML = x + 1;
         tdTitle.innerHTML = track.getTitle();
         tdArtist.innerHTML = track.getArtist();
         tdAlbum.innerHTML = track.getAlbum();
         tdDuration.innerHTML = track.formatTrackDuration();
-        tdAction.innerHTML = `<span data-track-id="${trackUUid}" class="track-actions"><i class="fa-solid fa-ellipsis"></i></span>`;
+        // tdAction.innerHTML = `<span data-track-id="${trackUUid}" class="track-actions"><i class="fa-solid fa-ellipsis"></i></span>`;
+        
         tdNumber.classList.add('small-cell');
         tdDuration.classList.add('small-cell');
+
+        liEllipsis.addEventListener('click', this.showActionMenu.bind(this));
+        spanAction.appendChild(liEllipsis);
+        tdAction.appendChild(spanAction);
+
         tr.appendChild(tdNumber);
         tr.appendChild(tdTitle);
         tr.appendChild(tdArtist);
@@ -1090,14 +1171,129 @@ TrackListBrowser.prototype = {
         tr.appendChild(tdAction);
 
         this.tableBodyElem.appendChild(tr);
+
+        this._displayTracklistInfo();
     },
-    unload() {
-        clearElementInnerHTML(this.tableBodyElem);
-        this.loaded = false;
-        this.trackExplorerBox.style.display = 'none';
-        this.overlayDiv.style.display = 'none';
+    showActionMenu(evt) {
+        const target = evt.target;
+        const targetChildren = target.parentNode.getElementsByClassName('action-menu-cnt');
+
+        if (targetChildren.length > 0 ) {
+            return targetChildren[0].style.display = 'block';
+        }
+
+        const trackUUid = target.parentNode.dataset.trackId;
+        const divElem = document.createElement('div');
+        const ulAction = document.createElement('ul');
+        const liAddToQueue = document.createElement('li');
+        const liDelete = document.createElement('li');
+        const liFavorite = document.createElement('li');
+
+        divElem.className = 'action-menu-cnt';
+        divElem.dataset.trackId = trackUUid;
+
+        liAddToQueue.innerText = 'Add to queue';
+        liDelete.innerText = 'Remove track';
+        liFavorite.innerText = 'Add to favorites';
+
+        liAddToQueue.addEventListener('click', () => {
+            this.addToQueueAction(divElem, trackUUid);
+        });
+
+        liDelete.addEventListener('click', () => {
+            this.deleteTrackAction(liDelete, divElem, trackUUid);
+        });
+
+        liFavorite.addEventListener('click', () => {
+            this.addToFavoriteAction(liFavorite, divElem, trackUUid);
+        });
+
+        ulAction.appendChild(liAddToQueue);
+        ulAction.appendChild(liFavorite);
+        ulAction.appendChild(liDelete);
+        divElem.appendChild(ulAction);
+
+        divElem.addEventListener('mouseleave', (evt) => {
+            this.hideActionMenu(divElem);
+        });
+
+        target.parentNode.appendChild(divElem);
+    },
+    addToQueueAction(divElem, trackUUid) {
+        this.tracklist.addToQueue(this.tracklist.getTrackByUUID(trackUUid));
+        divElem.style.display = 'none';
+    },
+    deleteTrackAction(liDelete, divElem, trackUUid) {
+        console.log('not implemented', trackUUid);
+    },
+    addToFavoriteAction(liFavorite, divElem, trackUUid) {
+        console.log('not implemented', trackUUid);
+    },
+    hideActionMenu(divElem) {
+        const target = divElem;
+        console.log('hideActionMenu', target, target.children);
+        divElem.style.display = 'none';
     }
 };
+
+
+const TrackSearch = function(tracklist) {
+    this.tracklist = tracklist;
+    this.magGlassElem = document.querySelector('.tracklist-head .tracklist-search .img-cnt');
+    this.inputSearchElem = document.querySelector('.tracklist-head .tracklist-search .input-cnt');
+    this.searchInput = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
+    this.magGlassElem.addEventListener('click', this._toggleInputSearchVisibility.bind(this));
+    this.inputSearchElem.addEventListener('keydown', this.search.bind(this));
+    this.searchEvents = new ListEvents();
+    this.term = '';
+}
+TrackSearch.prototype = {
+    setTrackList(trackList) {
+        this.tracklist = trackList;
+    },
+    search(evt) {
+        if (evt.key == 'Backspace')
+            this.term = this.term.slice(0, this.term.length - 1);
+        else
+            this.term += evt.key;
+        this.result = this._searchTrack(this.term);
+        this.searchEvents.trigger('onSearchResult');
+        console.log(evt.key, evt.target.value, this.term, this.result);
+    },
+    onSearchResult(cb) {
+        this.searchEvents.onEventRegister(() => {
+            cb(this.result);
+        }, 'onSearchResult');
+    },
+    onSearchVisibilityChange(cb) {
+        this.searchEvents.onEventRegister(() => {
+            cb(this._isSearchVisible());
+        }, 'onSearchVisibilityChange');
+    },
+    _isSearchVisible() {
+        return this.inputSearchElem.style.visibility == 'visible';
+    },
+    _toggleInputSearchVisibility(evt) {
+        if (!this._isSearchVisible()) {
+            this.inputSearchElem.style.visibility = 'visible';
+            this.searchInput.focus();
+        } else {
+            this.inputSearchElem.style.visibility = 'hidden';
+            this.term = '';
+            this.searchInput.value = '';
+        }
+        this.searchEvents.trigger('onSearchVisibilityChange');
+    },
+    _searchTrack(term) {
+        let termLower = term.toLowerCase()
+        const tracklist = this.tracklist.getTrackList();
+        return tracklist.filter(trk => trk.trackUUid.includes(termLower) || 
+            trk.trackName.toLowerCase().includes(termLower) || 
+            (trk.getArtist() && trk.getArtist().toLowerCase().includes(termLower)) ||
+            (trk.getTitle() && trk.getTitle().toLowerCase().includes(termLower)) ||
+            (trk.getAlbum() && trk.getAlbum().toLowerCase().includes(termLower)))
+    },
+}
 
 
 const Drawing = function(canvas) {
@@ -1128,7 +1324,6 @@ Drawing.prototype = {
     const api = new Api();
     const audioPlayer = new AudioPlayer(tracklist, api);
     const trackListBrowser = new TrackListBrowser(tracklist, audioPlayer);
-
     api.loadBGImages(function(res) {
         imgList.push(...res['img_list']);
         audioPlayer.init();
@@ -1247,7 +1442,7 @@ Drawing.prototype = {
                 barWidth,
                 barHeight * 2,
             );
-            canvasCtx.font = "26px sans-serif";
+            canvasCtx.font = "25px sans-serif";
             canvasCtx.textAlign = 'left';
             canvasCtx.fillStyle = `#f1f1f1`;
             canvasCtx.fillText(dateText, 10, 36);

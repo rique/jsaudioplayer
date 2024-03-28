@@ -95,7 +95,8 @@
   </div>
   <div style="display: none;" class="track-browser">
     <div class="tracklist-head">
-        <p class="tracklist-title">Track list</p>
+      <!--<i class="fa-solid fa-magnifying-glass"></i>-->
+        <div class="tracklist-title inline-block">Track list</div><div class="tracklist-search inline-block"><div class="img-cnt inline-block"><img src="/static/mag-glass-white.png"></div><div style="visibility: hidden;" class="input-cnt inline-block"><input placeholder="Search for tracks" type="text" class="search-input"></div></div>
     </div>
     <div class="tracklist-content-div">
       <table class="tracklist-content">
@@ -108,11 +109,14 @@
           
         </tbody>
       </table>
+      <div class="tracklist-info-cnt">
+        <span class="tracklist-info-nb"><span class="nb-tracks">0</span> total track(s)</span><span class="tracklist-info-duration"><span class="duration-tracks">0</span> total duration</span>
+      </div>
     </div>
   </div>
 </div>
 {% endblock %}
 {% block scripts %}
-<script type="text/javascript" src="/static/jsmediatags.min.js"></script>
 <script type="text/javascript" src="/static/player.js"></script>
+<script src="/static/node_modules/luxon/src/luxonjs.js"></script>
 {% endblock %}
