@@ -31,7 +31,7 @@ ul {
 }
 
 #cotrols {
-    width: 28.7%;
+    width: 100%;
     height: auto;
 }
 
@@ -125,9 +125,10 @@ ul {
 }
 
 #main-volume-bar {
-    width: 70%;
-    margin-top: 10px;
+    width: 90%;
+    margin-top: 22px;
     height: 1px;
+    position: relative;
 }
 
 #main-volume-bar:hover, #main-volume-bar.volume-action {
@@ -258,12 +259,12 @@ ul {
 }
 
 .track-browser tbody tr:hover {
-    background: #0ca2ff;
+    background: #16a6ff;
     color: #f7f8f8;
 }
 
 .track-browser tbody td:hover {
-    background: #016bb7;
+    background: #0086da;
 }
 
 .track-browser table {
@@ -443,3 +444,35 @@ li.fa-solid.fa-file {
     width: 100%;
     height: 100%;
   }
+
+#main-left-menu {
+    height: 98%;
+    background: transparent;
+    width: 16%;
+    position: absolute;
+    right: -358px;
+    top: 0;
+}
+
+#open-menu {
+    width: 12%;
+    background: #181717;
+    font-size: 26px;
+    text-align: center;
+    padding: 5px 0;
+    cursor: pointer;
+    border-radius: 5px 0 0 5px;
+}
+
+
+#open-menu:hover, 
+.is-open #open-menu {
+    background: #272727;
+}
+
+#left-menu {
+    width: 80%;
+    height: 100%;
+    background: #272727;
+    padding: 8px 16px;
+}

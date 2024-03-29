@@ -11,10 +11,10 @@
       <div id="foto-box">
         <img src="/static/albumart.jpg" id="album-art">  
       </div><div id="track-box">
-        <p id="track-title"><span id="name-track">Hello 2</span><span id="name-album"></span><span id="time-track"></span></p>
-        <p id="artist-name">Hello 3</p>
+        <p id="track-title"><span id="name-track">No track</span><span id="name-album"></span><span id="time-track"></span></p>
+        <p id="artist-name"></p>
       </div>
-      <div id="cotrols" class="inline-block">
+      <!--<div id="cotrols" class="inline-block">
         <div id="file-browser-action">
           <button class="open-file-browser">Browse File</button>
           <button class="open-tracklist-browser">View tracks</button>
@@ -29,7 +29,7 @@
             <div id="main-volume-bar"><div id="volume-bar"></div></div>
           </div>
         </div>
-    </div>
+      </div>-->
     </div>
     <div id="player-controls">
       <div class="inline-block action-cnt" id="play-button">
@@ -38,13 +38,7 @@
             <i class="fa-solid fa-play"></i>
           </a>
         </span>
-      </div><!--<div class="inline-block action-cnt" id="pause-button">
-        <span>
-          <a href="" class="player-action">
-            <i class="fa-solid fa-pause"></i>
-          </a>
-        </span>
-      </div>--><div class="inline-block action-cnt" id="stop-button">
+      </div><div class="inline-block action-cnt" id="stop-button">
         <span>
           <a href="" class="player-action">
             <i class="fa-solid fa-stop"></i>
@@ -82,7 +76,28 @@
       <div id="prog-bar"></div>
     </div>
     <!--<canvas id="vu-meters"></canvas>-->
-    
+    <div id="main-left-menu">
+      <div id="open-menu" style="vertical-align: top;" class="inline-block">
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </div><div id="left-menu" style="vertical-align: top;" class="inline-block">
+        <div id="cotrols" class="inline-block">
+          <div id="file-browser-action">
+            <button class="open-file-browser">Browse File</button>
+            <button class="open-tracklist-browser">View tracks</button>
+          </div>
+          <div id="volume-control">
+            VOL : <span class="vol-up">
+              <i class="fa-solid fa-plus"></i>
+            </span><span class="vol-down">
+              <i class="fa-solid fa-minus"></i>
+            </span><span class="vol-val">100</span>
+            <div id="volume-bar-container">
+              <div id="main-volume-bar"><div id="volume-bar"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 <div style="display: none;" class="cnt-overlay">
@@ -96,7 +111,7 @@
   <div style="display: none;" class="track-browser">
     <div class="tracklist-head">
       <!--<i class="fa-solid fa-magnifying-glass"></i>-->
-        <div class="tracklist-title inline-block">Track list</div><div class="tracklist-search inline-block"><div class="img-cnt inline-block"><img src="/static/mag-glass-white.png"></div><div style="visibility: hidden;" class="input-cnt inline-block"><input placeholder="Search for tracks" type="text" class="search-input"></div></div>
+        <div class="tracklist-title inline-block">Track list</div><div class="tracklist-search inline-block"><div class="img-cnt inline-block"><img src="/static/mag-glass2-white.svg"></div><div style="visibility: hidden;" class="input-cnt inline-block"><input placeholder="Search for tracks" type="text" class="search-input"></div></div>
     </div>
     <div class="tracklist-content-div">
       <table class="tracklist-content">

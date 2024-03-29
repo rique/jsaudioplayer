@@ -1,5 +1,6 @@
 import subprocess
 import json
+import shlex
 from uuid import uuid4
 from base64 import b64encode
 
@@ -79,6 +80,27 @@ def addTrack(request):
     }})
 
 
+@csrf_exempt
+def deleteTrack(request):
+    if request.method != 'POST':
+        return JsonResponse(data={'success': False, 'code': 'wrong_method'}, status=405, reason="Method Not Allowed")
+
+    body_unicode = request.body.decode('utf-8')
+    params = json.loads(body_unicode)
+    track_uuid = params['track_uuid']
+    try:
+        track = Tracks.objects.get(track_uuid=track_uuid)
+    except Tracks.DoesNotExist:
+        return JsonResponse(data={'success': False, 'code': 'dose_not_exist'}, status=404, reason=f"Object or ressource with uuid {track_uuid} not found")
+
+    print('Proceeding to delete file ', track_uuid)
+    subprocess.run(f'rm -f "{settings.BASE_DIR}/static/{track_uuid}.mp3"', shell=True)
+    print('Removed link ', track_uuid)
+    track.delete()
+    print('Deleted file ', track_uuid)
+    
+    return JsonResponse(data={'success': True, })
+
 
 @csrf_exempt
 def fileBrowser(request):
@@ -98,7 +120,10 @@ def fileBrowser(request):
     if len(res_str) > 0:
         dir_list += res_str.split('\n')
     
-    res = subprocess.run(f'cd "{base_dir}" && ls -p | grep -v /| grep -i mp3', shell=True, capture_output=True)
+    # base_dir = shlex.quote(base_dir) #.replace(' ', '\ ').replace('(', '\(').replace(')', '\)').replace('&', '\&')
+
+    res = subprocess.run(f'ls -p  "{base_dir}" | grep -v /| grep -i mp3', shell=True, capture_output=True)
+    print('errors :', res.stderr.decode())
     res_str = res.stdout.decode().strip()
     file_list = []
 
