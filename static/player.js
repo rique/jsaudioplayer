@@ -467,6 +467,9 @@ TrackList.prototype = {
     onTrackIndexChange(cb) {
         this.trackListEvents.onEventRegister(cb, 'onIndexChange');
     },
+    isShuffleOn() {
+        return this.isShuffle;
+    },
     shuffle(conserveCurrentTrack) {
         if (this.isShuffle) {
             this.tracklistShuffle = [];
@@ -476,10 +479,13 @@ TrackList.prototype = {
             let trackIndex;
             if (conserveCurrentTrack === true)
                 trackIndex = this.trackIndex;
-            this.tracklistShuffle = this._shuffle([...this.tracklist], trackIndex);
-            this.isShuffle = true;
-            this.setTrackIndex(0, true);
+            this.shuffleTracklist(trackIndex);
         }
+    },
+    shuffleTracklist(trackIndex) {
+        this.tracklistShuffle = this._shuffle([...this.tracklist], trackIndex);
+        this.isShuffle = true;
+        this.setTrackIndex(0, true);
     },
     setTrackListTotalDuration(duration) {
         this.tracklistTotalDuration = duration;
@@ -805,8 +811,14 @@ AudioPlayer.prototype = {
             }
             else {
                 autoPlay = true;
-                if (this.repeatMode == 1)
-                    this.tracklist.resetTrackListIndex();
+                if (this.repeatMode == 1) {
+                    if (!this.tracklist.isShuffleOn())
+                        this.tracklist.resetTrackListIndex();
+                    else {
+                        this.tracklist.shuffleTracklist();
+                        this.audioPlayerEvents.trigger('onShuffle');
+                    }
+                }
             }
         } else  {
             if (this.repeatMode != 2 && !hasQueue)
@@ -1039,7 +1051,7 @@ const TrackListBrowser = function(tracklist, player) {
     this.trackSearch.onSearchResult(this.searchTrack.bind(this));
     this.trackSearch.onSearchVisibilityChange(this.restoreTracklistFromSearch.bind(this));
     this.player.onPlayerSongChange(this.setCurrentPlayingTrack.bind(this));
-    this.player.onShuffle(this.unload.bind(this));
+    this.player.onShuffle(this.reload.bind(this, true));
     this.itemsPerPage = 20;
     this.overlayDiv.addEventListener('click', this.closeTrackExplorer.bind(this));
 };
