@@ -7,7 +7,8 @@ body {
     padding: 0;
     background: #181717;
     font-family:  Arial, Helvetica, sans-serif!important;
-    color: #f6f6f6
+    color: #f6f6f6;
+    overflow-x: hidden;
 }
 
 ul {
@@ -115,7 +116,7 @@ ul {
 
 #progress, #main-volume-bar {
     cursor: pointer;
-    background: #181717;
+    background: transparent;
 }
 
 #progress {
@@ -235,6 +236,11 @@ ul {
     text-align: center;
     position: relative;
     border-radius: 3px;
+}
+
+.track-actions li {
+    width: 100%;
+    height: 100%;
 }
 
 .track-actions:hover {
@@ -464,6 +470,17 @@ li.fa-solid.fa-file {
     border-radius: 5px 0 0 5px;
 }
 
+#open-menu:hover {
+    width: 11.95%;
+    border-left: 1px solid rgba(84, 84, 84, 0.4);
+    border-top: 0px solid rgba(84, 84, 84, 0.4);
+    border-bottom: 1px solid rgba(84, 84, 84, 0.4);
+}
+
+.is-open #open-menu:hover {
+    width: 12%;
+    border: none;
+}
 
 #open-menu:hover, 
 .is-open #open-menu {

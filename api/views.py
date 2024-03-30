@@ -121,10 +121,19 @@ def fileBrowser(request):
         dir_list += res_str.split('\n')
     
     # base_dir = shlex.quote(base_dir) #.replace(' ', '\ ').replace('(', '\(').replace(')', '\)').replace('&', '\&')
-
-    res = subprocess.run(f'ls -p  "{base_dir}" | grep -v /| grep -i mp3', shell=True, capture_output=True)
-    print('errors :', res.stderr.decode())
-    res_str = res.stdout.decode().strip()
+    command1 = ['ls', '-p', base_dir]
+    command2 = [ 'grep', '-v', '/']
+    command3 = ['grep', '-i', 'mp3']
+    res1 = subprocess.Popen(command1, stdout=subprocess.PIPE)
+    res2 = subprocess.Popen(command2, stdout=subprocess.PIPE, stdin=res1.stdout)
+    res1.stdout.close()
+    res3 = subprocess.Popen(command3, stdout=subprocess.PIPE, stdin=res2.stdout)
+    res2.stdout.close()
+    res = res3.communicate()[0]
+    print('communicate', res)
+    # res = subprocess.run(f'ls -p  "{base_dir}" | grep -v /| grep -i mp3', shell=True, capture_output=True)
+    # print('errors :', res3.stderr.decode())
+    res_str = res.decode().strip()
     file_list = []
 
     if len(res_str) > 0:

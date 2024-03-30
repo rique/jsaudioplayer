@@ -1191,7 +1191,6 @@ TrackListBrowser.prototype = {
         tdArtist.innerHTML = track.getArtist();
         tdAlbum.innerHTML = track.getAlbum();
         tdDuration.innerHTML = track.formatTrackDuration();
-        // tdAction.innerHTML = `<span data-track-id="${trackUUid}" class="track-actions"><i class="fa-solid fa-ellipsis"></i></span>`;
         
         tdNumber.classList.add('small-cell');
         tdDuration.classList.add('small-cell');
@@ -1355,14 +1354,14 @@ LeftMenu.prototype = {
     },
     open() {
         let maxRight = 0 - 1;
-        let start = -(this.leftMenuElement.clientWidth);
-        let step = 25;
+        let start = -(this.leftMenuElement.offsetWidth);
+        let step = 28;
         this._slide.bind(this)(start, maxRight, step, this.mainMenuElem, 'right');
     },
     close() {
-        let maxRight = -(this.leftMenuElement.clientWidth) + 1;
+        let maxRight = -(this.leftMenuElement.offsetWidth) + 1;
         let start = 0;
-        let step = -25;
+        let step = -28;
         this._slide.bind(this)(start, maxRight, step, this.mainMenuElem, 'left');
     },
     _slide(start, maxRight, step, mainMenuElem, direction) {
