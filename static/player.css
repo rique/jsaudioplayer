@@ -209,7 +209,8 @@ ul {
 }
 
 .cnt-overlay .file-browser, 
-.cnt-overlay .track-browser {
+.cnt-overlay .track-browser,
+.cnt-overlay #window-content {
     position: relative;
     width: 62%;
     height: 62%;
@@ -486,9 +487,9 @@ li.fa-solid.fa-file {
 #main-left-menu {
     height: 98%;
     background: transparent;
-    width: 16%;
+    width: 16.4%;
     position: absolute;
-    right: -358px;
+    right: -14.2%;/*right: -358px;*/
     top: 0;
 }
 
@@ -520,8 +521,8 @@ li.fa-solid.fa-file {
 }
 
 #left-menu {
-    width: 80%;
+    width: 78%; /*80*/
     height: 100%;
     background: #272727;
-    padding: 8px 16px;
+    padding: 6% 4%;/*8px 16px*/
 }
