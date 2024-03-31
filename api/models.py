@@ -1,5 +1,6 @@
 import json
 from django.db import models
+from uuid import uuid4
 
 # Create your models here.
 
@@ -17,7 +18,8 @@ class Tracks(models.Model):
             'track_original_path': self.track_original_path,
             'track_date_added': self.track_date_added,
         }
-    
+
+
 PLAYLIST_TYPES = (
     ('USER', 'user'),
     ('SYSTEM', 'system'),
@@ -26,6 +28,8 @@ class Playlist(models.Model):
     playlist_name = models.CharField(max_length=256)
     tracks = models.ManyToManyField(Tracks)
     playlist_type = models.CharField(max_length=12, choices=PLAYLIST_TYPES, default="USER")
+    playlist_uuid = models.CharField(max_length=36, default=str(uuid4()))
+    playlist_created_date = models.DateTimeField(auto_now_add=True)
 
 
 class TrackInfo(models.Model):

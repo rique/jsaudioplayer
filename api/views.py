@@ -10,7 +10,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
-from .models import Tracks
+from .models import Tracks, Playlist
 
 from mutagen.id3 import ID3
 from mutagen.mp3 import MP3
@@ -229,4 +229,51 @@ def scanForMyTracks(request):
     return JsonResponse(data={
         'success': True,
         'traks_list': traks_list
+    })
+
+
+@csrf_exempt
+def createPLaylist(request):
+    if request.method != 'POST':
+        return JsonResponse(data={'success': False, 'code': 'wrong_method'}, status=405, reason="Method Not Allowed")
+
+    body_unicode = request.body.decode('utf-8')
+    params = json.loads(body_unicode)
+
+    tracklist = params['tracklist']
+    playlist_name = params['playlist_name']
+
+    playlist = Playlist()
+    playlist.playlist_name = playlist_name
+
+    if len(tracklist) > 0:
+        for tr in tracklist:
+            try:
+                track = Tracks.objects.get(track_uuid=tr['track_uuid'])
+            except Tracks.DoesNotExist:
+                continue
+            playlist.tracks.add(track)
+
+    playlist.save()
+
+    return JsonResponse(data={
+        'success': True,
+        'playlist_uuid': playlist.playlist_uuid
+    })
+
+
+@csrf_exempt
+def updatePLaylist(request):
+    if request.method != 'POST':
+        return JsonResponse(data={'success': False, 'code': 'wrong_method'}, status=405, reason="Method Not Allowed")
+
+    body_unicode = request.body.decode('utf-8')
+    params = json.loads(body_unicode)
+
+    tracklist = params['tracklist']
+    playlist_uuid = params['playlist_uuid']
+
+    return JsonResponse(data={
+        'success': True,
+        'playlist_uuid': playlist_uuid
     })

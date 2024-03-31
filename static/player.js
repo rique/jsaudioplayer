@@ -52,6 +52,49 @@ const getFormatedDate = () => {
     return d.setLocale('es').toLocaleString(DateTime.TIME_WITH_SECONDS);
 }
 
+const fadeOut = (element, cb, speed, opacity) => {
+    opacity = opacity || 1;  // initial opacity
+    speed = speed || 0.1;
+    var timer = setInterval(() => {
+        if (opacity <= 0.1) {
+            clearInterval(timer);
+            element.style.display = 'none';
+            if (typeof cb === 'function')
+                cb(element);
+        }
+        element.style.opacity = opacity;
+        element.style.filter = 'alpha(opacity=' + opacity * 100 + ")";
+        opacity -= opacity * speed;
+    }, 50);
+}
+
+const fadeIn = (element, cb, speed, opacity) => {
+    opacity = opacity || 0.1;
+    speed = speed || 0.1;
+    element.style.display = 'block';
+    const timerID = setInterval(() => {
+        if (opacity >= 1) {
+            clearInterval(timerID);
+            if (typeof cb === 'function')
+                cb(element);
+        }
+        
+        requestAnimationFrame(() => {
+            element.style.opacity = opacity
+        });
+
+        opacity += opacity * speed;
+    }, 50);
+}
+
+const fadeInOut = (element, cb) => {
+    console.log('fadeInOut', element.style.display)
+    if (element.style.display == 'block')
+        fadeOut(element, cb);
+    else
+        fadeIn(element, cb);
+};
+
 
 const whileMousePressedAndMove = (element, cb, doMouseout) => {    
     if (typeof doMouseout === 'undefined')
@@ -152,7 +195,7 @@ ListEvents.prototype = {
     onEventRegister(callback, eventKey) {
         this._eventsRegistered.push({'eventKey': eventKey,  'event': new OneEvent(callback)});
     },
-    trigger(eventKey, args) {
+    trigger(eventKey, ...args) {
         args = args || [];
         this._onEventTrigger(eventKey, args);
     },
@@ -241,7 +284,7 @@ Api.prototype = {
 
         xhr.setRequestHeader('Content-type', 'application/json; charset=UTF-8');
         // xhr.setRequestHeader("X-CSRFToken", this.csrftoken);
-        xhr.send();
+        xhr.send(data);
 
         xhr.onload = () => {
             console.log('xhr', xhr.status);
@@ -251,6 +294,21 @@ Api.prototype = {
     loadBGImages(callback) {
         let xhr = this.getXhrGet(`${this.url}/load-bg-img`);
         xhr.send();
+
+        xhr.onload = () => {
+            console.log('xhr', xhr.status);
+            callback(JSON.parse(xhr.response));
+        }
+    },
+    createPlaylist(playlistName, tracklist, callback) {
+        let xhr = this.getXhrPost(`${this.url}/create-playlist`);
+        let data = JSON.stringify({
+            'playlist_name': playlistName,
+            'traccklist': tracklist
+        });
+
+        xhr.setRequestHeader('Content-type', 'application/json; charset=UTF-8');
+        xhr.send(data);
 
         xhr.onload = () => {
             console.log('xhr', xhr.status);
@@ -572,6 +630,63 @@ TrackList.prototype = {
     }
 };
 
+const Playlist = function(tracklist) {
+    this.tracklist = tracklist;
+    this.api = window.playerApi;
+};
+Playlist.prototype = {
+    setPlaylistName(name) {
+        this.playlistName = name;
+    },
+    getPlaylistName() {
+        return this.playlistName;
+    },
+    setPlaylistUUID(uuid4) {
+        if (typeof uuid4 === 'undefined')
+            uuid4 = crypto.randomUUID();
+        this.playlistUUID = uuid4;
+    },
+    setTrackList(tracklist) {
+        this.tracklist = tracklist;
+    },
+    getTrackList() {
+        return this.tracklist;
+    },
+    addTrack(track) {
+        this.tracklist.addTrackToList(track);
+    },
+    removeTrackFromList(track) {
+        this.tracklist.removeTrackFromTracklistByUUID(track.trackUUid);
+    },
+    next() {
+        return this.tracklist.nextTrack();
+    },
+    previous() {
+        return this.tracklist.previousTrack();
+    },
+    savePlaylist() {
+        this.api.createPLaylist(this.playlistName, this.tracklist.getTrackList(), (res) => {
+            console.log('savePlaylist', res);
+        });
+    }
+};
+
+
+const PlaylistCreationTool = function() {
+};
+PlaylistCreationTool.prototype = {
+    createPlaylist(tracklist) {
+        this.playlist = new Playlist(tracklist)
+    },
+    getPlaylist() {
+        return this.playlist;
+    },
+    displayPLaylistCreationStudio(evt) {
+        evt.preventDefault();
+        console.log('coming soon..');
+    }
+};
+
 
 const AudioPlayer = function(tracklist) {
     if (!tracklist) {
@@ -583,6 +698,7 @@ const AudioPlayer = function(tracklist) {
     this.audioPlayerEvents = new ListEvents();
 
     this.volumeStep = 0.02;
+    this.seekStep = 5;
     this.isPaused = true;
     //0 -> no repeat; 1 -> repeat all; 2 -> repeat one; 
     this.repeatMode = 1;
@@ -762,10 +878,19 @@ AudioPlayer.prototype = {
 
         this.audioElem.volume = volume;
         this._updateVolumeBar(volume);
+        this.audioPlayerEvents.trigger('onVolumeChange', volume);
+    },
+    onVolumeChange(cb) {
+        this.audioPlayerEvents.onEventRegister(cb, 'onVolumeChange');
+    },
+    mute() {
+        this.audioElem.muted = !this.audioElem.muted
+    },
+    isMuted() {
+        return this.audioElem.muted;
     },
     shuffle(evt) {
         evt.preventDefault();
-        console.log('shuffle!', this.isPaused);
         this.tracklist.shuffle(!this.isPaused);
         if (this.isPaused)
             this.setCurrentTrackFromTrackList(false);
@@ -1019,7 +1144,7 @@ FileBrowser.prototype = {
             track.setID3Tags(id3Tags);//addToTrackListTotalDuration
             track.setTrackDuration(id3Tags.getDuration());
             tracklist.addTrackToList(track);
-            this.folderBrowserEvent.trigger('onSongAdded', [track, this.player.getTrackList().getTracksNumber() - 1]);
+            this.folderBrowserEvent.trigger('onSongAdded', track, this.player.getTrackList().getTracksNumber() - 1);
         }.bind(this));
     },
     fileBrowserCB(res) {
@@ -1108,6 +1233,12 @@ TrackListBrowser.prototype = {
     reload(keep) {
         this.unload(keep);
         this.load(keep);
+    },
+    toggleLoad(keep) {
+        if (this.loaded)
+            this.unload(keep);
+        else
+            this.load(keep);
     },
     displayTracklList(pageNumbre) {
         let tracklist = this.tracklist.getTrackList();
@@ -1249,7 +1380,7 @@ TrackListBrowser.prototype = {
         ulAction.appendChild(liDelete);
         divElem.appendChild(ulAction);
 
-        divElem.addEventListener('mouseleave', (evt) => {
+        divElem.addEventListener('mouseleave', () => {
             this.hideActionMenu(divElem);
         });
 
@@ -1283,9 +1414,6 @@ const TrackSearch = function(tracklist) {
     this.magGlassElem = document.querySelector('.tracklist-head .tracklist-search .img-cnt');
     this.inputSearchElem = document.querySelector('.tracklist-head .tracklist-search .input-cnt');
     this.searchInput = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
-    this.searchInput.addEventListener('change', (evt) => {
-
-    });
     this.magGlassElem.addEventListener('click', this._toggleInputSearchVisibility.bind(this));
     this.inputSearchElem.addEventListener('keyup', this.search.bind(this));
     this.searchEvents = new ListEvents();
@@ -1355,13 +1483,13 @@ LeftMenu.prototype = {
     open() {
         let maxRight = 0 - 1;
         let start = -(this.leftMenuElement.offsetWidth);
-        let step = 28;
+        let step = 30;
         this._slide.bind(this)(start, maxRight, step, this.mainMenuElem, 'right');
     },
     close() {
         let maxRight = -(this.leftMenuElement.offsetWidth) + 1;
         let start = 0;
-        let step = -28;
+        let step = -30;
         this._slide.bind(this)(start, maxRight, step, this.mainMenuElem, 'left');
     },
     _slide(start, maxRight, step, mainMenuElem, direction) {
@@ -1373,6 +1501,102 @@ LeftMenu.prototype = {
                 start += step;
             mainMenuElem.style.right = `${start}px`;
             requestAnimationFrame(this._slide.bind(this, start, maxRight, step, mainMenuElem, direction))
+        }
+    },
+};
+
+
+const KeyValues = function() {
+    this.SPACE = ' ';
+    this.PLUS = '+';
+    this.MINUS = '-';
+    this.T = 't';
+    this.CAP_P = 'P';
+    this.ArrowRight = 'ArrowRight';
+    this.ArrowLeft = 'ArrowLeft';
+}
+
+
+const KeyCotrols = function(keyvalues, player) {
+    if (typeof keyvalues === 'undefined') {
+        const e = new Error('KeyValues instance required!');
+        console.error(e);
+        throw e;
+    }
+    if (typeof player === 'undefined') {
+        const e = new Error('A player is required!');
+        console.error(e);
+        throw e;
+    }
+
+    this.playPauseKey = keyvalues.CAP_P;
+    this.minusVolKey = keyvalues.MINUS;
+    this.plusVolKey = keyvalues.PLUS;
+    this.nextTrackKey = keyvalues.ArrowRight;
+    this.prevTrackKey = keyvalues.ArrowLeft;
+    this.player = player;
+    this._keyDownActions = {};
+    this._keyUpActions = {};
+    this._setUpBuiltinActions();
+    this._bindEvents();
+};
+KeyCotrols.prototype = {
+    playPause() {
+        this.player.playPause();
+    },
+    volumeUp() {
+        this.player.increasVolume();
+    },
+    volumeDown() {
+        this.player.decreasVolume();
+    },
+    nextTrack() {
+        this.player.next();
+    },
+    prevTrack() {
+        this.player.prev();
+    },
+    registerKeyUpAction(key, cb) {
+        if (!this._keyUpActions.hasOwnProperty(key))
+            this._keyUpActions[key] = [];
+        this._keyUpActions[key].push(cb);
+    },
+    registerKeyDownAction(key, cb) {
+        if (!this._keyDownActions.hasOwnProperty(key))
+            this._keyDownActions[key] = [];
+        this._keyDownActions[key].push(cb);
+    },
+    _bindEvents() {
+        document.body.addEventListener('keyup', evt => this._dispatchActions.bind(this)(evt.key, 'up'));
+        document.body.addEventListener('keydown', evt => this._dispatchActions.bind(this)(evt.key, 'down'));
+    },
+    _dispatchActions(key, keyType) {
+        if (keyType == 'up')
+            return this._executeKeyUpActions(key);
+        else if (keyType == 'down')
+            return this._executeKeyDownActions(key);
+    },
+    _setUpBuiltinActions() {
+        this.registerKeyUpAction(this.playPauseKey, this.playPause.bind(this));
+        this.registerKeyDownAction(this.plusVolKey, this.volumeUp.bind(this));
+        this.registerKeyDownAction(this.minusVolKey, this.volumeDown.bind(this));
+        this.registerKeyUpAction(this.nextTrackKey, this.nextTrack.bind(this));
+        this.registerKeyUpAction(this.prevTrackKey, this.prevTrack.bind(this));
+    },
+    _executeKeyDownActions(key) {
+        if (!this._keyDownActions.hasOwnProperty(key))
+            return;
+        const actions = this._keyDownActions[key];
+        if (actions.length > 0) {
+            actions.map(cb => typeof cb === 'function' && cb());
+        }
+    },
+    _executeKeyUpActions(key) {
+        if (!this._keyUpActions.hasOwnProperty(key))
+            return;
+        const actions = this._keyUpActions[key];
+        if (actions.length > 0) {
+            actions.map(cb => typeof cb === 'function' && cb());
         }
     },
 };
@@ -1401,13 +1625,15 @@ Drawing.prototype = {
 
 
 (function(window, document, undefined) {
-    const tracklist = new TrackList();
+    const mainTracklist = new TrackList();
     const imgList = [];
     const leftMenu = new LeftMenu();
     leftMenu.init();
     const api = window.playerApi;
-    const audioPlayer = new AudioPlayer(tracklist);
-    const trackListBrowser = new TrackListBrowser(tracklist, audioPlayer);
+    const audioPlayer = new AudioPlayer(mainTracklist);
+    const trackListBrowser = new TrackListBrowser(mainTracklist, audioPlayer);
+    const playlistCreationTool = new PlaylistCreationTool();
+    playlistCreationTool.createPlaylist(mainTracklist);
     api.loadBGImages(function(res) {
         imgList.push(...res['img_list']);
         audioPlayer.init();
@@ -1425,11 +1651,65 @@ Drawing.prototype = {
         const fileBrowser = new FileBrowser(audioPlayer);
         fileBrowser.onSongAdded(trackListBrowser.addTrackToList.bind(trackListBrowser))
         document.querySelector('#file-browser-action button.open-file-browser').addEventListener('click', fileBrowser.loadFileBrowser.bind(fileBrowser));
-        document.querySelector('#file-browser-action button.open-tracklist-browser').addEventListener('click', (evt) => {
-            trackListBrowser.setTrackList(tracklist);
+        document.querySelector('#file-browser-action button.open-playlist-create').addEventListener(
+            'click',
+            playlistCreationTool.displayPLaylistCreationStudio.bind(playlistCreationTool)
+        );
+        document.querySelector('#file-browser-action button.open-tracklist-browser').addEventListener('click', () => {
+            trackListBrowser.setTrackList(mainTracklist);
             trackListBrowser.load();
         });
         draw(0, true, 0);
+    });
+
+    const volumeCnt = document.querySelector('#volume-display');
+    const volumeCntDisplay = document.querySelector('#volume-display .vol-val');
+    const muteCnt = document.querySelector('#muted-display');
+    const muteOn = document.querySelector('#muted-display #mute-on');
+    const muteOff = document.querySelector('#muted-display #mute-off');
+
+    audioPlayer.onVolumeChange((volume) => {
+        volumeCntDisplay.innerText = Math.round(volume * 100);
+    });
+
+    const keyCotrols = new KeyCotrols(new KeyValues, audioPlayer);
+    keyCotrols.registerKeyDownAction('M', () => {
+        audioPlayer.mute();
+        muteCnt.style.display = 'block';
+        if (audioPlayer.isMuted()) {
+            muteOn.style.display = 'block';
+            muteOff.style.display = 'none';
+        } else {
+            muteOn.style.display = 'none';
+            muteOff.style.display = 'block';
+        }
+
+        setTimeout(() => {
+            muteOn.style.display = 'none';
+            muteOff.style.display = 'none';
+            muteCnt.style.display = 'none';
+        }, 1668);
+    });
+    keyCotrols.registerKeyDownAction('a', trackListBrowser.load.bind(trackListBrowser));
+    keyCotrols.registerKeyDownAction('Escape', trackListBrowser.unload.bind(trackListBrowser));
+    keyCotrols.registerKeyDownAction('+', () => {
+        volumeCnt.style.opacity = 1;
+        volumeCnt.style.display = 'block';
+    });
+    keyCotrols.registerKeyUpAction('+', () => {
+        setTimeout(() => {
+            fadeOut(volumeCnt, false, 0.35);
+        }, 568);
+    });
+    keyCotrols.registerKeyDownAction('-', () => {
+        console.log('vol - Start');
+        volumeCnt.style.opacity = 1;
+        volumeCnt.style.display = 'block';
+    });
+    keyCotrols.registerKeyUpAction('-', () => {
+        setTimeout(() => {
+            fadeOut(volumeCnt, false, 0.35);
+        }, 568);
     });
 
     const audioCtx = new AudioContext();

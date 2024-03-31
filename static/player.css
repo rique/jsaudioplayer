@@ -33,7 +33,7 @@ ul {
 
 #cotrols {
     width: 100%;
-    height: auto;
+    height: 100%;
 }
 
 #track-box {
@@ -147,7 +147,7 @@ ul {
 }
 
 #main-volume-bar:hover, #volume-bar:hover, #volume-bar-container:hover #volume-bar {
-    height: 5px;
+    height: 7px;
 }
 
 /*#volume-bar-container, #progress:hover, #prog-bar:hover,
@@ -172,6 +172,31 @@ ul {
     height: 660px;
 }
 
+#volume-display {
+    position: absolute;
+    right: 0;
+    top: 90%;
+    width: 18%;
+    padding: 14px;
+    font-size: 60px;
+    color: #f6f6f6;
+    background: transparent;
+    text-align: center;
+    z-index: 5000;
+}
+
+#muted-display {
+    position: absolute;
+    top: 40%;
+    left: 33%;
+    width: 35%;
+    background: transparent;
+    text-align: center;
+    color: #f6f6f6;
+    z-index: 5000;
+    font-size: 176px;
+}
+
 .cnt-overlay {
     width: 100%;
     height: 100%;
@@ -194,6 +219,10 @@ ul {
     overflow: auto;
     display: none;
     margin: 10% auto 0 auto;
+}
+
+.cnt-overlay .file-browser {
+    font-size: 18px;
 }
 
 .cnt-overlay .track-browser {
@@ -375,6 +404,7 @@ li.fa-solid.fa-file {
 #file-browser-action {
     width: 100%;
     padding: 0 0 20px 0;
+    height: 90%;
 }
 
 #volume-control {
@@ -410,6 +440,8 @@ li.fa-solid.fa-file {
     font-size: 16px;
     font-family: Arial, Helvetica, sans-serif;
     cursor: pointer;
+    display: block;
+    margin: 0 0 24px 0;
 }
 
 #file-browser-action button:hover {

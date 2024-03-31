@@ -9,5 +9,6 @@ urlpatterns = [
     path("load-bg-img", views.loadBGImages, name="loadbgimages"),
     path("scan-for-my-tracks", views.scanForMyTracks, name="scanformytracks"),
     path("delete-track", views.deleteTrack, name="deleteTrack"),
+    path("create-playlist", views.createPLaylist, name="createPLaylist"),
 ]
 
