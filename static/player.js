@@ -1094,10 +1094,6 @@ AudioPlayer.prototype = {
 
 const FileBrowser = function(player) {
     this.overlayDiv = document.querySelector('.cnt-overlay');
-    this.fileExplorerBox = document.querySelector('.file-browser');
-    this.basePathBox = document.querySelector('.file-browser div.base-path');
-    this.folderListBox = document.querySelector('.file-browser ul.folder-list');
-    this.fileListBox = document.querySelector('.file-browser ul.file-list');
     this.baseDir = '/';
     this.api = window.playerApi;
     this.browseHistory = [this.baseDir];
@@ -1114,6 +1110,12 @@ FileBrowser.prototype = {
         clearElementInnerHTML(this.fileListBox);
         this.overlayDiv.style.display = 'none';
         this.fileExplorerBox.style.display = 'none';
+    },
+    setElementBoxes(fileExplorerBox, basePathBox, folderListBox, fileListBox) {
+        this.fileExplorerBox = fileExplorerBox;
+        this.basePathBox = basePathBox;
+        this.folderListBox = folderListBox;
+        this.fileListBox = fileListBox;
     },
     folderSelector(evt) {
         let target = evt.target;
@@ -1141,7 +1143,7 @@ FileBrowser.prototype = {
         this.api.addTrack(fileName, this.baseDir + fileName, function(res) {
             let track = new Track(res['track']),
                 id3Tags = new ID3Tags(res['ID3']);
-            track.setID3Tags(id3Tags);//addToTrackListTotalDuration
+            track.setID3Tags(id3Tags);
             track.setTrackDuration(id3Tags.getDuration());
             tracklist.addTrackToList(track);
             this.folderBrowserEvent.trigger('onSongAdded', track, this.player.getTrackList().getTracksNumber() - 1);
@@ -1463,8 +1465,7 @@ TrackSearch.prototype = {
 }
 
 
-const LeftMenu = function() {
-}
+const LeftMenu = function() {};
 LeftMenu.prototype = {
     init() {
         this.mainMenuElem = document.getElementById('main-left-menu');
@@ -1478,7 +1479,7 @@ LeftMenu.prototype = {
         } else {
             this.open();
         }
-        this.mainMenuElem.classList.toggle('is-open')
+        this.mainMenuElem.classList.toggle('is-open');
     },
     open() {
         let maxRight = 0 - 1;
@@ -1519,7 +1520,7 @@ const KeyValues = function() {
 
 const KeyCotrols = function(keyvalues, player) {
     if (typeof keyvalues === 'undefined') {
-        const e = new Error('KeyValues instance required!');
+        const e = new Error('KeyValues instance is required!');
         console.error(e);
         throw e;
     }
@@ -1602,6 +1603,91 @@ KeyCotrols.prototype = {
 };
 
 
+const Layout = function(parentElem, layoutName) {
+    this.parentElem = parentElem;
+    this.layoutName = layoutName;
+};
+Layout.prototype = {
+    setParntElem(parentElem) {
+        this.parentElem = parentElem;
+    },
+    getParentElem() {
+        return this.parentElem;
+    },
+    setLayoutName(layoutName) {
+        this.layoutName = layoutName;
+    },
+    getLayoutName() {
+        return this.layoutName;
+    },
+    registerRenderCallback(cb) {
+        this.renderCallback = cb; 
+    },
+    render() {
+        this.renderCallback(this.parentElem);
+    }
+};
+
+
+const LayoutHTML = function() {
+    this.layouts = {};
+};
+LayoutHTML.prototype = {
+    addHTMLLayout(layout) {
+        this.layouts[layout.layoutName] = layout;
+    },
+    renderLayout(layoutName) {
+        this.layouts[layoutName].render();
+    }
+};
+
+
+/*
+<div style="display: none;" class="file-browser">
+    <div class="base-path"></div>
+    <ul class="folder-list">
+    </ul>
+    <ul class="file-list">
+    </ul>
+</div>
+*/
+
+const FileBrowserRenderer = function(fileBrowser, layout, elemEvent) {
+    this.fileBrowser = fileBrowser;
+    this.layout = layout;
+    this.elemEvent = elemEvent;
+    this.layout.registerRenderCallback(this._render.bind(this));
+    this._bindEVent();
+};
+FileBrowserRenderer.prototype = {
+    _bindEVent() {
+        this.elemEvent.addEventListener('click', (evt) => {
+            this._displayFileBroser();
+            this.fileBrowser.loadFileBrowser.bind(this.fileBrowser)(evt);
+        });
+    },
+    _displayFileBroser() {
+        window.layoutHTML.renderLayout(this.layout.layoutName);
+    },
+    _render(parentElem) {
+        clearElementInnerHTML(parentElem);
+        parentElem.classList.add('file-browser');
+        const divBasePath = document.createElement('div');
+        const ulFolderList = document.createElement('ul');
+        const ulFileList = document.createElement('ul');
+        this.fileBrowser.setElementBoxes(this.layout.getParentElem(), divBasePath, ulFolderList, ulFileList);
+        divBasePath.classList.add('base-path');
+        ulFolderList.classList.add('folder-list');
+        ulFileList.classList.add('file-list');
+        parentElem.appendChild(divBasePath);
+        parentElem.appendChild(ulFolderList);
+        parentElem.appendChild(ulFileList);
+    }
+};
+
+
+window.layoutHTML = new LayoutHTML();
+
 const Drawing = function(canvas) {
     this.canvas = canvas; //document.createElement("canvas");
 };
@@ -1624,15 +1710,16 @@ Drawing.prototype = {
 };
 
 
-(function(window, document, undefined) {
+(function main(window, document, undefined) {
     const mainTracklist = new TrackList();
     const imgList = [];
     const leftMenu = new LeftMenu();
-    leftMenu.init();
     const api = window.playerApi;
     const audioPlayer = new AudioPlayer(mainTracklist);
     const trackListBrowser = new TrackListBrowser(mainTracklist, audioPlayer);
     const playlistCreationTool = new PlaylistCreationTool();
+    
+    leftMenu.init();
     playlistCreationTool.createPlaylist(mainTracklist);
     api.loadBGImages(function(res) {
         imgList.push(...res['img_list']);
@@ -1648,9 +1735,17 @@ Drawing.prototype = {
             }
             this.setCurrentTrackFromTrackList(false);
         }.bind(audioPlayer));
+        
         const fileBrowser = new FileBrowser(audioPlayer);
+        const layoutHTML = window.layoutHTML;
+        const windowContentElem = document.getElementById('window-content');
+        const fileBrowserLayout = new Layout(windowContentElem, 'folerBroser');
+        const fileBrowserRenderer = new FileBrowserRenderer(fileBrowser, fileBrowserLayout, document.querySelector('#file-browser-action button.open-file-browser'));
+
+        layoutHTML.addHTMLLayout(fileBrowserLayout);
+
         fileBrowser.onSongAdded(trackListBrowser.addTrackToList.bind(trackListBrowser))
-        document.querySelector('#file-browser-action button.open-file-browser').addEventListener('click', fileBrowser.loadFileBrowser.bind(fileBrowser));
+
         document.querySelector('#file-browser-action button.open-playlist-create').addEventListener(
             'click',
             playlistCreationTool.displayPLaylistCreationStudio.bind(playlistCreationTool)
