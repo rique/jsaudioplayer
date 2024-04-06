@@ -88,7 +88,6 @@ const fadeIn = (element, cb, speed, opacity) => {
 }
 
 const fadeInOut = (element, cb) => {
-    console.log('fadeInOut', element.style.display)
     if (element.style.display == 'block')
         fadeOut(element, cb);
     else
@@ -951,7 +950,6 @@ AudioPlayer.prototype = {
     },
     audioLoaded(evt) {
         let audioElem = evt.target;
-        console.log('duration', audioElem.duration, 'volume', audioElem.volume);
         this.progressBar(audioElem);
     },
     progressBar(audioELem) {
@@ -1481,7 +1479,6 @@ TrackSearch.prototype = {
         this.tracklist = trackList;
     },
     search(evt) {
-        console.log('evt.target.value', evt.target.value);
         this.result = this._searchTrack(evt.target.value);
         this.searchEvents.trigger('onSearchResult', this.result);
     },
@@ -1496,11 +1493,17 @@ TrackSearch.prototype = {
     _isSearchVisible() {
         return this.inputSearchElem.style.visibility == 'visible';
     },
-    _toggleInputSearchVisibility(evt) {
+    _toggleInputSearchVisibility() {
         if (!this._isSearchVisible()) {
+            window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowLeft', this);
+            window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowRight', this);
+            window.KeyCotrols.setExlcusivityCallerKeyUp(' ', this);
             this.inputSearchElem.style.visibility = 'visible';
             this.searchInput.focus();
         } else {
+            window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowLeft', this);
+            window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowRight', this);
+            window.KeyCotrols.unsetExlcusivityCallerKeyUp(' ', this);
             this.inputSearchElem.style.visibility = 'hidden';
             this.term = '';
             this.searchInput.value = '';
@@ -1527,7 +1530,7 @@ LeftMenu.prototype = {
         this.leftMenuElement = document.getElementById('left-menu');
         this.openMenuElem.addEventListener('click', this.openClose.bind(this));
     },
-    openClose(evt) {
+    openClose() {
         if (this.mainMenuElem.classList.contains('is-open')) {
             this.close();
         } else {
@@ -1579,7 +1582,7 @@ const KeyCotrols = function(keyvalues) {
         throw e;
     }
 
-    this.playPauseKey = keyvalues.CAP_P;
+    this.playPauseKey = keyvalues.SPACE;
     this.minusVolKey = keyvalues.MINUS;
     this.plusVolKey = keyvalues.PLUS;
     this.nextTrackKey = keyvalues.ArrowRight;
@@ -1587,6 +1590,8 @@ const KeyCotrols = function(keyvalues) {
     
     this._keyDownActions = {};
     this._keyUpActions = {};
+    this._exclusivityCallerKeyUp = [];
+    this._exclusivityCallerKeyDown = [];
     this._setUpBuiltinActions();
     this._bindEvents();
 };
@@ -1598,6 +1603,30 @@ KeyCotrols.prototype = {
             throw e;
         }
         this.player = player;
+    },
+    setExlcusivityCallerKeyUp(key, caller) {
+        const previousCaller = this._exclusivityCallerKeyUp.filter(obj => obj.key == key);
+        if (previousCaller.length != 0)
+            return;
+        this._exclusivityCallerKeyUp.push({key, caller});
+    },
+    unsetExlcusivityCallerKeyUp(key, caller) {
+        const previousCallerIdx = this._exclusivityCallerKeyUp.findIndex(obj => obj.key == key && obj.caller == caller);
+        if (typeof previousCallerIdx === 'undefined')
+            return;
+        this._exclusivityCallerKeyUp.splice(previousCallerIdx, 1);
+    },
+    setExlcusivityCallerKeyDown(key, caller) {
+        const previousCaller = this._exclusivityCallerKeyDown.filter(obj => obj.key == key);
+        if (previousCaller.length != 0)
+            return;
+        this._exclusivityCallerKeyDown.push({key, caller});
+    },
+    unsetExlcusivityCallerKeyDown(key, caller) {
+        const previousCallerIdx = this._exclusivityCallerKeyDown.findIndex(obj => obj.key == key && obj.caller == caller);
+        if (typeof previousCallerIdx === 'undefined')
+            return;
+        this._exclusivityCallerKeyDown.splice(previousCallerIdx, 1);
     },
     playPause() {
         this.player.playPause();
@@ -1626,15 +1655,15 @@ KeyCotrols.prototype = {
         if (ctrlKey && repeat)
             this.player.setCurrentTime(this.player.getCurrentTime() - 1);
     },
-    registerKeyUpAction(key, cb) {
+    registerKeyUpAction(key, cb, caller) {
         if (!this._keyUpActions.hasOwnProperty(key))
             this._keyUpActions[key] = [];
-        this._keyUpActions[key].push(cb);
+        this._keyUpActions[key].push({cb, caller});
     },
-    registerKeyDownAction(key, cb) {
+    registerKeyDownAction(key, cb, caller) {
         if (!this._keyDownActions.hasOwnProperty(key))
             this._keyDownActions[key] = [];
-        this._keyDownActions[key].push(cb);
+        this._keyDownActions[key].push({cb, caller});
     },
     _bindEvents() {
         document.body.addEventListener('keyup', evt => this._dispatchActions.bind(this)(evt, 'up'));
@@ -1647,30 +1676,59 @@ KeyCotrols.prototype = {
             return this._executeKeyDownActions(evt);
     },
     _setUpBuiltinActions() {
-        this.registerKeyUpAction(this.playPauseKey, this.playPause.bind(this));
-        this.registerKeyDownAction(this.plusVolKey, this.volumeUp.bind(this));
-        this.registerKeyDownAction(this.minusVolKey, this.volumeDown.bind(this));
-        this.registerKeyUpAction(this.nextTrackKey, this.nextTrack.bind(this));
-        this.registerKeyUpAction(this.prevTrackKey, this.prevTrack.bind(this));
-        this.registerKeyDownAction(this.nextTrackKey, this.fastFoward.bind(this));
-        this.registerKeyDownAction(this.prevTrackKey, this.rewind.bind(this));
+        this.registerKeyUpAction(this.playPauseKey, this.playPause.bind(this), this);
+        this.registerKeyDownAction(this.plusVolKey, this.volumeUp.bind(this), this);
+        this.registerKeyDownAction(this.minusVolKey, this.volumeDown.bind(this), this);
+        this.registerKeyUpAction(this.nextTrackKey, this.nextTrack.bind(this), this);
+        this.registerKeyUpAction(this.prevTrackKey, this.prevTrack.bind(this), this);
+        this.registerKeyDownAction(this.nextTrackKey, this.fastFoward.bind(this), this);
+        this.registerKeyDownAction(this.prevTrackKey, this.rewind.bind(this), this);
     },
     _executeKeyDownActions(evt) {
         const key = evt.key;
+        let exclusiveCaller = this._exclusivityCallerKeyDown.find(obj => obj.key == key);
         if (!this._keyDownActions.hasOwnProperty(key))
             return;
         const actions = this._keyDownActions[key];
         if (actions.length > 0) {
-            actions.map(cb => typeof cb === 'function' && cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat}));
+            for (let i = 0; i < actions.length; ++i) {
+                let obj = actions[i];
+                if (typeof obj.cb !== 'function')
+                    return;
+                if (typeof exclusiveCaller !== 'undefined') {
+                    if (obj.caller === exclusiveCaller.caller) { 
+                        obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat});
+                    }
+                }
+
+                else {
+                    obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat})
+                }
+            }
         }
     },
     _executeKeyUpActions(evt) {
         const key = evt.key;
+        let exclusiveCaller;
+        exclusiveCaller = this._exclusivityCallerKeyUp.find(obj => obj.key == key);
         if (!this._keyUpActions.hasOwnProperty(key))
             return;
         const actions = this._keyUpActions[key];
         if (actions.length > 0) {
-            actions.map(cb => typeof cb === 'function' && cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat}));
+            for (let i = 0; i < actions.length; ++i) {
+                let obj = actions[i];
+                if (typeof obj.cb !== 'function')
+                    return;
+                if (typeof exclusiveCaller !== 'undefined') {
+                    if (obj.caller === exclusiveCaller.caller) { 
+                        obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat});
+                    }
+                }
+
+                else {
+                    obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat})
+                }
+            }
         }
     },
 };
@@ -1979,8 +2037,8 @@ Drawing.prototype = {
             muteCnt.style.display = 'none';
         }, 1668);
     });
-    keyCotrols.registerKeyDownAction('a', trackListBrowserRenderer.load.bind(trackListBrowserRenderer));
-    keyCotrols.registerKeyDownAction('Escape', trackListBrowserRenderer.unload.bind(trackListBrowserRenderer));
+    keyCotrols.registerKeyDownAction('a', trackListBrowserRenderer.load.bind(trackListBrowserRenderer), trackListBrowserRenderer);
+    keyCotrols.registerKeyDownAction('Escape', trackListBrowserRenderer.unload.bind(trackListBrowserRenderer), trackListBrowserRenderer);
 
     let volUpEvtId = -1;
     let volDownEvtId = -1;
@@ -2002,7 +2060,7 @@ Drawing.prototype = {
         }, 568);
     });
     
-    keyCotrols.registerKeyDownAction('-', () => {
+    keyCotrols.registerKeyDownAction('-',  () => {
         if (volDownEvtId >= 0) {
             clearTimeout(volDownEvtId);
             volDownEvtId = -1;
