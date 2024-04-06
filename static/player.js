@@ -1211,19 +1211,16 @@ FileBrowser.prototype = {
 
 const TrackListBrowser = function(tracklist, player) {
     this.overlayDiv = document.querySelector('.cnt-overlay');
-    /*this.trackExplorerBox = document.querySelector('.track-browser');
-    this.mainTableElem = document.querySelector('.tracklist-content');
-    this.tableHeadElem = document.querySelector('.tracklist-content thead');
-    this.tableBodyElem = document.querySelector('.tracklist-content tbody');*/
     this.tracklist = tracklist;
     this.player = player;
     this.loaded = false;
-    this.trackSearch = new TrackSearch(this.tracklist);
+    this.trackSearch = new TrackSearch(this.tracklist, this);
     this.trackSearch.onSearchResult(this.searchTrack.bind(this));
     this.trackSearch.onSearchVisibilityChange(this.restoreTracklistFromSearch.bind(this));
     this.player.onPlayerSongChange(this.setCurrentPlayingTrack.bind(this));
     this.player.onShuffle(this.reload.bind(this, true, true));
     this.itemsPerPage = 20;
+    this.eventTraclistBrowser = new ListEvents();
     this.overlayDiv.addEventListener('click', (evt) => {
         if (evt.target != evt.currentTarget)
             return;
@@ -1238,6 +1235,10 @@ TrackListBrowser.prototype = {
         if (keep !== true) {
             this._closeTrackExplorer();
         }
+        this.eventTraclistBrowser.trigger('onCloseTracklistBrowser');
+    },
+    onCloseTracklistBrowser(cb) {
+        this.eventTraclistBrowser.onEventRegister(cb, 'onCloseTracklistBrowser');
     },
     openTracklistExplorer(kept) {
         this.load();
@@ -1300,7 +1301,7 @@ TrackListBrowser.prototype = {
     searchTrack(tracks) {
         if (tracks.length == 0)
             return;
-        this.closeTrackExplorer(true, true);
+
         clearElementInnerHTML(this.tableBodyElem);
         for (x = 0; x < tracks.length; ++x) {
             let track = tracks[x];
@@ -1309,6 +1310,7 @@ TrackListBrowser.prototype = {
         this.loaded = true;
     },
     restoreTracklistFromSearch(visible) {
+        console.log('visible', visible);
         if (!visible) {
             this.reload(true, true);
         }
@@ -1462,10 +1464,11 @@ TrackListBrowser.prototype = {
 };
 
 
-const TrackSearch = function(tracklist) {
+const TrackSearch = function(tracklist, tracklistBrowser) {
     this.tracklist = tracklist;
     this.searchEvents = new ListEvents();
     this.term = '';
+    this.tracklistBrowser = tracklistBrowser;
 }
 TrackSearch.prototype = {
     init() {
@@ -1474,6 +1477,7 @@ TrackSearch.prototype = {
         this.searchInput = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
         this.magGlassElem.addEventListener('click', this._toggleInputSearchVisibility.bind(this));
         this.inputSearchElem.addEventListener('keyup', this.search.bind(this));
+        this.tracklistBrowser.onCloseTracklistBrowser(this._unsetExclusivity.bind(this));
     },
     setTrackList(trackList) {
         this.tracklist = trackList;
@@ -1495,20 +1499,32 @@ TrackSearch.prototype = {
     },
     _toggleInputSearchVisibility() {
         if (!this._isSearchVisible()) {
-            window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowLeft', this);
-            window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowRight', this);
-            window.KeyCotrols.setExlcusivityCallerKeyUp(' ', this);
+            this._setExclusivity();
             this.inputSearchElem.style.visibility = 'visible';
             this.searchInput.focus();
         } else {
-            window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowLeft', this);
-            window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowRight', this);
-            window.KeyCotrols.unsetExlcusivityCallerKeyUp(' ', this);
+            this._unsetExclusivity();
             this.inputSearchElem.style.visibility = 'hidden';
             this.term = '';
             this.searchInput.value = '';
         }
         this.searchEvents.trigger('onSearchVisibilityChange');
+    },
+    _setExclusivity() {
+        console.log('Setting exclusivity');
+        window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowLeft', this);
+        window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowRight', this);
+        window.KeyCotrols.setExlcusivityCallerKeyUp(' ', this);
+        window.KeyCotrols.setExlcusivityCallerKeyUp('a', this);
+        window.KeyCotrols.setExlcusivityCallerKeyDown('a', this);
+    },
+    _unsetExclusivity() {
+        console.log('Unsetting exclusivity');
+        window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowLeft', this);
+        window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowRight', this);
+        window.KeyCotrols.unsetExlcusivityCallerKeyUp(' ', this);
+        window.KeyCotrols.unsetExlcusivityCallerKeyUp('a', this);
+        window.KeyCotrols.unsetExlcusivityCallerKeyDown('a', this);
     },
     _searchTrack(term) {
         let termLower = term.toLowerCase();
@@ -1779,14 +1795,20 @@ const FileBrowserRenderer = function(fileBrowser, layout, elemEvent) {
     this.layout = layout;
     this.elemEvent = elemEvent;
     this.layout.registerRenderCallback(this._render.bind(this));
-    this._bindEVent();
+    this._bindEVents();
+    this._createElements();
 };
 FileBrowserRenderer.prototype = {
-    _bindEVent() {
+    _bindEVents() {
         this.elemEvent.addEventListener('click', (evt) => {
             this._displayFileBroserLayout();
             this.fileBrowser.loadFileBrowser.bind(this.fileBrowser)(evt);
         });
+    },
+    _createElements() {
+        this.divBasePath = document.createElement('div');
+        this.ulFolderList = document.createElement('ul');
+        this.ulFileList = document.createElement('ul');
     },
     _displayFileBroserLayout() {
         window.layoutHTML.renderLayout(this.layout.layoutName);
@@ -1795,19 +1817,15 @@ FileBrowserRenderer.prototype = {
         clearElementInnerHTML(parentElem);
         parentElem.className = 'file-browser';
         
-        const divBasePath = document.createElement('div');
-        const ulFolderList = document.createElement('ul');
-        const ulFileList = document.createElement('ul');
+        this.divBasePath.classList.add('base-path');
+        this.ulFolderList.classList.add('folder-list');
+        this.ulFileList.classList.add('file-list');
         
-        divBasePath.classList.add('base-path');
-        ulFolderList.classList.add('folder-list');
-        ulFileList.classList.add('file-list');
-        
-        parentElem.appendChild(divBasePath);
-        parentElem.appendChild(ulFolderList);
-        parentElem.appendChild(ulFileList);
+        parentElem.appendChild(this.divBasePath);
+        parentElem.appendChild(this.ulFolderList);
+        parentElem.appendChild(this.ulFileList);
 
-        this.fileBrowser.setElementBoxes(parentElem, divBasePath, ulFolderList, ulFileList);
+        this.fileBrowser.setElementBoxes(parentElem, this.divBasePath, this.ulFolderList, this.ulFileList);
     }
 };
 
@@ -1823,9 +1841,9 @@ const TrackListBrowserRenderer = function(trackListBrowser, layout, elemEvent) {
 TrackListBrowserRenderer.prototype = {
     load() {
         if (!this.isRendered) {
-            this._displayFileBroserLayout();
             this.isRendered = true;
         }
+        this._displayFileBroserLayout();
         this.trackListBrowser.reload(false, true);
     },
     unload() {
