@@ -32,6 +32,7 @@ def addTrack(request):
     
     
     track_original_path = params['track_original_path']
+    # track_original_path = track_original_path.replace('~', '\~')
     audio = ID3(track_original_path)
     mp3_file = MP3(track_original_path)
     keys = audio.keys()
@@ -199,7 +200,7 @@ def loadTrackList(request):
 @csrf_exempt
 def loadBGImages(request):
 
-    img_dir = './static/imga/'
+    img_dir = './static/imgc/'
     res = subprocess.run(f'find -L "{img_dir}" -type f | grep -i --include=*.{{jpg,jpeg,png}} "" | sort -R', shell=True, capture_output=True, check=False)
     res_str = res.stdout.decode().strip()
 

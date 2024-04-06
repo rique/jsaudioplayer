@@ -222,15 +222,17 @@ ul {
     margin: 10% auto 0 auto;
 }
 
-.cnt-overlay .file-browser {
+.cnt-overlay .file-browser,
+.cnt-overlay #window-content.file-browser {
     font-size: 18px;
 }
 
-.cnt-overlay .track-browser {
+.cnt-overlay .track-browser, #window-content.track-browser {
     overflow: hidden!important;
 }
 
-.cnt-overlay .track-browser .tracklist-content-div {
+.cnt-overlay .track-browser .tracklist-content-div, 
+#window-content.track-browser .tracklist-content-div{
     overflow: scroll;
     height: 92.4%;
     width: auto;
@@ -487,9 +489,9 @@ li.fa-solid.fa-file {
 #main-left-menu {
     height: 98%;
     background: transparent;
-    width: 16.4%;
+    width: 16%;
     position: absolute;
-    right: -14.2%;/*right: -358px;*/
+    right: -358px;/*right: -14.2%;*/
     top: 0;
 }
 
@@ -521,8 +523,8 @@ li.fa-solid.fa-file {
 }
 
 #left-menu {
-    width: 78%; /*80*/
+    width: 80%; /*78*/
     height: 100%;
     background: #272727;
-    padding: 6% 4%;/*8px 16px*/
+    padding: 8px 16px;/*6% 4%*/
 }

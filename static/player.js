@@ -219,7 +219,7 @@ ListEvents.prototype = {
 
 
 const Api = function() {
-    this.url = 'http://localhost:8888/api';
+    this.url = 'http://jsradio.me:3600/api';
     this.xhr = new XMLHttpRequest();
     this.csrftoken = readCookie('csrftoken');
 };
@@ -387,7 +387,7 @@ Track.prototype = {
         return this.currentTime;
     },
     getTimeRemaining(formated) {
-        let remainigTime = this.trackDuration - this.currentTime;
+        let remainigTime = this.trackDuration - this.getCurrentTime();
         if (formated)
             return this._formatTime(remainigTime);
         return remainigTime;
@@ -402,7 +402,7 @@ Track.prototype = {
         return this._formatTime(this.trackDuration);
     },
     formatCurrentTime() {
-        return this._formatTime(this.currentTime);
+        return this._formatTime(this.getCurrentTime());
     },
     getArtist() {
         return this._id3TagsInstance.getArtist();
@@ -560,21 +560,28 @@ TrackList.prototype = {
         return this.isShuffle;
     },
     shuffle(conserveCurrentTrack) {
+        let tracklist;
         if (this.isShuffle) {
             this.tracklistShuffle = [];
             this.isShuffle = false;
             this.setTrackIndex(this.getTrackIndexByTrack(this.getCurrentTrack()));
+            tracklist = this.tracklist;
         } else {
             let trackIndex;
             if (conserveCurrentTrack === true)
                 trackIndex = this.trackIndex;
             this.shuffleTracklist(trackIndex);
+            tracklist = this.tracklistShuffle;
         }
+        this.trackListEvents.trigger('onShuffleTracklist', tracklist);
     },
     shuffleTracklist(trackIndex) {
         this.tracklistShuffle = this._shuffle([...this.tracklist], trackIndex);
         this.isShuffle = true;
         this.setTrackIndex(0, true);
+    },
+    onShuffleTracklist() {
+        this.trackListEvents.onEventRegister(cb, 'onShuffleTracklist');
     },
     setTrackListTotalDuration(duration) {
         this.tracklistTotalDuration = duration;
@@ -783,7 +790,7 @@ AudioPlayer.prototype = {
         this.disableProgress = mouseUp;
 
         if (!mouseUp)
-            this.audioElem.currentTime = this.tracklist.getCurrentTrack().trackDuration * percentWidth;
+            this.setCurrentTime(this.tracklist.getCurrentTrack().trackDuration * percentWidth);
         this._updateProgressBar(percentWidth  * 100, this.progressBar.bind(this, this.audioElem));
     },
     changeVolume(evt, mouseUp) {
@@ -845,7 +852,7 @@ AudioPlayer.prototype = {
     },
     stop() {
         this.pause();
-        this.audioElem.currentTime = 0;
+        this.setCurrentTime(0);
     },
     next() {
         if (!this.tracklist.hasQueue())
@@ -854,8 +861,8 @@ AudioPlayer.prototype = {
         this.play();
     },
     prev() {
-        if (this.audioElem.currentTime > 3.6) {
-            this.audioElem.currentTime = 0;
+        if (this.getCurrentTime() > 3.6) {
+            this.setCurrentTime(0);
         } else {
             if (!this.tracklist.hasQueue())
                 this.tracklist.previousTrack();
@@ -869,6 +876,17 @@ AudioPlayer.prototype = {
         else
             ++this.repeatMode;
         this._setRepeatBtnStyle();
+    },
+    setCurrentTime(timeInSec) {
+        if (timeInSec < 0)
+            timeInSec = 0;
+        else if (timeInSec > this.currentTrack.getTrackDuration())
+            timeInSec = this.currentTrack.getTrackDuration();
+
+        this.audioElem.currentTime = timeInSec;
+    },
+    getCurrentTime() {
+        return this.audioElem.currentTime;
     },
     setVolume(volume) {
         if (volume > 1)
@@ -895,7 +913,7 @@ AudioPlayer.prototype = {
         if (this.isPaused)
             this.setCurrentTrackFromTrackList(false);
         this._setShuffleBtnStyle(this.tracklist.isShuffle);
-        this.audioPlayerEvents.trigger('onShuffle');
+        this.audioPlayerEvents.trigger('onShuffle', this.tracklist);
     },
     onShuffle(cb) {
         this.audioPlayerEvents.onEventRegister(cb, 'onShuffle');
@@ -1094,10 +1112,6 @@ AudioPlayer.prototype = {
 
 const FileBrowser = function(player) {
     this.overlayDiv = document.querySelector('.cnt-overlay');
-    this.fileExplorerBox = document.querySelector('.file-browser');
-    this.basePathBox = document.querySelector('.file-browser div.base-path');
-    this.folderListBox = document.querySelector('.file-browser ul.folder-list');
-    this.fileListBox = document.querySelector('.file-browser ul.file-list');
     this.baseDir = '/';
     this.api = window.playerApi;
     this.browseHistory = [this.baseDir];
@@ -1110,10 +1124,14 @@ FileBrowser.prototype = {
     closeFileBrowser(evt) {
         if (evt.target != evt.currentTarget)
             return;
-        clearElementInnerHTML(this.folderListBox);
-        clearElementInnerHTML(this.fileListBox);
-        this.overlayDiv.style.display = 'none';
-        this.fileExplorerBox.style.display = 'none';
+        if (this.isOpen)
+            this._closeFileBrowser();
+    },
+    setElementBoxes(fileExplorerBox, basePathBox, folderListBox, fileListBox) {
+        this.fileExplorerBox = fileExplorerBox;
+        this.basePathBox = basePathBox;
+        this.folderListBox = folderListBox;
+        this.fileListBox = fileListBox;
     },
     folderSelector(evt) {
         let target = evt.target;
@@ -1141,17 +1159,15 @@ FileBrowser.prototype = {
         this.api.addTrack(fileName, this.baseDir + fileName, function(res) {
             let track = new Track(res['track']),
                 id3Tags = new ID3Tags(res['ID3']);
-            track.setID3Tags(id3Tags);//addToTrackListTotalDuration
+            track.setID3Tags(id3Tags);
             track.setTrackDuration(id3Tags.getDuration());
             tracklist.addTrackToList(track);
             this.folderBrowserEvent.trigger('onSongAdded', track, this.player.getTrackList().getTracksNumber() - 1);
         }.bind(this));
     },
     fileBrowserCB(res) {
-        this.overlayDiv.style.display = 'block';
-        this.fileExplorerBox.style.display = 'block';
+        this._openFileBrowser();
         this.basePathBox.innerText = res['base_dir'];
-        
         if (res['dir_list'].length > 0) {
             for (let dirName of res['dir_list']) {
                 let liElem = document.createElement('li');
@@ -1180,15 +1196,27 @@ FileBrowser.prototype = {
             cb(track, idx);
         }, 'onSongAdded');
     },
+    _closeFileBrowser() {
+        this.isOpen = false;
+        clearElementInnerHTML(this.folderListBox);
+        clearElementInnerHTML(this.fileListBox);
+        this.overlayDiv.style.display = 'none';
+        this.fileExplorerBox.style.display = 'none';
+    },
+    _openFileBrowser() {
+        this.isOpen = true;
+        this.overlayDiv.style.display = 'block';
+        this.fileExplorerBox.style.display = 'block';
+    },
 };
 
 
 const TrackListBrowser = function(tracklist, player) {
     this.overlayDiv = document.querySelector('.cnt-overlay');
-    this.trackExplorerBox = document.querySelector('.track-browser');
+    /*this.trackExplorerBox = document.querySelector('.track-browser');
     this.mainTableElem = document.querySelector('.tracklist-content');
     this.tableHeadElem = document.querySelector('.tracklist-content thead');
-    this.tableBodyElem = document.querySelector('.tracklist-content tbody');
+    this.tableBodyElem = document.querySelector('.tracklist-content tbody');*/
     this.tracklist = tracklist;
     this.player = player;
     this.loaded = false;
@@ -1196,52 +1224,65 @@ const TrackListBrowser = function(tracklist, player) {
     this.trackSearch.onSearchResult(this.searchTrack.bind(this));
     this.trackSearch.onSearchVisibilityChange(this.restoreTracklistFromSearch.bind(this));
     this.player.onPlayerSongChange(this.setCurrentPlayingTrack.bind(this));
-    this.player.onShuffle(this.reload.bind(this, true));
+    this.player.onShuffle(this.reload.bind(this, true, true));
     this.itemsPerPage = 20;
-    this.overlayDiv.addEventListener('click', this.closeTrackExplorer.bind(this));
-};
-TrackListBrowser.prototype = {
-    closeTrackExplorer(evt) {
+    this.overlayDiv.addEventListener('click', (evt) => {
         if (evt.target != evt.currentTarget)
             return;
-        this.overlayDiv.style.display = 'none';
-        this.trackExplorerBox.style.display = 'none';
+        if (this.isOpen)
+            this._closeTrackExplorer();
+    });
+};
+TrackListBrowser.prototype = {
+    closeTrackExplorer(keep, unload) {
+        if (unload)
+            this.unload();
+        if (keep !== true) {
+            this._closeTrackExplorer();
+        }
+    },
+    openTracklistExplorer(kept) {
+        this.load();
+        if (kept !== true) {
+            this._displayTrackExplorer();
+        }
     },
     setTrackList(tracklist) {
+        this.loaded = false;
         this.tracklist = tracklist;
     },
     addTrackToList(track, idx) {
         this._makeTracklistHTML(track, idx, idx % 2 == 0);
     },
-    load(kept) {
+    load() {
         if (!this.loaded) {
             this.loaded = this.displayTracklList(0);
         }
-        if (!kept === true) {
-            this.trackExplorerBox.style.display = 'block';
-            this.overlayDiv.style.display = 'block';
-        }
     },
-    unload(keep) {
-        clearElementInnerHTML(this.tableBodyElem);
+    unload() {
         this.loaded = false;
-        if (keep !== true) {
-            this.trackExplorerBox.style.display = 'none';
-            this.overlayDiv.style.display = 'none';
-        }
     },
-    reload(keep) {
-        this.unload(keep);
-        this.load(keep);
+    reload(keep, unload) {
+        this.closeTrackExplorer(keep, unload);
+        this.openTracklistExplorer(keep);
     },
     toggleLoad(keep) {
         if (this.loaded)
-            this.unload(keep);
+            this.closeTrackExplorer(keep);
         else
-            this.load(keep);
+            this.openTracklistExplorer(keep);
+    },
+    setElementBoxes(trackExplorerBox, mainTableElem, tableHeadElem, tableBodyElem) {
+        this.trackExplorerBox = trackExplorerBox;
+        this.mainTableElem = mainTableElem;
+        this.tableHeadElem = tableHeadElem;
+        this.tableBodyElem = tableBodyElem;
+        this.trackSearch.init();
     },
     displayTracklList(pageNumbre) {
         let tracklist = this.tracklist.getTrackList();
+        clearElementInnerHTML(this.tableBodyElem);
+        console.log('tracklist', tracklist);
         if (tracklist.length == 0)
             return false
         for (x = 0; x < tracklist.length; ++x) {
@@ -1255,12 +1296,14 @@ TrackListBrowser.prototype = {
         this.tracklist.setTrackIndex(trackIndex, true);
     },
     setCurrentPlayingTrack(track) {
-        this._setCurrentrackStyle(track.trackUUid);
+        if (this.loaded)
+            this._setCurrentrackStyle(track.trackUUid);
     },
     searchTrack(tracks) {
         if (tracks.length == 0)
             return;
-        this.unload(true);
+        this.closeTrackExplorer(true, true);
+        clearElementInnerHTML(this.tableBodyElem);
         for (x = 0; x < tracks.length; ++x) {
             let track = tracks[x];
             this._makeTracklistHTML(track, x, x % 2 == 0);
@@ -1269,8 +1312,20 @@ TrackListBrowser.prototype = {
     },
     restoreTracklistFromSearch(visible) {
         if (!visible) {
-            this.reload(true);
+            this.reload(true, true);
         }
+    },
+    _displayTrackExplorer() {
+        console.log('opening');
+        this.isOpen = true;
+        this.trackExplorerBox.style.display = 'block';
+        this.overlayDiv.style.display = 'block';
+    },
+    _closeTrackExplorer() {
+        this.isOpen = false;
+        console.log('closing');
+        this.overlayDiv.style.display = 'none';
+        this.trackExplorerBox.style.display = 'none';
     },
     _setCurrentrackStyle(trackUUid) {
         const currentlyPlaying = document.querySelector('tr.currently-playing');
@@ -1395,13 +1450,13 @@ TrackListBrowser.prototype = {
         api.deleteTrack(trackUUid, (res) => {
             if (res.success) {
                 this.tracklist.removeTrackFromTracklistByUUID(trackUUid);
-                this.reload(true);
+                this.reload(true, true);
             } else
                 alert('Error deleting file');
         });
     },
     addToFavoriteAction(liFavorite, divElem, trackUUid) {
-        console.log('not implemented', trackUUid);
+        console.log('not implemented :|', trackUUid);
     },
     hideActionMenu(divElem) {
         divElem.style.display = 'none';
@@ -1411,26 +1466,27 @@ TrackListBrowser.prototype = {
 
 const TrackSearch = function(tracklist) {
     this.tracklist = tracklist;
-    this.magGlassElem = document.querySelector('.tracklist-head .tracklist-search .img-cnt');
-    this.inputSearchElem = document.querySelector('.tracklist-head .tracklist-search .input-cnt');
-    this.searchInput = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
-    this.magGlassElem.addEventListener('click', this._toggleInputSearchVisibility.bind(this));
-    this.inputSearchElem.addEventListener('keyup', this.search.bind(this));
     this.searchEvents = new ListEvents();
     this.term = '';
 }
 TrackSearch.prototype = {
+    init() {
+        this.magGlassElem = document.querySelector('.tracklist-head .tracklist-search .img-cnt');
+        this.inputSearchElem = document.querySelector('.tracklist-head .tracklist-search .input-cnt');
+        this.searchInput = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
+        this.magGlassElem.addEventListener('click', this._toggleInputSearchVisibility.bind(this));
+        this.inputSearchElem.addEventListener('keyup', this.search.bind(this));
+    },
     setTrackList(trackList) {
         this.tracklist = trackList;
     },
     search(evt) {
+        console.log('evt.target.value', evt.target.value);
         this.result = this._searchTrack(evt.target.value);
-        this.searchEvents.trigger('onSearchResult');
+        this.searchEvents.trigger('onSearchResult', this.result);
     },
     onSearchResult(cb) {
-        this.searchEvents.onEventRegister(() => {
-            cb(this.result);
-        }, 'onSearchResult');
+        this.searchEvents.onEventRegister(cb, 'onSearchResult', this.result);
     },
     onSearchVisibilityChange(cb) {
         this.searchEvents.onEventRegister(() => {
@@ -1463,8 +1519,7 @@ TrackSearch.prototype = {
 }
 
 
-const LeftMenu = function() {
-}
+const LeftMenu = function() {};
 LeftMenu.prototype = {
     init() {
         this.mainMenuElem = document.getElementById('main-left-menu');
@@ -1478,7 +1533,7 @@ LeftMenu.prototype = {
         } else {
             this.open();
         }
-        this.mainMenuElem.classList.toggle('is-open')
+        this.mainMenuElem.classList.toggle('is-open');
     },
     open() {
         let maxRight = 0 - 1;
@@ -1517,14 +1572,9 @@ const KeyValues = function() {
 }
 
 
-const KeyCotrols = function(keyvalues, player) {
+const KeyCotrols = function(keyvalues) {
     if (typeof keyvalues === 'undefined') {
-        const e = new Error('KeyValues instance required!');
-        console.error(e);
-        throw e;
-    }
-    if (typeof player === 'undefined') {
-        const e = new Error('A player is required!');
+        const e = new Error('KeyValues instance is required!');
         console.error(e);
         throw e;
     }
@@ -1534,13 +1584,21 @@ const KeyCotrols = function(keyvalues, player) {
     this.plusVolKey = keyvalues.PLUS;
     this.nextTrackKey = keyvalues.ArrowRight;
     this.prevTrackKey = keyvalues.ArrowLeft;
-    this.player = player;
+    
     this._keyDownActions = {};
     this._keyUpActions = {};
     this._setUpBuiltinActions();
     this._bindEvents();
 };
 KeyCotrols.prototype = {
+    setPlayer(player) {
+        if (typeof player === 'undefined') {
+            const e = new Error('A player is required!');
+            console.error(e);
+            throw e;
+        }
+        this.player = player;
+    },
     playPause() {
         this.player.playPause();
     },
@@ -1550,11 +1608,23 @@ KeyCotrols.prototype = {
     volumeDown() {
         this.player.decreasVolume();
     },
-    nextTrack() {
+    nextTrack({ctrlKey, repeat}={}) {
+        if (ctrlKey || repeat)
+            return;
         this.player.next();
     },
-    prevTrack() {
+    prevTrack({ctrlKey, repeat}={}) {
+        if (ctrlKey || repeat)
+            return;
         this.player.prev();
+    },
+    fastFoward({ctrlKey, repeat}={}) {
+        if (ctrlKey && repeat)
+            this.player.setCurrentTime(this.player.getCurrentTime() + 1);
+    },
+    rewind({ctrlKey, repeat}={}) {
+        if (ctrlKey && repeat)
+            this.player.setCurrentTime(this.player.getCurrentTime() - 1);
     },
     registerKeyUpAction(key, cb) {
         if (!this._keyUpActions.hasOwnProperty(key))
@@ -1567,14 +1637,14 @@ KeyCotrols.prototype = {
         this._keyDownActions[key].push(cb);
     },
     _bindEvents() {
-        document.body.addEventListener('keyup', evt => this._dispatchActions.bind(this)(evt.key, 'up'));
-        document.body.addEventListener('keydown', evt => this._dispatchActions.bind(this)(evt.key, 'down'));
+        document.body.addEventListener('keyup', evt => this._dispatchActions.bind(this)(evt, 'up'));
+        document.body.addEventListener('keydown', evt => this._dispatchActions.bind(this)(evt, 'down'));
     },
-    _dispatchActions(key, keyType) {
+    _dispatchActions(evt, keyType) {
         if (keyType == 'up')
-            return this._executeKeyUpActions(key);
+            return this._executeKeyUpActions(evt);
         else if (keyType == 'down')
-            return this._executeKeyDownActions(key);
+            return this._executeKeyDownActions(evt);
     },
     _setUpBuiltinActions() {
         this.registerKeyUpAction(this.playPauseKey, this.playPause.bind(this));
@@ -1582,25 +1652,220 @@ KeyCotrols.prototype = {
         this.registerKeyDownAction(this.minusVolKey, this.volumeDown.bind(this));
         this.registerKeyUpAction(this.nextTrackKey, this.nextTrack.bind(this));
         this.registerKeyUpAction(this.prevTrackKey, this.prevTrack.bind(this));
+        this.registerKeyDownAction(this.nextTrackKey, this.fastFoward.bind(this));
+        this.registerKeyDownAction(this.prevTrackKey, this.rewind.bind(this));
     },
-    _executeKeyDownActions(key) {
+    _executeKeyDownActions(evt) {
+        const key = evt.key;
         if (!this._keyDownActions.hasOwnProperty(key))
             return;
         const actions = this._keyDownActions[key];
         if (actions.length > 0) {
-            actions.map(cb => typeof cb === 'function' && cb());
+            actions.map(cb => typeof cb === 'function' && cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat}));
         }
     },
-    _executeKeyUpActions(key) {
+    _executeKeyUpActions(evt) {
+        const key = evt.key;
         if (!this._keyUpActions.hasOwnProperty(key))
             return;
         const actions = this._keyUpActions[key];
         if (actions.length > 0) {
-            actions.map(cb => typeof cb === 'function' && cb());
+            actions.map(cb => typeof cb === 'function' && cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat}));
         }
     },
 };
 
+window.KeyCotrols = new KeyCotrols(new KeyValues);
+
+const Layout = function(parentElem, layoutName) {
+    this.parentElem = parentElem;
+    this.layoutName = layoutName;
+};
+Layout.prototype = {
+    setParntElem(parentElem) {
+        this.parentElem = parentElem;
+    },
+    getParentElem() {
+        return this.parentElem;
+    },
+    setLayoutName(layoutName) {
+        this.layoutName = layoutName;
+    },
+    getLayoutName() {
+        return this.layoutName;
+    },
+    registerRenderCallback(cb) {
+        this.renderCallback = cb; 
+    },
+    render() {
+        this.renderCallback(this.parentElem);
+    }
+};
+
+
+const LayoutHTML = function() {
+    this.layouts = {};
+};
+LayoutHTML.prototype = {
+    addHTMLLayout(layout) {
+        this.layouts[layout.layoutName] = layout;
+    },
+    renderLayout(layoutName) {
+        this.layouts[layoutName].render();
+    }
+};
+
+
+const FileBrowserRenderer = function(fileBrowser, layout, elemEvent) {
+    this.fileBrowser = fileBrowser;
+    this.layout = layout;
+    this.elemEvent = elemEvent;
+    this.layout.registerRenderCallback(this._render.bind(this));
+    this._bindEVent();
+};
+FileBrowserRenderer.prototype = {
+    _bindEVent() {
+        this.elemEvent.addEventListener('click', (evt) => {
+            this._displayFileBroserLayout();
+            this.fileBrowser.loadFileBrowser.bind(this.fileBrowser)(evt);
+        });
+    },
+    _displayFileBroserLayout() {
+        window.layoutHTML.renderLayout(this.layout.layoutName);
+    },
+    _render(parentElem) {
+        clearElementInnerHTML(parentElem);
+        parentElem.className = 'file-browser';
+        
+        const divBasePath = document.createElement('div');
+        const ulFolderList = document.createElement('ul');
+        const ulFileList = document.createElement('ul');
+        
+        divBasePath.classList.add('base-path');
+        ulFolderList.classList.add('folder-list');
+        ulFileList.classList.add('file-list');
+        
+        parentElem.appendChild(divBasePath);
+        parentElem.appendChild(ulFolderList);
+        parentElem.appendChild(ulFileList);
+
+        this.fileBrowser.setElementBoxes(parentElem, divBasePath, ulFolderList, ulFileList);
+    }
+};
+
+
+const TrackListBrowserRenderer = function(trackListBrowser, layout, elemEvent) {
+    this.trackListBrowser = trackListBrowser;
+    this.layout = layout;
+    this.elemEvent = elemEvent;
+    this.isRendered = false;
+    this.layout.registerRenderCallback(this._render.bind(this));
+    this._bindEVent();
+};
+TrackListBrowserRenderer.prototype = {
+    load() {
+        if (!this.isRendered) {
+            this._displayFileBroserLayout();
+            this.isRendered = true;
+        }
+        this.trackListBrowser.reload(false, true);
+    },
+    unload() {
+        this.trackListBrowser.closeTrackExplorer();
+        this.isRendered = false;
+    },
+    _bindEVent() {
+        this.elemEvent.addEventListener('click', (evt) => {
+           this.load();
+        });
+    },
+    _displayFileBroserLayout() {
+        window.layoutHTML.renderLayout(this.layout.layoutName);
+    },
+    _render(parentElem) {
+        clearElementInnerHTML(parentElem);
+        parentElem.className = 'track-browser';
+
+        /* tracklist-head */
+        const divTrackListHead = document.createElement('div');
+        const divTracklistTitle = document.createElement('div');
+        const divTracklistSearch = document.createElement('div');
+        const divImgCnt = document.createElement('div');
+        const imgELem = document.createElement('img');
+        const divInputCnt = document.createElement('div');
+        const InputSearchElem = document.createElement('input');
+
+        divTrackListHead.className = 'tracklist-head';
+        divTracklistTitle.innerText = 'Track list';
+        divTracklistTitle.className = 'tracklist-title inline-block';
+        divTracklistSearch.className = 'tracklist-search inline-block';
+        divImgCnt.className = 'img-cnt inline-block';
+        divInputCnt.className = 'input-cnt inline-block';
+        InputSearchElem.className = 'search-input';
+        imgELem.src = "/static/mag-glass2-white.svg";
+
+        divImgCnt.appendChild(imgELem);
+        divInputCnt.appendChild(InputSearchElem);
+        divTracklistSearch.append(divImgCnt, divInputCnt);
+        divTrackListHead.append(divTracklistTitle, divTracklistSearch);
+
+        parentElem.append(divTrackListHead);
+
+        /* tracklist-content-div */
+        const tracklistContentDiv = document.createElement('div');
+        const tracklistContentTable = document.createElement('table');
+        const thead = document.createElement('thead');
+        const trHead = document.createElement('tr');
+        const thSmallCellNb = document.createElement('th');
+        const thTitle = document.createElement('th');
+        const thArtist = document.createElement('th');
+        const thAlbum = document.createElement('th');
+        const thSmallCellDuration = document.createElement('th');
+        const thAction = document.createElement('th');
+        const tbody = document.createElement('tbody');
+        
+        const tracklistInfoCntDiv = document.createElement('div');
+        const tracklistinfoNbSpan = document.createElement('span');
+        const nbTracksSpan = document.createElement('span');
+        const tracklistInfoDurationSpan = document.createElement('span');
+        const durationTracksSpan = document.createElement('span');
+        const totalTracksText = document.createTextNode(' Total Tracks');
+        const totalDurationText = document.createTextNode(' Total Duration');
+
+        tracklistInfoCntDiv.className = 'tracklist-info-cnt';
+        tracklistinfoNbSpan.className = 'tracklist-info-nb';
+        nbTracksSpan.className = 'nb-tracks';
+        tracklistInfoDurationSpan.className = 'tracklist-info-duration';
+        durationTracksSpan.className = 'duration-tracks';
+
+        tracklistContentDiv.className = 'tracklist-content-div';
+        tracklistContentTable.className = 'tracklist-content';
+        thSmallCellNb.className = 'small-cell';
+        thSmallCellDuration.className = 'small-cell';
+
+        thSmallCellNb.innerText = 'N°';
+        thTitle.innerText = 'Title';
+        thArtist.innerText = 'Artist';
+        thAlbum.innerText = 'Album';
+        thSmallCellDuration.innerText = 'Duration';
+
+        trHead.append(thSmallCellNb, thTitle, thArtist, thAlbum, thSmallCellDuration, thAction);
+        thead.append(trHead);
+        tracklistContentTable.append(thead, tbody);
+        tracklistContentDiv.append(tracklistContentTable);
+
+        tracklistInfoDurationSpan.append(durationTracksSpan, totalDurationText);
+        tracklistinfoNbSpan.append(nbTracksSpan, totalTracksText);
+        tracklistInfoCntDiv.append(tracklistinfoNbSpan, tracklistInfoDurationSpan);
+        tracklistContentDiv.append(tracklistInfoCntDiv);
+        parentElem.append(tracklistContentDiv);
+
+        this.trackListBrowser.setElementBoxes(parentElem, tracklistContentTable, thead, tbody);
+    }
+}
+
+
+window.layoutHTML = new LayoutHTML();
 
 const Drawing = function(canvas) {
     this.canvas = canvas; //document.createElement("canvas");
@@ -1624,19 +1889,36 @@ Drawing.prototype = {
 };
 
 
-(function(window, document, undefined) {
+(function main(window, document, undefined) {
     const mainTracklist = new TrackList();
     const imgList = [];
     const leftMenu = new LeftMenu();
-    leftMenu.init();
     const api = window.playerApi;
     const audioPlayer = new AudioPlayer(mainTracklist);
     const trackListBrowser = new TrackListBrowser(mainTracklist, audioPlayer);
     const playlistCreationTool = new PlaylistCreationTool();
+    const layoutHTML = window.layoutHTML;
+
+    const windowContentElem = document.getElementById('window-content');
+    const trackListBrowserLayout = new Layout(windowContentElem, 'tracklistBrowser');
+    
+    layoutHTML.addHTMLLayout(trackListBrowserLayout);
+    
+    const trackListBrowserRenderer = new TrackListBrowserRenderer(
+            trackListBrowser, 
+            trackListBrowserLayout, 
+            document.querySelector('#file-browser-action button.open-tracklist-browser')
+    );
+
+    //trackListBrowser.setTrackList(mainTracklist);
+
+    leftMenu.init();
     playlistCreationTool.createPlaylist(mainTracklist);
+    
     api.loadBGImages(function(res) {
         imgList.push(...res['img_list']);
         audioPlayer.init();
+        
         api.loadTrackList(function(res) {
             for (let i in res['tracklist']) {
                 let trackInfo = res['tracklist'][i];
@@ -1648,17 +1930,21 @@ Drawing.prototype = {
             }
             this.setCurrentTrackFromTrackList(false);
         }.bind(audioPlayer));
+        
         const fileBrowser = new FileBrowser(audioPlayer);
+        const fileBrowserLayout = new Layout(windowContentElem, 'folderBroser');
+        const fileBrowserRenderer = new FileBrowserRenderer(fileBrowser, fileBrowserLayout, document.querySelector('#file-browser-action button.open-file-browser'));
+        
+
+        layoutHTML.addHTMLLayout(fileBrowserLayout);
+
         fileBrowser.onSongAdded(trackListBrowser.addTrackToList.bind(trackListBrowser))
-        document.querySelector('#file-browser-action button.open-file-browser').addEventListener('click', fileBrowser.loadFileBrowser.bind(fileBrowser));
+
         document.querySelector('#file-browser-action button.open-playlist-create').addEventListener(
             'click',
             playlistCreationTool.displayPLaylistCreationStudio.bind(playlistCreationTool)
         );
-        document.querySelector('#file-browser-action button.open-tracklist-browser').addEventListener('click', () => {
-            trackListBrowser.setTrackList(mainTracklist);
-            trackListBrowser.load();
-        });
+        
         draw(0, true, 0);
     });
 
@@ -1672,7 +1958,10 @@ Drawing.prototype = {
         volumeCntDisplay.innerText = Math.round(volume * 100);
     });
 
-    const keyCotrols = new KeyCotrols(new KeyValues, audioPlayer);
+    const keyCotrols = window.KeyCotrols;
+
+    keyCotrols.setPlayer(audioPlayer);
+
     keyCotrols.registerKeyDownAction('M', () => {
         audioPlayer.mute();
         muteCnt.style.display = 'block';
@@ -1690,24 +1979,43 @@ Drawing.prototype = {
             muteCnt.style.display = 'none';
         }, 1668);
     });
-    keyCotrols.registerKeyDownAction('a', trackListBrowser.load.bind(trackListBrowser));
-    keyCotrols.registerKeyDownAction('Escape', trackListBrowser.unload.bind(trackListBrowser));
+    keyCotrols.registerKeyDownAction('a', trackListBrowserRenderer.load.bind(trackListBrowserRenderer));
+    keyCotrols.registerKeyDownAction('Escape', trackListBrowserRenderer.unload.bind(trackListBrowserRenderer));
+
+    let volUpEvtId = -1;
+    let volDownEvtId = -1;
     keyCotrols.registerKeyDownAction('+', () => {
+        if (volUpEvtId >= 0) {
+            clearTimeout(volUpEvtId);
+            volUpEvtId = -1;
+        }
+        if (volDownEvtId >= 0) {
+            clearTimeout(volDownEvtId);
+            volDownEvtId = -1;
+        }
         volumeCnt.style.opacity = 1;
         volumeCnt.style.display = 'block';
     });
     keyCotrols.registerKeyUpAction('+', () => {
-        setTimeout(() => {
+        volUpEvtId = setTimeout(() => {
             fadeOut(volumeCnt, false, 0.35);
         }, 568);
     });
+    
     keyCotrols.registerKeyDownAction('-', () => {
-        console.log('vol - Start');
+        if (volDownEvtId >= 0) {
+            clearTimeout(volDownEvtId);
+            volDownEvtId = -1;
+        }
+        if (volUpEvtId >= 0) {
+            clearTimeout(volUpEvtId);
+            volUpEvtId = -1;
+        }
         volumeCnt.style.opacity = 1;
         volumeCnt.style.display = 'block';
     });
     keyCotrols.registerKeyUpAction('-', () => {
-        setTimeout(() => {
+        volDownEvtId = setTimeout(() => {
             fadeOut(volumeCnt, false, 0.35);
         }, 568);
     });
@@ -1744,7 +2052,7 @@ Drawing.prototype = {
     canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
     let curImg = 'img1.jpg';
     let background = new Image();
-    background.src = `http://localhost:8888/static/${curImg}`;
+    background.src = `http://jsradio.me:3600/static/${curImg}`;
 
     background.onload = function() {
         console.log('img loaded', background.width, background.height, canvas.width, canvas.height);
@@ -1769,7 +2077,7 @@ Drawing.prototype = {
         else if (c == 0) {
             d = true;
             curImg = encodeURI(`${imgList[i]}`);
-            background.src = `http://localhost:8888/${curImg}`;
+            background.src = `http://jsradio.me:3600/${curImg}`;
             ++i;
             if (i >= imgList.length)
                 i = 0;
