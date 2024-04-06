@@ -25,8 +25,15 @@ SECRET_KEY = 'django-insecure-t&t2ei2dj@jy@g0nviv+059hncwg56%9m=_g2eyu3_(8@ig4$f
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = [
+    'jsradio.me',
+    'localhost'
+]
+CORS_ORIGIN_WHITELIST = (
+    'jsradio.me',
+    'localhost',
+    '127.0.0.1'
+)
 
 # Application definition
 

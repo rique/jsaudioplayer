@@ -227,11 +227,12 @@ ul {
     font-size: 18px;
 }
 
-.cnt-overlay .track-browser {
+.cnt-overlay .track-browser, #window-content.track-browser {
     overflow: hidden!important;
 }
 
-.cnt-overlay .track-browser .tracklist-content-div {
+.cnt-overlay .track-browser .tracklist-content-div, 
+#window-content.track-browser .tracklist-content-div{
     overflow: scroll;
     height: 92.4%;
     width: auto;
