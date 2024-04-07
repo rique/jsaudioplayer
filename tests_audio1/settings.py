@@ -29,11 +29,6 @@ ALLOWED_HOSTS = [
     'jsradio.me',
     'localhost'
 ]
-CORS_ORIGIN_WHITELIST = (
-    'jsradio.me',
-    'localhost',
-    '127.0.0.1'
-)
 
 # Application definition
 

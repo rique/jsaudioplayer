@@ -262,6 +262,23 @@ Api.prototype = {
             callback(JSON.parse(xhr.response));
         }
     },
+    editTrack(fieldType, fieldValue, trackUUid, callback) {
+        let xhr = this.getXhrPost(`${this.url}/edit-track`);
+        let data = JSON.stringify({
+            field_type: fieldType,
+            field_value: fieldValue,
+            track_uuid: trackUUid
+        });
+
+        xhr.setRequestHeader('Content-type', 'application/json; charset=UTF-8');
+        xhr.setRequestHeader("X-CSRFToken", this.csrftoken);
+        xhr.send(data);
+
+        xhr.onload = () => {
+            console.log('xhr', xhr.status);
+            callback(JSON.parse(xhr.response));
+        }
+    },
     deleteTrack(track_uuid, callback) {
         let xhr = this.getXhrPost(`${this.url}/delete-track`);
         let data = JSON.stringify({
@@ -336,6 +353,18 @@ ID3Tags.prototype = {
     },
     getAlbumArt() {
         return this.picture;
+    },
+    setArtist(artist) {
+        this.tags.artist = artist;
+        this._manageTags(this.tags);
+    },
+    setTitle(title) {
+        this.tags.title = title;
+        this._manageTags(this.tags);
+    },
+    setAlbum(album) {
+        this.tags.album = album;
+        this._manageTags(this.tags);
     },
     getDuration() {
         return this.duration;
@@ -423,6 +452,15 @@ Track.prototype = {
     },
     setID3Tags(id3Tags) {
         this._id3TagsInstance = id3Tags;
+    },
+    setTag(tag, value) {
+        console.log('setTag', tag, value);
+        if (tag == 'title')
+            this._id3TagsInstance.setTitle(value);
+        else if (tag == 'artist')
+            this._id3TagsInstance.setArtist(value);
+        else if (tag == 'album')
+            this._id3TagsInstance.setAlbum(value);
     },
     _formatTime(millisecTime) {
         let secs = '0', mins = '0';
@@ -1225,7 +1263,7 @@ const TrackListBrowser = function(tracklist, player) {
         if (evt.target != evt.currentTarget)
             return;
         if (this.isOpen)
-            this._closeTrackExplorer();
+            this.closeTrackExplorer();
     });
 };
 TrackListBrowser.prototype = {
@@ -1310,20 +1348,17 @@ TrackListBrowser.prototype = {
         this.loaded = true;
     },
     restoreTracklistFromSearch(visible) {
-        console.log('visible', visible);
         if (!visible) {
             this.reload(true, true);
         }
     },
     _displayTrackExplorer() {
-        console.log('opening');
         this.isOpen = true;
         this.trackExplorerBox.style.display = 'block';
         this.overlayDiv.style.display = 'block';
     },
     _closeTrackExplorer() {
         this.isOpen = false;
-        console.log('closing');
         this.overlayDiv.style.display = 'none';
         this.trackExplorerBox.style.display = 'none';
     },
@@ -1359,19 +1394,33 @@ TrackListBrowser.prototype = {
         const trackIndex = this.tracklist.getTrackIndexByTrack(track);
         tr.dataset.trackIndex = trackIndex;
         tr.dataset.trackId = trackUUid;
-        tr.addEventListener('dblclick', this.playSongFromTracklist.bind(this, trackIndex));
+        // tr.addEventListener('dblclick', this.playSongFromTracklist.bind(this, trackIndex));
         let tdNumber = document.createElement('td'),
             tdTitle = document.createElement('td'),
             tdArtist = document.createElement('td'),
             tdAlbum = document.createElement('td'),
             tdDuration = document.createElement('td'),
+            tdTrackPlay = document.createElement('td'),            
             tdAction = document.createElement('td'),
             spanAction = document.createElement('span'),
-            liEllipsis = document.createElement('li');
+            liEllipsis = document.createElement('li'),
+            liPlay = document.createElement('li');
+
         spanAction.dataset.trackId = trackUUid;
         spanAction.classList.add('track-actions');
         liEllipsis.className = 'fa-solid fa-ellipsis';
-
+        tdTitle.dataset.fieldType = 'title';
+        tdArtist.dataset.fieldType = 'artist';
+        tdAlbum.dataset.fieldType = 'album';
+        
+        tdTrackPlay.className = 'track-play';
+        tdTrackPlay.dataset.trackId = trackUUid;
+        tdTrackPlay.addEventListener('click', this.playSongFromTracklist.bind(this, trackIndex));
+        liPlay.className = "fa-solid fa-play";
+        tdTrackPlay.appendChild(liPlay);
+        tdTitle.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
+        tdArtist.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
+        tdAlbum.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
         tdNumber.innerHTML = x + 1;
         tdTitle.innerHTML = track.getTitle();
         tdArtist.innerHTML = track.getArtist();
@@ -1385,13 +1434,8 @@ TrackListBrowser.prototype = {
         spanAction.appendChild(liEllipsis);
         tdAction.appendChild(spanAction);
 
-        tr.appendChild(tdNumber);
-        tr.appendChild(tdTitle);
-        tr.appendChild(tdArtist);
-        tr.appendChild(tdAlbum);
-        tr.appendChild(tdDuration);
-        tr.appendChild(tdAction);
-
+        tr.append(tdNumber, tdTitle, tdArtist, tdAlbum, tdDuration, tdAction, tdTrackPlay);
+        
         this.tableBodyElem.appendChild(tr);
 
         this._displayTracklistInfo();
@@ -1538,6 +1582,68 @@ TrackSearch.prototype = {
 }
 
 
+const TrackEditor = {
+    tracklist: '',
+    onclickCell(evt) {
+        this._setExclusivity();
+        const target = evt.target;
+        const inputField = document.createElement('input');
+        const hiddenInputField = document.createElement('input');
+        const trackUUid = target.parentNode.dataset.trackId;
+
+        hiddenInputField.type = 'hidden';
+
+        inputField.className = 'track-edit';
+        inputField.value = target.innerText;
+        hiddenInputField.value = target.innerText;
+        inputField.dataset.trackId = trackUUid;
+        this.cachedValue = target.innerText;
+        this.fieldType = inputField.dataset.fieldType;
+        inputField.addEventListener('blur', this.onValidate.bind(this));
+        window.KeyCotrols.registerKeyDownAction('Enter', this.onValidate.bind(this), this);
+
+        target.innerHTML = '';
+        target.append(inputField, hiddenInputField);
+        inputField.focus();
+    },
+    onValidate({target}) {
+        this._unsetExclusivity();
+        const targetValue = target.value;
+        const targetSibling = target.nextSibling;
+        const targetParent = target.parentNode;
+        if (targetSibling != null && targetValue != targetSibling.value) {
+            const trackUUid = targetParent.parentNode.dataset.trackId;
+            const fieldType = targetParent.dataset.fieldType;
+            window.playerApi.editTrack(fieldType, targetValue, trackUUid, (res) => {
+                if (res.success) {
+                    targetParent.innerHTML = targetValue;
+                    const track = this.tracklist.getTrackByUUID(trackUUid);
+                    track.setTag(fieldType, targetValue);
+                } else {
+                    targetParent.innerHTML = targetSibling.value;
+                }
+            });
+        } else {
+            targetParent.innerHTML = targetValue;
+        }
+    },
+    _setExclusivity() {
+        window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowLeft', this);
+        window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowRight', this);
+        window.KeyCotrols.setExlcusivityCallerKeyUp(' ', this);
+        window.KeyCotrols.setExlcusivityCallerKeyUp('a', this);
+        window.KeyCotrols.setExlcusivityCallerKeyDown('a', this);
+    },
+    _unsetExclusivity() {
+        window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowLeft', this);
+        window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowRight', this);
+        window.KeyCotrols.unsetExlcusivityCallerKeyUp(' ', this);
+        window.KeyCotrols.unsetExlcusivityCallerKeyUp('a', this);
+        window.KeyCotrols.unsetExlcusivityCallerKeyDown('a', this);
+    },
+};
+
+
 const LeftMenu = function() {};
 LeftMenu.prototype = {
     init() {
@@ -1603,7 +1709,7 @@ const KeyCotrols = function(keyvalues) {
     this.plusVolKey = keyvalues.PLUS;
     this.nextTrackKey = keyvalues.ArrowRight;
     this.prevTrackKey = keyvalues.ArrowLeft;
-    
+    this.enabled = true;
     this._keyDownActions = {};
     this._keyUpActions = {};
     this._exclusivityCallerKeyUp = [];
@@ -1612,6 +1718,15 @@ const KeyCotrols = function(keyvalues) {
     this._bindEvents();
 };
 KeyCotrols.prototype = {
+    enable() {
+        this.enabled = true;
+    },
+    disable() {
+        this.enabled = false;
+    },
+    isEnabled() {
+        return this.enabled;
+    },
     setPlayer(player) {
         if (typeof player === 'undefined') {
             const e = new Error('A player is required!');
@@ -1701,11 +1816,17 @@ KeyCotrols.prototype = {
         this.registerKeyDownAction(this.prevTrackKey, this.rewind.bind(this), this);
     },
     _executeKeyDownActions(evt) {
+        if (!this.isEnabled())
+            return;
+
         const key = evt.key;
-        let exclusiveCaller = this._exclusivityCallerKeyDown.find(obj => obj.key == key);
+
         if (!this._keyDownActions.hasOwnProperty(key))
             return;
+
+        const exclusiveCaller = this._exclusivityCallerKeyDown.find(obj => obj.key == key);
         const actions = this._keyDownActions[key];
+        
         if (actions.length > 0) {
             for (let i = 0; i < actions.length; ++i) {
                 let obj = actions[i];
@@ -1718,18 +1839,22 @@ KeyCotrols.prototype = {
                 }
 
                 else {
-                    obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat})
+                    obj.cb({target:  evt.target, ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat})
                 }
             }
         }
     },
     _executeKeyUpActions(evt) {
-        const key = evt.key;
-        let exclusiveCaller;
-        exclusiveCaller = this._exclusivityCallerKeyUp.find(obj => obj.key == key);
-        if (!this._keyUpActions.hasOwnProperty(key))
+        if (!this.isEnabled())
             return;
+
+        const key = evt.key;
+        
+        if (!this._keyUpActions.hasOwnProperty(key)) return;
+
+        const exclusiveCaller = this._exclusivityCallerKeyUp.find(obj => obj.key == key);
         const actions = this._keyUpActions[key];
+        
         if (actions.length > 0) {
             for (let i = 0; i < actions.length; ++i) {
                 let obj = actions[i];
@@ -1897,6 +2022,7 @@ TrackListBrowserRenderer.prototype = {
         const thArtist = document.createElement('th');
         const thAlbum = document.createElement('th');
         const thSmallCellDuration = document.createElement('th');
+        const thTrackPlay = document.createElement('th');
         const thAction = document.createElement('th');
         const tbody = document.createElement('tbody');
         
@@ -1925,7 +2051,7 @@ TrackListBrowserRenderer.prototype = {
         thAlbum.innerText = 'Album';
         thSmallCellDuration.innerText = 'Duration';
 
-        trHead.append(thSmallCellNb, thTitle, thArtist, thAlbum, thSmallCellDuration, thAction);
+        trHead.append(thSmallCellNb, thTitle, thArtist, thAlbum, thSmallCellDuration, thAction, thTrackPlay);
         thead.append(trHead);
         tracklistContentTable.append(thead, tbody);
         tracklistContentDiv.append(tracklistContentTable);
@@ -1978,6 +2104,8 @@ Drawing.prototype = {
     const windowContentElem = document.getElementById('window-content');
     const trackListBrowserLayout = new Layout(windowContentElem, 'tracklistBrowser');
     
+    TrackEditor.tracklist = mainTracklist;
+
     layoutHTML.addHTMLLayout(trackListBrowserLayout);
     
     const trackListBrowserRenderer = new TrackListBrowserRenderer(

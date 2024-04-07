@@ -12,7 +12,7 @@ from django.conf import settings
 
 from .models import Tracks, Playlist
 
-from mutagen.id3 import ID3
+from mutagen.id3 import ID3, TIT2, TPE1, TALB
 from mutagen.mp3 import MP3
 from base64 import b64encode
 
@@ -32,6 +32,7 @@ def addTrack(request):
     
     
     track_original_path = params['track_original_path']
+    
     # track_original_path = track_original_path.replace('~', '\~')
     audio = ID3(track_original_path)
     mp3_file = MP3(track_original_path)
@@ -79,6 +80,41 @@ def addTrack(request):
         'picture': {'data': apict, 'format': pic_format},
         'duration': mp3_file.info.length
     }})
+
+
+@csrf_exempt
+def editTrack(request):
+    if request.method != 'POST':
+        return JsonResponse(data={'success': False, 'code': 'wrong_method'}, status=405, reason="Method Not Allowed")
+
+    body_unicode = request.body.decode('utf-8')
+    params = json.loads(body_unicode)
+
+    track_uuid = params['track_uuid']
+    field_type = params['field_type']
+    field_value = params['field_value']
+
+    try:
+        track = Tracks.objects.get(track_uuid=track_uuid)
+    except Tracks.DoesNotExist:
+        return JsonResponse(data={'success': False, 'code': 'dose_not_exist'}, status=404, reason=f"Object or ressource with uuid {track_uuid} not found")
+
+    # track_original_path = track_original_path.replace('~', '\~')
+    audio = ID3(f'./static/{track_uuid}.mp3')
+    # mp3_file = MP3(track_original_path)
+
+    try:
+        if field_type == 'title':
+            audio.add(TIT2(encoding=3, text=field_value))
+        elif field_type == 'artist':
+            audio.add(TPE1(encoding=3, text=field_value))
+        elif field_type == 'album':
+            audio.add(TALB(encoding=3, text=field_value))
+        audio.save()
+    except Exception as e:
+        return JsonResponse(data={'success': False, 'code': 'system_error'}, status=500, reason=f"AN unknow error occured {e}")
+    
+    return JsonResponse(data={'success': True})
 
 
 @csrf_exempt

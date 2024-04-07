@@ -239,6 +239,25 @@ ul {
     margin: auto;
 }
 
+#window-content.track-browser .track-edit {
+    border: none;
+    display: block;
+    width: 98%;
+    padding: 1%;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+
+#window-content.track-browser .track-play {
+    cursor: pointer;
+    text-align: center;
+}
+
+#window-content.track-browser .track-play:hover {
+    background: #0aa0fe;
+    color: #fff;
+}
+
 .base-path {
     height: 30px;
     border-bottom: 1px solid #a0a0a0;
