@@ -1556,19 +1556,13 @@ TrackSearch.prototype = {
     },
     _setExclusivity() {
         console.log('Setting exclusivity');
-        window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowLeft', this);
-        window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowRight', this);
-        window.KeyCotrols.setExlcusivityCallerKeyUp(' ', this);
-        window.KeyCotrols.setExlcusivityCallerKeyUp('a', this);
-        window.KeyCotrols.setExlcusivityCallerKeyDown('a', this);
+        window.KeyCotrols.setExlcusivityCallerKeyUpV2(this);
+        window.KeyCotrols.setExlcusivityCallerKeyDownV2(this);
     },
     _unsetExclusivity() {
         console.log('Unsetting exclusivity');
-        window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowLeft', this);
-        window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowRight', this);
-        window.KeyCotrols.unsetExlcusivityCallerKeyUp(' ', this);
-        window.KeyCotrols.unsetExlcusivityCallerKeyUp('a', this);
-        window.KeyCotrols.unsetExlcusivityCallerKeyDown('a', this);
+        window.KeyCotrols.unsetExlcusivityCallerKeyUpV2(this);
+        window.KeyCotrols.unsetExlcusivityCallerKeyDownV2(this);
     },
     _searchTrack(term) {
         let termLower = term.toLowerCase();
@@ -1628,18 +1622,12 @@ const TrackEditor = {
         }
     },
     _setExclusivity() {
-        window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowLeft', this);
-        window.KeyCotrols.setExlcusivityCallerKeyUp('ArrowRight', this);
-        window.KeyCotrols.setExlcusivityCallerKeyUp(' ', this);
-        window.KeyCotrols.setExlcusivityCallerKeyUp('a', this);
-        window.KeyCotrols.setExlcusivityCallerKeyDown('a', this);
+        window.KeyCotrols.setExlcusivityCallerKeyUpV2(this);
+        window.KeyCotrols.setExlcusivityCallerKeyDownV2(this);
     },
     _unsetExclusivity() {
-        window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowLeft', this);
-        window.KeyCotrols.unsetExlcusivityCallerKeyUp('ArrowRight', this);
-        window.KeyCotrols.unsetExlcusivityCallerKeyUp(' ', this);
-        window.KeyCotrols.unsetExlcusivityCallerKeyUp('a', this);
-        window.KeyCotrols.unsetExlcusivityCallerKeyDown('a', this);
+        window.KeyCotrols.unsetExlcusivityCallerKeyUpV2();
+        window.KeyCotrols.unsetExlcusivityCallerKeyDownV2();
     },
 };
 
@@ -1714,6 +1702,8 @@ const KeyCotrols = function(keyvalues) {
     this._keyUpActions = {};
     this._exclusivityCallerKeyUp = [];
     this._exclusivityCallerKeyDown = [];
+    this._exclusivityCallerKeyUpV2 = [];
+    this._exclusivityCallerKeyDownV2 = [];
     this._setUpBuiltinActions();
     this._bindEvents();
 };
@@ -1758,6 +1748,24 @@ KeyCotrols.prototype = {
         if (typeof previousCallerIdx === 'undefined')
             return;
         this._exclusivityCallerKeyDown.splice(previousCallerIdx, 1);
+    },
+    setExlcusivityCallerKeyUpV2(caller) {
+        this._exclusivityCallerKeyUpV2.push(caller);
+    },
+    unsetExlcusivityCallerKeyUpV2(caller) {
+        const previousCallerIdx = this._exclusivityCallerKeyUpV2.findIndex(obj => obj == caller);
+        if (typeof previousCallerIdx === 'undefined')
+            return;
+        this._exclusivityCallerKeyUpV2.splice(previousCallerIdx, 1);
+    },
+    setExlcusivityCallerKeyDownV2(caller) {
+        this._exclusivityCallerKeyDownV2.push(caller);
+    },
+    unsetExlcusivityCallerKeyDownV2(caller) {
+        const previousCallerIdx = this._exclusivityCallerKeyDownV2.findIndex(obj => obj == caller);
+        if (typeof previousCallerIdx === 'undefined')
+            return;
+        this._exclusivityCallerKeyDownV2.splice(previousCallerIdx, 1);
     },
     playPause() {
         this.player.playPause();
@@ -1816,58 +1824,47 @@ KeyCotrols.prototype = {
         this.registerKeyDownAction(this.prevTrackKey, this.rewind.bind(this), this);
     },
     _executeKeyDownActions(evt) {
-        if (!this.isEnabled())
-            return;
+        if (!this.isEnabled()) return;
 
         const key = evt.key;
 
-        if (!this._keyDownActions.hasOwnProperty(key))
-            return;
+        if (!this._keyDownActions.hasOwnProperty(key)) return;
 
-        const exclusiveCaller = this._exclusivityCallerKeyDown.find(obj => obj.key == key);
+        const exclusiveCallers = this._exclusivityCallerKeyDownV2;
         const actions = this._keyDownActions[key];
         
-        if (actions.length > 0) {
+        if (actions && actions.length > 0) {
             for (let i = 0; i < actions.length; ++i) {
                 let obj = actions[i];
                 if (typeof obj.cb !== 'function')
-                    return;
-                if (typeof exclusiveCaller !== 'undefined') {
-                    if (obj.caller === exclusiveCaller.caller) { 
-                        obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat});
-                    }
-                }
-
-                else {
-                    obj.cb({target:  evt.target, ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat})
+                    continue;
+                if (exclusiveCallers && exclusiveCallers.length > 0) {
+                    exclusiveCallers.map(caller => obj.caller == caller && obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target}));
+                } else {
+                    obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target})
                 }
             }
         }
     },
     _executeKeyUpActions(evt) {
-        if (!this.isEnabled())
-            return;
+        if (!this.isEnabled()) return;
 
         const key = evt.key;
-        
-        if (!this._keyUpActions.hasOwnProperty(key)) return;
 
-        const exclusiveCaller = this._exclusivityCallerKeyUp.find(obj => obj.key == key);
+        if (!this._keyDownActions.hasOwnProperty(key)) return;
+
+        const exclusiveCallers = this._exclusivityCallerKeyUpV2;
         const actions = this._keyUpActions[key];
-        
-        if (actions.length > 0) {
+        console.log('keyUp', actions, exclusiveCallers);
+        if (actions && actions.length > 0) {
             for (let i = 0; i < actions.length; ++i) {
                 let obj = actions[i];
                 if (typeof obj.cb !== 'function')
-                    return;
-                if (typeof exclusiveCaller !== 'undefined') {
-                    if (obj.caller === exclusiveCaller.caller) { 
-                        obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat});
-                    }
-                }
-
-                else {
-                    obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat})
+                    continue;
+                if (exclusiveCallers && exclusiveCallers.length > 0) {
+                    exclusiveCallers.map(caller => obj.caller == caller && obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target}));
+                } else {
+                    obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target})
                 }
             }
         }
