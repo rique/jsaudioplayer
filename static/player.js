@@ -191,8 +191,14 @@ const ListEvents = function() {
     this._eventsRegistered = [];
 };
 ListEvents.prototype = {
-    onEventRegister(callback, eventKey) {
-        this._eventsRegistered.push({'eventKey': eventKey,  'event': new OneEvent(callback)});
+    onEventRegister({cb, subscriber}, eventKey) {
+        this._eventsRegistered.push({'eventKey': eventKey, 'subscriber': subscriber,  'event': new OneEvent(cb)});
+    },
+    unsubscribeEVent({eventKey, subscriber}) {
+        const subInedx = this._eventsRegistered.findIndex(evt => evt.subscriber == subscriber && evt.eventKey == eventKey);
+        if (typeof subInedx === 'undefined')
+            return;
+        this._eventsRegistered.splice(subInedx, 1);
     },
     trigger(eventKey, ...args) {
         args = args || [];
@@ -396,6 +402,7 @@ const Track = function(trackInfo) {
     this.trackDuration = undefined;
     this.currentTime = 0;
     this.isPlaying = false;
+    this._eventTrack = new ListEvents();
 };
 Track.prototype = {
     setTrackDuration(duration) {
@@ -454,13 +461,19 @@ Track.prototype = {
         this._id3TagsInstance = id3Tags;
     },
     setTag(tag, value) {
-        console.log('setTag', tag, value);
         if (tag == 'title')
             this._id3TagsInstance.setTitle(value);
         else if (tag == 'artist')
             this._id3TagsInstance.setArtist(value);
         else if (tag == 'album')
             this._id3TagsInstance.setAlbum(value);
+        this._eventTrack.trigger('onTagChange', tag, value);
+    },
+    onTagChange(cb, subscriber) {
+        this._eventTrack.onEventRegister({cb, subscriber}, 'onTagChange');
+    },
+    onTagChangeUnsub(subscriber) {
+        this._eventTrack.unsubscribeEVent({eventKey: 'onTagChange', subscriber});
     },
     _formatTime(millisecTime) {
         let secs = '0', mins = '0';
@@ -532,8 +545,8 @@ TrackList.prototype = {
         this.currentTrack = this.addedToQueue.splice(0, 1)[0];
         return this.currentTrack;
     },
-    onAddedToQueue(cb) {
-        this.trackListEvents.onEventRegister(cb, 'onAddedToQueue');
+    onAddedToQueue(cb, subscriber) {
+        this.trackListEvents.onEventRegister({cb, subscriber}, 'onAddedToQueue');
     },
     getCurrentTrack() {
         if (this.currentTrack != null)
@@ -590,8 +603,8 @@ TrackList.prototype = {
     getTrackIndexByUUID(trackUUid) {
         return this.getTrackList().findIndex(trk => trk.trackUUid == trackUUid);
     },
-    onTrackIndexChange(cb) {
-        this.trackListEvents.onEventRegister(cb, 'onIndexChange');
+    onTrackIndexChange(cb, subscriber) {
+        this.trackListEvents.onEventRegister({cb, subscriber}, 'onIndexChange');
     },
     isShuffleOn() {
         return this.isShuffle;
@@ -617,8 +630,8 @@ TrackList.prototype = {
         this.isShuffle = true;
         this.setTrackIndex(0, true);
     },
-    onShuffleTracklist() {
-        this.trackListEvents.onEventRegister(cb, 'onShuffleTracklist');
+    onShuffleTracklist(cb, subscriber) {
+        this.trackListEvents.onEventRegister({cb, subscriber}, 'onShuffleTracklist');
     },
     setTrackListTotalDuration(duration) {
         this.tracklistTotalDuration = duration;
@@ -862,10 +875,10 @@ AudioPlayer.prototype = {
             return this.play();
         return this.stop();
     },
-    onPlayerSongChange(cb) {
-        this.audioPlayerEvents.onEventRegister(() => {
+    onPlayerSongChange(cb, subscriber) {
+        this.audioPlayerEvents.onEventRegister({'cb': () => {
             cb(this.currentTrack);
-        }, 'playerSongChange');
+        }, subscriber}, 'playerSongChange');
     },
     playPause() {
         if (this.isPaused)
@@ -892,6 +905,7 @@ AudioPlayer.prototype = {
         this.setCurrentTime(0);
     },
     next() {
+        this.currentTrack.onTagChangeUnsub(this);
         if (!this.tracklist.hasQueue())
             this.tracklist.nextTrack();
         this.setCurrentTrackFromTrackList(true);
@@ -901,6 +915,7 @@ AudioPlayer.prototype = {
         if (this.getCurrentTime() > 3.6) {
             this.setCurrentTime(0);
         } else {
+            this.currentTrack.onTagChangeUnsub(this);
             if (!this.tracklist.hasQueue())
                 this.tracklist.previousTrack();
             this.setCurrentTrackFromTrackList(true);
@@ -935,8 +950,8 @@ AudioPlayer.prototype = {
         this._updateVolumeBar(volume);
         this.audioPlayerEvents.trigger('onVolumeChange', volume);
     },
-    onVolumeChange(cb) {
-        this.audioPlayerEvents.onEventRegister(cb, 'onVolumeChange');
+    onVolumeChange(cb, subscriber) {
+        this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onVolumeChange');
     },
     mute() {
         this.audioElem.muted = !this.audioElem.muted
@@ -952,8 +967,8 @@ AudioPlayer.prototype = {
         this._setShuffleBtnStyle(this.tracklist.isShuffle);
         this.audioPlayerEvents.trigger('onShuffle', this.tracklist);
     },
-    onShuffle(cb) {
-        this.audioPlayerEvents.onEventRegister(cb, 'onShuffle');
+    onShuffle(cb, subscriber) {
+        this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onShuffle');
     },
     increasVolume() {
         let volume = this.audioElem.volume + this.volumeStep;
@@ -970,7 +985,7 @@ AudioPlayer.prototype = {
         else
             track = this.tracklist.getCurrentTrack();
         console.log('playing song', track);
-
+        track.onTagChange(this._manageTag.bind(this), this);
         this.loadID3Tags(track);
         this.setPlayerSong(track, autoPlay);
     },
@@ -1001,6 +1016,7 @@ AudioPlayer.prototype = {
     },
     audioEnded() {
         let autoPlay, hasQueue = this.tracklist.hasQueue();
+        this.currentTrack.onTagChangeUnsub(this);
         if (this.tracklist.isLastTrack() && !hasQueue) {
             if (!this.repeatMode >= 1) {
                 console.log('End of session');
@@ -1085,7 +1101,6 @@ AudioPlayer.prototype = {
         this.timeTrackElem.innerText = ` - [${trackTime}]`;
         this.nameAlbumElem.innerText = album;
         this.nameTrackElem.innerText = title;
-
         this.artistName.innerText = artist;
 
         if (!tags.hasOwnProperty('picture'))
@@ -1099,6 +1114,19 @@ AudioPlayer.prototype = {
         
         let imgData = data;
         this.albumImg.src = `data:${format};base64,${imgData}`;
+    },
+    _manageTag(tag, value) {
+        switch(tag) {
+            case 'artist':
+                this.artistName.innerText = value;
+                break;
+            case 'album':
+                this.nameAlbumElem.innerText = ` ~ ${value}`;
+                break;
+            case 'title':
+                this.nameTrackElem.innerText = value;
+                break;
+        }
     },
     _setRepeatBtnStyle() {
         if (this.repeatMode == 0) {
@@ -1227,10 +1255,10 @@ FileBrowser.prototype = {
     loadFileBrowser() {
         this.api.browseFiles(this.baseDir, this.fileBrowserCB.bind(this))
     },
-    onSongAdded(cb) {
-        this.folderBrowserEvent.onEventRegister((track, idx) => {
+    onSongAdded(cb, subscriber) {
+        this.folderBrowserEvent.onEventRegister({'cb': (track, idx) => {
             cb(track, idx);
-        }, 'onSongAdded');
+        }, subscriber}, 'onSongAdded');
     },
     _closeFileBrowser() {
         this.isOpen = false;
@@ -1275,8 +1303,8 @@ TrackListBrowser.prototype = {
         }
         this.eventTraclistBrowser.trigger('onCloseTracklistBrowser');
     },
-    onCloseTracklistBrowser(cb) {
-        this.eventTraclistBrowser.onEventRegister(cb, 'onCloseTracklistBrowser');
+    onCloseTracklistBrowser(cb, subscriber) {
+        this.eventTraclistBrowser.onEventRegister({cb, subscriber}, 'onCloseTracklistBrowser');
     },
     openTracklistExplorer(kept) {
         this.load();
@@ -1330,6 +1358,7 @@ TrackListBrowser.prototype = {
         return true
     },
     playSongFromTracklist(trackIndex) {
+        this.tracklist.getCurrentTrack().onTagChangeUnsub(this.player);
         this.tracklist.setTrackIndex(trackIndex, true);
     },
     setCurrentPlayingTrack(track) {
@@ -1409,6 +1438,7 @@ TrackListBrowser.prototype = {
         spanAction.dataset.trackId = trackUUid;
         spanAction.classList.add('track-actions');
         liEllipsis.className = 'fa-solid fa-ellipsis';
+        tdAction.className = 'small-cell dont-hide';
         tdTitle.dataset.fieldType = 'title';
         tdArtist.dataset.fieldType = 'artist';
         tdAlbum.dataset.fieldType = 'album';
@@ -1442,8 +1472,9 @@ TrackListBrowser.prototype = {
     },
     showActionMenu(evt) {
         const target = evt.target;
+        
         const targetChildren = target.parentNode.getElementsByClassName('action-menu-cnt');
-
+        console.log('showActionMenu', targetChildren);
         if (targetChildren.length > 0 ) {
             return targetChildren[0].style.display = 'block';
         }
@@ -1530,13 +1561,13 @@ TrackSearch.prototype = {
         this.result = this._searchTrack(evt.target.value);
         this.searchEvents.trigger('onSearchResult', this.result);
     },
-    onSearchResult(cb) {
-        this.searchEvents.onEventRegister(cb, 'onSearchResult', this.result);
+    onSearchResult(cb, subscriber) {
+        this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchResult', this.result);
     },
-    onSearchVisibilityChange(cb) {
-        this.searchEvents.onEventRegister(() => {
+    onSearchVisibilityChange(cb, subscriber) {
+        this.searchEvents.onEventRegister({'cb': () => {
             cb(this._isSearchVisible());
-        }, 'onSearchVisibilityChange');
+        }, subscriber}, 'onSearchVisibilityChange');
     },
     _isSearchVisible() {
         return this.inputSearchElem.style.visibility == 'visible';
@@ -1851,11 +1882,11 @@ KeyCotrols.prototype = {
 
         const key = evt.key;
 
-        if (!this._keyDownActions.hasOwnProperty(key)) return;
+        if (!this._keyUpActions.hasOwnProperty(key)) return;
 
         const exclusiveCallers = this._exclusivityCallerKeyUpV2;
         const actions = this._keyUpActions[key];
-        console.log('keyUp', actions, exclusiveCallers);
+        
         if (actions && actions.length > 0) {
             for (let i = 0; i < actions.length; ++i) {
                 let obj = actions[i];
@@ -2036,6 +2067,8 @@ TrackListBrowserRenderer.prototype = {
         nbTracksSpan.className = 'nb-tracks';
         tracklistInfoDurationSpan.className = 'tracklist-info-duration';
         durationTracksSpan.className = 'duration-tracks';
+        thTrackPlay.className = 'track-play'
+        thAction.className = 'small-cell';
 
         tracklistContentDiv.className = 'tracklist-content-div';
         tracklistContentTable.className = 'tracklist-content';
