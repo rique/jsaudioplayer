@@ -62,8 +62,10 @@ const fadeOut = (element, cb, speed, opacity) => {
             if (typeof cb === 'function')
                 cb(element);
         }
-        element.style.opacity = opacity;
-        element.style.filter = 'alpha(opacity=' + opacity * 100 + ")";
+        requestAnimationFrame(() => {
+            element.style.opacity = opacity
+            element.style.filter = 'alpha(opacity=' + opacity * 100 + ")";
+        });
         opacity -= opacity * speed;
     }, 50);
 }
@@ -71,9 +73,11 @@ const fadeOut = (element, cb, speed, opacity) => {
 const fadeIn = (element, cb, speed, opacity) => {
     opacity = opacity || 0.1;
     speed = speed || 0.1;
+    element.style.opacity = 0;
     element.style.display = 'block';
     const timerID = setInterval(() => {
         if (opacity >= 1) {
+            
             clearInterval(timerID);
             if (typeof cb === 'function')
                 cb(element);
@@ -81,8 +85,9 @@ const fadeIn = (element, cb, speed, opacity) => {
         
         requestAnimationFrame(() => {
             element.style.opacity = opacity
+            element.style.filter = 'alpha(opacity=' + opacity * 100 + ")";
         });
-
+        
         opacity += opacity * speed;
     }, 50);
 }
@@ -222,6 +227,264 @@ ListEvents.prototype = {
     },
 };
 
+
+const NotificationBoxTemplate = {
+    notifParentNode: document.body,
+    render(title, message) {
+        this._setUpTpl(title, message);
+        this._renderTpl();
+    },
+    _setUpTpl(title, message) {
+        this.tpl = document.createElement('div');
+        this.tpl.id = 'notification-box';
+        this.tpl.style.display = 'none';
+        this.tpl.innerHTML = `
+        <div class="notification-head">
+          <div class="notif-title" class="inline-block">
+            ${title}
+          </div><div class="notif-close" class="inline-block"><div class="close-cirlce"><i class="fa-solid fa-xmark"></i></div></div>
+        </div>
+        <div class="notification-message">
+          <p>${message}</p>
+        </div>
+        <div class="notification-timer">
+          <div class="notif-prog-bar">
+            <div class="notif-sub-prog-bar"></div>
+          </div>
+        </div>`
+    },
+    _renderTpl() {
+        this.notifParentNode.appendChild(this.tpl);
+    }
+};
+
+
+const NotificationRendererV2 = function() {
+    this._notificationBoxTemplate = NotificationBoxTemplate;
+    this.defaultTimeout = 5000;
+    this.timeoutStep = 10;
+};
+NotificationRendererV2.prototype = {
+    render(notification, timeout) {
+        timeout = timeout || this.defaultTimeout;
+        this._notificationBoxTemplate.render(notification.getTitle(), notification.getMessage());
+        this._displayNotificationBox(timeout);
+    },
+    _displayNotificationBox(timeout) {
+        this.notifSubProgBar.style.width = '100%';
+        this.notificationBox.style.display = 'block';
+        this._timeoutTheBox(timeout, timeout);
+    },
+    _timeoutTheBox(startTime, currentTime) {
+        if (currentTime < 0)
+            return this._hideNotificationBox();
+        let percentProg = (currentTime / startTime) * 100;
+        requestAnimationFrame(this._updateProgressBar.bind(this, percentProg.toFixed(2)));
+        setTimeout(this._timeoutTheBox.bind(this, startTime, currentTime - this.timeoutStep), this.timeoutStep);
+    },
+    _hideNotificationBox() {
+        this.notificationBox.style.display = 'none';
+    },
+    _updateProgressBar(percentProg) {
+        this.notifSubProgBar.style.width = `${percentProg}%`;
+    }
+};
+
+
+const NotificationRendererV1 = function(notificationBoxId, titleBox, messageBox, notifProgBar, notifSubProgBar, closeBtn) {
+    this.notificationBox = document.querySelector(notificationBoxId);
+    this.titleBox = document.querySelector(titleBox);
+    this.messageBox = document.querySelector(messageBox);
+    this.notifProgBar = document.querySelector(notifProgBar);
+    this.notifSubProgBar = document.querySelector(notifSubProgBar);
+    this.closeBtn = document.querySelector(closeBtn);
+    this.notificationBox.addEventListener('click', this.close.bind(this));
+    this.defaultTimeout = 5000;
+    this.timeoutStep = 10;
+};
+NotificationRendererV1.prototype = {
+    render(notification, timeout) {
+        timeout = timeout || this.defaultTimeout;
+        this._renderTitle(notification.getTitle());
+        this._renderMessage(notification.getMessage());
+        this._displayNotificationBox(timeout);
+    },
+    close() {
+        // this._requestedClose = true;
+        if (this.animation)
+            this.animation.finish();
+    },
+    remove() {
+        this._hideNotificationBox();
+    },
+    _renderTitle(title) {
+        this.titleBox.innerText = title;
+    },
+    _renderMessage(message) {
+        this.messageBox.innerHTML = message;
+    },
+    _displayNotificationBoxOld(timeout) {
+        this.notifSubProgBar.style.width = '100%';
+        fadeIn(this.notificationBox, this._timeoutTheBox.bind(this, timeout, timeout), 0.6);
+    },
+    _displayNotificationBox(timeout) {
+        fadeIn(this.notificationBox, undefined, 0.6);
+        this.animation = this._setUpAnimation(timeout);
+        this.animation.play();
+        this.animation.onfinish = this._hideNotificationBox.bind(this);
+    },
+    _timeoutTheBox(startTime, currentTime) {
+        if (currentTime < 0 || this._requestedClose === true) {
+            this._requestedClose = false;
+            return this._hideNotificationBox();
+        }
+        
+        let percentProg = (currentTime / startTime) * 100;
+
+        requestAnimationFrame(this._updateProgressBar.bind(this, percentProg.toFixed(2)));
+        setTimeout(this._timeoutTheBox.bind(this, startTime, currentTime - (this.timeoutStep * 2)), this.timeoutStep);
+    },
+    _hideNotificationBox() {
+        fadeOut(this.notificationBox, undefined, 0.3, this.notificationBox.style.opacity);
+    },
+    _updateProgressBar(percentProg) {
+        this.notifSubProgBar.style.width = `${percentProg}%`;
+    },
+    _setUpAnimation(timeout) {
+        const keyFrames = [{width: '100%'}, {width: '0%'}];
+        const kfEffect = new KeyframeEffect(this.notifSubProgBar, keyFrames, {
+            duration: timeout,
+
+        });
+        return new Animation(kfEffect, document.timeline);
+    }
+};
+
+
+window.NotificationRenderer = new NotificationRendererV1(
+    '#notification-box', 
+    '#notif-title', 
+    '#notification-message', 
+    '#notif-prog-bar', 
+    '#notif-sub-prog-bar',
+    '#notif-close',
+);
+
+window.NotificationRendererV2 = new NotificationRendererV2();
+
+const Notification = function(title, message, level) {
+    this.title = title;
+    this.message = message;
+    this.level = level;
+    this._notificationRenderer = window.NotificationRenderer;
+};
+Notification.prototype = {
+    getTitle() {
+        return this.title;
+    },
+    setTitle(title) {
+        this.title = title;
+    },
+    getMessage() {
+        return this.message;
+    },
+    setMessage(message) {
+        this.message = message;
+    },
+    getLevel() {
+        return this.level;
+    },
+    setLevel(level) {
+        this.level = level;
+    },
+    render(timeout) {
+        this._notificationRenderer.render(this, timeout);
+    },
+    remove() {
+        this._notificationRenderer.remove();
+    }
+};
+
+
+const NotificationCenter = {
+    notifications: {},
+    registerNotification({title, message, level}, key) {
+        if (this.notifications.hasOwnProperty(key))
+            return console.error(`Notification key ${key} already set`);
+        this._createNotification(title, message, level, key);
+    },
+    unregisterNotification(key) {
+        if (!this.notifications.hasOwnProperty(key))
+            return console.error(`Notification key ${key} not set, doing nothing`);
+        this._deleteNotification(key);
+    },
+    modifyNotification({title, message, level}, key) {
+        if (!this.notifications.hasOwnProperty(key))
+            return console.error(`Notification key ${key} does not exists`);
+        this._updateNotification(title, message, level, key);
+    },
+    displayNotification(key, timeout) {
+        if (!this.notifications.hasOwnProperty(key))
+            return console.error(`Notification key ${key} does not exists`);
+        this.notifications[key].render(timeout);
+    },
+    hideNotification(key) {
+        if (!this.notifications.hasOwnProperty(key))
+            return console.error(`Notification key ${key} does not exists`);
+
+        this.notifications[key].remove();
+    },
+    _createNotification(title, message, level, key) {
+        this.notifications[key] = new Notification(title, message, level);
+    },
+    _updateNotification(title, message, level, key) {
+        const notification = this.notifications[key];
+        if (typeof title === 'string')
+            notification.setTitle(title);
+        if (typeof message === 'string')
+            notification.setMessage(message);
+        if (typeof level === 'string')
+            notification.setLevel(level);
+    },
+    _deleteNotification(key) {
+        delete this.notifications[key];
+    },
+};
+
+
+const PlayerNotifications = function() {
+    this.comingNextKey = 'player.comingNext';
+    NotificationCenter.registerNotification({
+        title: 'Coming Next',
+        level: 'info',
+    }, this.comingNextKey);
+};
+PlayerNotifications.prototype = {
+    setComingNext(message, timeout) {
+        NotificationCenter.modifyNotification({message}, this.comingNextKey);
+        NotificationCenter.displayNotification(this.comingNextKey, timeout);
+    },
+    hideComingNext() {
+        NotificationCenter.hideNotification(this.comingNextKey);
+    },
+};
+
+const FileBrowserNotifications = function() {
+  this.trackAddedKey = 'filebrowser.added';
+  NotificationCenter.registerNotification({
+    title: 'Track added',
+    level: 'info',
+  }, this.trackAddedKey);
+};
+FileBrowserNotifications.prototype = {
+    setAddedTrack(message, timeout) {
+        NotificationCenter.modifyNotification({message}, this.trackAddedKey);
+        NotificationCenter.displayNotification(this.trackAddedKey, timeout);
+    },
+    hideComingNext() {
+        NotificationCenter.hideNotification(this.trackAddedKey);
+    },
+};
 
 const Api = function() {
     this.url = 'http://jsradio.me:3600/api';
@@ -534,12 +797,15 @@ TrackList.prototype = {
     hasQueue() {
         return this.addedToQueue.length > 0;
     },
+    getQueueLength() {
+        return this.addedToQueue.length;
+    },
     getQueue() {
         return this.addedToQueue;
     },
     nextInQueue() {
         if (this.addedToQueue.length == 0) {
-            console.error('No tracks left in queue');
+            console.log('No tracks left in queue');
             return this.getCurrentTrack();
         }
         this.currentTrack = this.addedToQueue.splice(0, 1)[0];
@@ -573,6 +839,24 @@ TrackList.prototype = {
         --this.tracksNumber;
         this.trackIndexMax = this.tracksNumber - 1;
         return true;
+    },
+    getNextTrackInList() {
+        if (this.hasQueue()) {
+            const queue = this.getQueue();
+            if (queue.length == 1) {
+                return queue[0];
+            }
+
+            return queue[1];
+        }
+
+        return this.getNextTrackInTrackList();
+    },
+    getNextTrackInTrackList() {
+        const tracklist = this.getTrackList();
+        if (this.isLastTrack())
+            return tracklist[0];
+        return tracklist[this.trackIndex + 1];
     },
     nextTrack() {
         this._advanceTrackIndex();
@@ -796,6 +1080,7 @@ const AudioPlayer = function(tracklist) {
 
     this.audioElem = new Audio();
     this.jsmediatags = window.jsmediatags;
+    this._playerNotifications = new PlayerNotifications();
 };
 AudioPlayer.prototype = {
     init() {
@@ -871,6 +1156,11 @@ AudioPlayer.prototype = {
         this.audioElem.src = `/static/${track.trackUUid}.mp3`;
         this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
         this.audioPlayerEvents.trigger('playerSongChange');
+        if (this._nextratckFired === true)
+            this._playerNotifications.hideComingNext();
+        
+        this._nextratckFired = false;
+        
         if (autoPlay === true)
             return this.play();
         return this.stop();
@@ -1051,8 +1341,37 @@ AudioPlayer.prototype = {
         this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
         this.audioElem.onended = this.audioEnded.bind(this);
         this.audioElem.ontimeupdate = (evt) => {
-            this.tracklist.getCurrentTrack().setCurrentTime(evt.target.currentTime);
+            const target = evt.target;
+            const duration = target.duration;
+            const currentTime = target.currentTime;
+            
+            if (this._checkForNextTrack(currentTime, duration) && !this._nextratckFired) {
+                this._fireNotification();
+                this._nextratckFired = true;
+            }
+
+            this.tracklist.getCurrentTrack().setCurrentTime(target.currentTime);
         };
+    },
+    _checkForNextTrack(currentTime, duration) {
+        if (duration - currentTime <= 22) 
+            return true;
+        return false;
+    },
+    _fireNotification() {
+        const track = this.tracklist.getNextTrackInList();
+        this._playerNotifications.setComingNext(this._renderNextTrack(track), 21840);
+    },
+    _renderNextTrack(track) {
+        let album  = track.getAlbum();
+        let artist = track.getArtist();
+        if (!artist || artist.length == 0)
+            artist = 'N/A';
+        if (!album || album.length == 0)
+            album = 'N/A';
+         
+        return `<p class="no-wrap">${track.getTitle()} ~ ${album}</p>
+        <p class="no-wrap">${artist}</p>`;
     },
     _setUpPlayerControls() {
         this.playBtn.addEventListener('click', (evt) => {
@@ -1183,6 +1502,7 @@ const FileBrowser = function(player) {
     this.player = player;
     this.overlayDiv.addEventListener('click', this.closeFileBrowser.bind(this));
     this.folderBrowserEvent = new ListEvents();
+    this._fileBrowserNotifications = new FileBrowserNotifications();
 };
 FileBrowser.prototype = {
     closeFileBrowser(evt) {
@@ -1220,14 +1540,18 @@ FileBrowser.prototype = {
         let fileName = target.innerText.trim();
         let tracklist = this.player.tracklist;
         console.log('filename', fileName);
-        this.api.addTrack(fileName, this.baseDir + fileName, function(res) {
+        this.api.addTrack(fileName, this.baseDir + fileName, (res) => {
             let track = new Track(res['track']),
                 id3Tags = new ID3Tags(res['ID3']);
             track.setID3Tags(id3Tags);
             track.setTrackDuration(id3Tags.getDuration());
             tracklist.addTrackToList(track);
+            this._fileBrowserNotifications.setAddedTrack(this._renderAddedTrack(track), 5500);
             this.folderBrowserEvent.trigger('onSongAdded', track, this.player.getTrackList().getTracksNumber() - 1);
-        }.bind(this));
+        });
+    },
+    _renderAddedTrack(track) {
+        return `<p>Track ${track.getTitle()} successfully added to your library</p>`;
     },
     fileBrowserCB(res) {
         this._openFileBrowser();
@@ -1381,95 +1705,6 @@ TrackListBrowser.prototype = {
             this.reload(true, true);
         }
     },
-    _displayTrackExplorer() {
-        this.isOpen = true;
-        this.trackExplorerBox.style.display = 'block';
-        this.overlayDiv.style.display = 'block';
-    },
-    _closeTrackExplorer() {
-        this.isOpen = false;
-        this.overlayDiv.style.display = 'none';
-        this.trackExplorerBox.style.display = 'none';
-    },
-    _setCurrentrackStyle(trackUUid) {
-        const currentlyPlaying = document.querySelector('tr.currently-playing');
-        if (currentlyPlaying)
-            currentlyPlaying.classList.remove('currently-playing');
-        const trELements = this.tableBodyElem.children;
-        for (let i = 0; i < trELements.length; ++i) {
-            let tr = trELements[i];
-            if (tr.dataset.trackId != trackUUid)
-                continue;
-            tr.classList.add('currently-playing');
-            break;
-        };
-    },
-    _displayTracklistInfo() {
-        const nbTracksElem = document.querySelector('.tracklist-info-cnt .tracklist-info-nb .nb-tracks');
-        const totalDurationElem = document.querySelector('.tracklist-info-cnt .tracklist-info-duration .duration-tracks');
-        nbTracksElem.innerText = this.tracklist.getTracksNumber();
-        totalDurationElem.innerText = this.tracklist.getTrackListTotalDuration(true);
-    },
-    _makeTracklistHTML(track, x, isEven) {
-        let tr = document.createElement('tr');
-        let currentTrack = this.tracklist.getCurrentTrack();
-        let trackUUid = track.trackUUid;
-
-        if (isEven)
-            tr.classList.add('tr-blue');
-        if (currentTrack.trackUUid == trackUUid)
-            tr.classList.add('currently-playing');
-
-        const trackIndex = this.tracklist.getTrackIndexByTrack(track);
-        tr.dataset.trackIndex = trackIndex;
-        tr.dataset.trackId = trackUUid;
-        // tr.addEventListener('dblclick', this.playSongFromTracklist.bind(this, trackIndex));
-        let tdNumber = document.createElement('td'),
-            tdTitle = document.createElement('td'),
-            tdArtist = document.createElement('td'),
-            tdAlbum = document.createElement('td'),
-            tdDuration = document.createElement('td'),
-            tdTrackPlay = document.createElement('td'),            
-            tdAction = document.createElement('td'),
-            spanAction = document.createElement('span'),
-            liEllipsis = document.createElement('li'),
-            liPlay = document.createElement('li');
-
-        spanAction.dataset.trackId = trackUUid;
-        spanAction.classList.add('track-actions');
-        liEllipsis.className = 'fa-solid fa-ellipsis';
-        tdAction.className = 'small-cell dont-hide';
-        tdTitle.dataset.fieldType = 'title';
-        tdArtist.dataset.fieldType = 'artist';
-        tdAlbum.dataset.fieldType = 'album';
-        
-        tdTrackPlay.className = 'track-play';
-        tdTrackPlay.dataset.trackId = trackUUid;
-        tdTrackPlay.addEventListener('click', this.playSongFromTracklist.bind(this, trackIndex));
-        liPlay.className = "fa-solid fa-play";
-        tdTrackPlay.appendChild(liPlay);
-        tdTitle.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
-        tdArtist.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
-        tdAlbum.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
-        tdNumber.innerHTML = x + 1;
-        tdTitle.innerHTML = track.getTitle();
-        tdArtist.innerHTML = track.getArtist();
-        tdAlbum.innerHTML = track.getAlbum();
-        tdDuration.innerHTML = track.formatTrackDuration();
-        
-        tdNumber.classList.add('small-cell');
-        tdDuration.classList.add('small-cell');
-
-        liEllipsis.addEventListener('click', this.showActionMenu.bind(this));
-        spanAction.appendChild(liEllipsis);
-        tdAction.appendChild(spanAction);
-
-        tr.append(tdNumber, tdTitle, tdArtist, tdAlbum, tdDuration, tdAction, tdTrackPlay);
-        
-        this.tableBodyElem.appendChild(tr);
-
-        this._displayTracklistInfo();
-    },
     showActionMenu(evt) {
         const target = evt.target;
         
@@ -1535,7 +1770,96 @@ TrackListBrowser.prototype = {
     },
     hideActionMenu(divElem) {
         divElem.style.display = 'none';
-    }
+    },
+    _displayTrackExplorer() {
+        this.isOpen = true;
+        this.trackExplorerBox.style.display = 'block';
+        this.overlayDiv.style.display = 'block';
+    },
+    _closeTrackExplorer() {
+        this.isOpen = false;
+        this.overlayDiv.style.display = 'none';
+        this.trackExplorerBox.style.display = 'none';
+    },
+    _setCurrentrackStyle(trackUUid) {
+        const currentlyPlaying = document.querySelector('tr.currently-playing');
+        if (currentlyPlaying)
+            currentlyPlaying.classList.remove('currently-playing');
+        const trELements = this.tableBodyElem.children;
+        for (let i = 0; i < trELements.length; ++i) {
+            let tr = trELements[i];
+            if (tr.dataset.trackId != trackUUid)
+                continue;
+            tr.classList.add('currently-playing');
+            break;
+        };
+    },
+    _makeTracklistHTML(track, x, isEven) {
+        let tr = document.createElement('tr');
+        let currentTrack = this.tracklist.getCurrentTrack();
+        let trackUUid = track.trackUUid;
+
+        if (isEven)
+            tr.classList.add('tr-blue');
+        if (currentTrack.trackUUid == trackUUid)
+            tr.classList.add('currently-playing');
+
+        const trackIndex = this.tracklist.getTrackIndexByTrack(track);
+        tr.dataset.trackIndex = trackIndex;
+        tr.dataset.trackId = trackUUid;
+        // tr.addEventListener('dblclick', this.playSongFromTracklist.bind(this, trackIndex));
+        let tdNumber = document.createElement('td'),
+            tdTitle = document.createElement('td'),
+            tdArtist = document.createElement('td'),
+            tdAlbum = document.createElement('td'),
+            tdDuration = document.createElement('td'),
+            tdTrackPlay = document.createElement('td'),            
+            tdAction = document.createElement('td'),
+            spanAction = document.createElement('span'),
+            liEllipsis = document.createElement('li'),
+            liPlay = document.createElement('li');
+
+        spanAction.dataset.trackId = trackUUid;
+        spanAction.classList.add('track-actions');
+        liEllipsis.className = 'fa-solid fa-ellipsis';
+        tdAction.className = 'small-cell dont-hide';
+        tdTitle.dataset.fieldType = 'title';
+        tdArtist.dataset.fieldType = 'artist';
+        tdAlbum.dataset.fieldType = 'album';
+        
+        tdTrackPlay.className = 'track-play';
+        tdTrackPlay.dataset.trackId = trackUUid;
+        tdTrackPlay.addEventListener('click', this.playSongFromTracklist.bind(this, trackIndex));
+        liPlay.className = "fa-solid fa-play";
+        tdTrackPlay.appendChild(liPlay);
+        tdTitle.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
+        tdArtist.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
+        tdAlbum.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
+        tdNumber.innerHTML = x + 1;
+        tdTitle.innerHTML = track.getTitle();
+        tdArtist.innerHTML = track.getArtist();
+        tdAlbum.innerHTML = track.getAlbum();
+        tdDuration.innerHTML = track.formatTrackDuration();
+        
+        tdNumber.classList.add('small-cell');
+        tdDuration.classList.add('small-cell');
+
+        liEllipsis.addEventListener('click', this.showActionMenu.bind(this));
+        spanAction.appendChild(liEllipsis);
+        tdAction.appendChild(spanAction);
+
+        tr.append(tdNumber, tdTitle, tdArtist, tdAlbum, tdDuration, tdAction, tdTrackPlay);
+        
+        this.tableBodyElem.appendChild(tr);
+
+        this._displayTracklistInfo();
+    },
+    _displayTracklistInfo() {
+        const nbTracksElem = document.querySelector('.tracklist-info-cnt .tracklist-info-nb .nb-tracks');
+        const totalDurationElem = document.querySelector('.tracklist-info-cnt .tracklist-info-duration .duration-tracks');
+        nbTracksElem.innerText = this.tracklist.getTracksNumber();
+        totalDurationElem.innerText = this.tracklist.getTrackListTotalDuration(true);
+    },
 };
 
 
@@ -1562,7 +1886,7 @@ TrackSearch.prototype = {
         this.searchEvents.trigger('onSearchResult', this.result);
     },
     onSearchResult(cb, subscriber) {
-        this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchResult', this.result);
+        this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchResult');
     },
     onSearchVisibilityChange(cb, subscriber) {
         this.searchEvents.onEventRegister({'cb': () => {
@@ -1622,8 +1946,6 @@ const TrackEditor = {
         inputField.value = target.innerText;
         hiddenInputField.value = target.innerText;
         inputField.dataset.trackId = trackUUid;
-        this.cachedValue = target.innerText;
-        this.fieldType = inputField.dataset.fieldType;
         inputField.addEventListener('blur', this.onValidate.bind(this));
         window.KeyCotrols.registerKeyDownAction('Enter', this.onValidate.bind(this), this);
 
@@ -1633,6 +1955,7 @@ const TrackEditor = {
     },
     onValidate({target}) {
         this._unsetExclusivity();
+        target.disabled = true;
         const targetValue = target.value;
         const targetSibling = target.nextSibling;
         const targetParent = target.parentNode;
@@ -1864,18 +2187,7 @@ KeyCotrols.prototype = {
         const exclusiveCallers = this._exclusivityCallerKeyDownV2;
         const actions = this._keyDownActions[key];
         
-        if (actions && actions.length > 0) {
-            for (let i = 0; i < actions.length; ++i) {
-                let obj = actions[i];
-                if (typeof obj.cb !== 'function')
-                    continue;
-                if (exclusiveCallers && exclusiveCallers.length > 0) {
-                    exclusiveCallers.map(caller => obj.caller == caller && obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target}));
-                } else {
-                    obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target})
-                }
-            }
-        }
+        this._executeActions(evt, actions, exclusiveCallers);
     },
     _executeKeyUpActions(evt) {
         if (!this.isEnabled()) return;
@@ -1887,6 +2199,9 @@ KeyCotrols.prototype = {
         const exclusiveCallers = this._exclusivityCallerKeyUpV2;
         const actions = this._keyUpActions[key];
         
+        this._executeActions(evt, actions, exclusiveCallers);
+    },
+    _executeActions(evt, actions, exclusiveCallers) {
         if (actions && actions.length > 0) {
             for (let i = 0; i < actions.length; ++i) {
                 let obj = actions[i];
@@ -1899,7 +2214,7 @@ KeyCotrols.prototype = {
                 }
             }
         }
-    },
+    }
 };
 
 window.KeyCotrols = new KeyCotrols(new KeyValues);
@@ -2148,7 +2463,10 @@ Drawing.prototype = {
 
     leftMenu.init();
     playlistCreationTool.createPlaylist(mainTracklist);
-    
+    NotificationCenter.registerNotification({
+        title: 'Tracks Loaded!!',
+        level: 'info'
+    }, 'tracks.loaded');
     api.loadBGImages(function(res) {
         imgList.push(...res['img_list']);
         audioPlayer.init();
@@ -2163,6 +2481,11 @@ Drawing.prototype = {
                 this.tracklist.addTrackToList(track);
             }
             this.setCurrentTrackFromTrackList(false);
+            
+            NotificationCenter.modifyNotification({
+                message: `<p>${this.tracklist.getTracksNumber()} tracks have been loaded!!<p>`
+            }, 'tracks.loaded')
+            NotificationCenter.displayNotification('tracks.loaded', 10000);
         }.bind(audioPlayer));
         
         const fileBrowser = new FileBrowser(audioPlayer);
@@ -2196,7 +2519,7 @@ Drawing.prototype = {
 
     keyCotrols.setPlayer(audioPlayer);
 
-    keyCotrols.registerKeyDownAction('M', () => {
+    keyCotrols.registerKeyDownAction('m', () => {
         audioPlayer.mute();
         muteCnt.style.display = 'block';
         if (audioPlayer.isMuted()) {
@@ -2288,7 +2611,7 @@ Drawing.prototype = {
     let background = new Image();
     background.src = `http://jsradio.me:3600/static/${curImg}`;
 
-    background.onload = function() {
+    background.onload = () => {
         console.log('img loaded', background.width, background.height, canvas.width, canvas.height);
         let width = 0, height = 0, x = 0, y = 0;
         //let coef = (canvas.width / background.width) * .8;

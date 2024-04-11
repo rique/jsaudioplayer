@@ -214,7 +214,7 @@ ul {
     position: relative;
     width: 62%;
     height: 62%;
-    background: #282626;
+    background: #2d2d2d;
     border-radius: 10px;
     padding: 16px;
     overflow: auto;
@@ -351,7 +351,7 @@ ul {
 
 .tracklist-content-div  .tracklist-info-cnt {
 	margin: 35px 0;
-	background: #282626;
+	background: transparent;
 }
 
 .tracklist-content-div .tracklist-info-nb,
@@ -562,10 +562,10 @@ li.fa-solid.fa-file {
 #notification-box {
     position: absolute;
     right: 1%;
-    bottom: 1%;
+    bottom: 1.5%;
     z-index: 2500;
-    width: 12%;
-    height: 7%;
+    width: 14%;
+    height: 8%;
     padding: 10px;
     border: 1px solid #313131;
     border-radius: 8px;
@@ -573,6 +573,7 @@ li.fa-solid.fa-file {
     color: #f4f4f4;
     font-family: Arial, Helvetica, sans-serif;
     filter: drop-shadow(0 0 2px #6a6a6a4a);
+    cursor: pointer;
 }
 
 #notification-box #notification-head {
@@ -598,10 +599,10 @@ li.fa-solid.fa-file {
     text-align: center;
     cursor: pointer;
     width: 100%;
-    height: 58%;
+    height: 50%;
 }
 
-#notification-box #notification-head #notif-close #close-cirlce:hover {
+#notification-box:hover #notification-head #notif-close #close-cirlce {
     background: #f40a0a;
     color: #f4f4f4;
     border-color: #f4f4f4;
@@ -611,6 +612,14 @@ li.fa-solid.fa-file {
     width: 100%;
     height: 62%;
     padding-bottom: 1%;
+}
+
+#notification-box #notification-message p.no-wrap {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    padding: 0 0 5px 0;
 }
 
 #notification-box #notification-timer {
@@ -626,7 +635,7 @@ li.fa-solid.fa-file {
 
 #notification-box #notification-timer #notif-prog-bar #notif-sub-prog-bar {
     height: 100%;
-    width: 50%;
+    width: 0%;
     background: #ff4949;
 }
 
