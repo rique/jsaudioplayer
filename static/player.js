@@ -323,32 +323,14 @@ NotificationRendererV1.prototype = {
     _renderMessage(message) {
         this.messageBox.innerHTML = message;
     },
-    _displayNotificationBoxOld(timeout) {
-        this.notifSubProgBar.style.width = '100%';
-        fadeIn(this.notificationBox, this._timeoutTheBox.bind(this, timeout, timeout), 0.6);
-    },
     _displayNotificationBox(timeout) {
         fadeIn(this.notificationBox, undefined, 0.6);
         this.animation = this._setUpAnimation(timeout);
         this.animation.play();
         this.animation.onfinish = this._hideNotificationBox.bind(this);
     },
-    _timeoutTheBox(startTime, currentTime) {
-        if (currentTime < 0 || this._requestedClose === true) {
-            this._requestedClose = false;
-            return this._hideNotificationBox();
-        }
-        
-        let percentProg = (currentTime / startTime) * 100;
-
-        requestAnimationFrame(this._updateProgressBar.bind(this, percentProg.toFixed(2)));
-        setTimeout(this._timeoutTheBox.bind(this, startTime, currentTime - (this.timeoutStep * 2)), this.timeoutStep);
-    },
     _hideNotificationBox() {
         fadeOut(this.notificationBox, undefined, 0.3, this.notificationBox.style.opacity);
-    },
-    _updateProgressBar(percentProg) {
-        this.notifSubProgBar.style.width = `${percentProg}%`;
     },
     _setUpAnimation(timeout) {
         const keyFrames = [{width: '100%'}, {width: '0%'}];
@@ -2485,7 +2467,7 @@ Drawing.prototype = {
             NotificationCenter.modifyNotification({
                 message: `<p>${this.tracklist.getTracksNumber()} tracks have been loaded!!<p>`
             }, 'tracks.loaded')
-            NotificationCenter.displayNotification('tracks.loaded', 10000);
+            NotificationCenter.displayNotification('tracks.loaded', 6000);
         }.bind(audioPlayer));
         
         const fileBrowser = new FileBrowser(audioPlayer);
