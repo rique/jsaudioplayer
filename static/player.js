@@ -233,7 +233,7 @@ ListEvents.prototype = {
 };
 
 
-const NotificationBoxTemplate = {
+const NotificationMainBoxTemplate = {
     notifParentNode: document.getElementById('notifications-cnt'),
     render(title, message) {
         const tplUUID = this._setUpTpl(title, message);
@@ -269,14 +269,57 @@ const NotificationBoxTemplate = {
 };
 
 
+const BoxTemplateBase = function() {};
+BoxTemplateBase.prototype = {
+    render() {
+        return this._tpl;
+    },
+    toString() {
+        return this.render();
+    }
+}
+
+TrackBoxTemplate = function(track) {
+    this._setUpTpl(track);
+};
+TrackBoxTemplate.prototype = {
+    _setUpTpl(track) {
+        let album  = track.getAlbum();
+        let artist = track.getArtist();
+        if (!artist || artist.length == 0)
+            artist = 'N/A';
+        if (!album || album.length == 0)
+            album = 'N/A';
+
+        const albumart  = track.getAlbumArt();
+        let data, format, imgSrc;
+        
+        if (albumart) {
+            [data, format] = albumart;
+        }
+
+        if (!data || data.length == 0) {
+            imgSrc = "/static/albumart.jpg";
+        } else {
+            imgSrc = `data:${format};base64,${data}`;
+        }
+
+        this._tpl = `<div style="width: 15%" class="notif-logo"><img style="width: 100%" src="${imgSrc}"></div><div style="width: 70%; font-size: 15px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>
+        <p class="no-wrap">${artist}</p></div>`;
+    }
+};
+
+
+Object.setPrototypeOf(TrackBoxTemplate.prototype, BoxTemplateBase.prototype);
+
 const NotificationRenderer = function() {
-    this._notificationBoxTemplate = NotificationBoxTemplate;
+    this._notificationMainBoxTemplate = NotificationMainBoxTemplate;
     this.defaultTimeout = 5000;
 };
 NotificationRenderer.prototype = {
     render(notification, timeout) {
         timeout = timeout || this.defaultTimeout;
-        const tplUUID = this._notificationBoxTemplate.render(notification.getTitle(), notification.getMessage());
+        const tplUUID = this._notificationMainBoxTemplate.render(notification.getTitle(), notification.getMessage());
         const notificationBox = document.querySelector(`[data-tpl-id="${tplUUID}"]`);
         const notifSubProgBar = document.querySelector(`[data-tpl-id="${tplUUID}"] .notif-prog-bar .notif-sub-prog-bar`);
         const animation = this._setUpAnimation(timeout, notifSubProgBar);
@@ -291,14 +334,14 @@ NotificationRenderer.prototype = {
     remove(tplUUID) {
         const notificationBox = document.querySelector(`[data-tpl-id="${tplUUID}"]`);
         if (notificationBox)
-            this._hideNotificationBox(notificationBox);
+            this._hideAndRemoveNotificationBox(notificationBox);
     },
     _displayNotificationBox(notificationBox, animation) {
         fadeIn(notificationBox, undefined, 0.6);
         animation.play();
-        animation.onfinish = this._hideNotificationBox.bind(this, notificationBox);
+        animation.onfinish = this._hideAndRemoveNotificationBox.bind(this, notificationBox);
     },
-    _hideNotificationBox(notificationBox) {
+    _hideAndRemoveNotificationBox(notificationBox) {
         fadeOut(notificationBox, this._removeNotificationBox.bind(this), 0.3, notificationBox.style.opacity);
     },
     _removeNotificationBox(notificationBox) {
@@ -342,10 +385,10 @@ Notification.prototype = {
         this.level = level;
     },
     render(timeout) {
-        return this._notificationRenderer.render(this, timeout);
+        this.tplUUID = this._notificationRenderer.render(this, timeout);
     },
-    remove(tplUUID) {
-        this._notificationRenderer.remove(tplUUID);
+    hide() {
+        this._notificationRenderer.remove(this.tplUUID);
     }
 };
 
@@ -369,24 +412,24 @@ const NotificationCenter = {
     displayNotification(key, timeout) {
         if (!this.notifications.hasOwnProperty(key))
             return console.error(`Notification key ${key} does not exists`);
-        return this.notifications[key].render(timeout);
+        this.notifications[key].render(timeout);
     },
-    hideNotification(key, tplUUID) {
+    hideNotification(key) {
         if (!this.notifications.hasOwnProperty(key))
             return console.error(`Notification key ${key} does not exists`);
 
-        this.notifications[key].remove(tplUUID);
+        this.notifications[key].hide();
     },
     _createNotification(title, message, level, key) {
         this.notifications[key] = new Notification(title, message, level);
     },
     _updateNotification(title, message, level, key) {
         const notification = this.notifications[key];
-        if (typeof title === 'string')
+        if (typeof title !== 'undefined')
             notification.setTitle(title);
-        if (typeof message === 'string')
+        if (typeof message !== 'undefined')
             notification.setMessage(message);
-        if (typeof level === 'string')
+        if (typeof level !== 'undefined')
             notification.setLevel(level);
     },
     _deleteNotification(key) {
@@ -403,30 +446,29 @@ const PlayerNotifications = function() {
     }, this.comingNextKey);
 };
 PlayerNotifications.prototype = {
-    setComingNext(message, timeout) {
-        NotificationCenter.modifyNotification({message}, this.comingNextKey);
-        this.ComingNextUUID = NotificationCenter.displayNotification(this.comingNextKey, timeout);
+    setComingNext(track, timeout) {
+        NotificationCenter.modifyNotification({message: new TrackBoxTemplate(track)}, this.comingNextKey);
+        NotificationCenter.displayNotification(this.comingNextKey, timeout);
     },
     hideComingNext() {
-        NotificationCenter.hideNotification(this.comingNextKey, this.ComingNextUUID);
-        this.ComingNextUUID = null;
+        NotificationCenter.hideNotification(this.comingNextKey);
     },
 };
 
 const FileBrowserNotifications = function() {
   this.trackAddedKey = 'filebrowser.added';
   NotificationCenter.registerNotification({
-    title: 'Track added',
+    title: 'New track successfully added!',
     level: 'info',
   }, this.trackAddedKey);
 };
 FileBrowserNotifications.prototype = {
-    setAddedTrack(message, timeout) {
-        NotificationCenter.modifyNotification({message}, this.trackAddedKey);
-        this.addedTrackUUID = NotificationCenter.displayNotification(this.trackAddedKey, timeout);
+    setAddedTrack(track, timeout) {
+        NotificationCenter.modifyNotification({message: new TrackBoxTemplate(track)}, this.trackAddedKey);
+        NotificationCenter.displayNotification(this.trackAddedKey, timeout);
     },
-    hideComingNext() {
-        NotificationCenter.hideNotification(this.trackAddedKey, this.addedTrackUUID);
+    hideAddedTrack() {
+        NotificationCenter.hideNotification(this.trackAddedKey);
     },
 };
 
@@ -1148,6 +1190,8 @@ AudioPlayer.prototype = {
     prev() {
         if (this.getCurrentTime() > 3.6) {
             this.setCurrentTime(0);
+            this._playerNotifications.hideComingNext();
+            this._comingNextFired = false;
         } else {
             this.currentTrack.onTagChangeUnsub(this);
             if (!this.tracklist.hasQueue())
@@ -1304,31 +1348,7 @@ AudioPlayer.prototype = {
     },
     _fireNotification() {
         const track = this.tracklist.getNextTrackInList();
-        this._playerNotifications.setComingNext(this._renderNextTrack(track), 29400);
-    },
-    _renderNextTrack(track) {
-        let album  = track.getAlbum();
-        let artist = track.getArtist();
-        if (!artist || artist.length == 0)
-            artist = 'N/A';
-        if (!album || album.length == 0)
-            album = 'N/A';
-
-        const albumart  = track.getAlbumArt();
-        let data, format, imgSrc;
-        
-        if (albumart) {
-            [data, format] = albumart;
-        }
-
-        if (!data || data.length == 0) {
-            imgSrc = "/static/albumart.jpg";
-        } else {
-            imgSrc = `data:${format};base64,${data}`;
-        }
-
-        return `<div style="width: 15%" class="notif-logo"><img style="width: 100%" src="${imgSrc}"></div><div style="width: 70%; font-size: 15px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>
-        <p class="no-wrap">${artist}</p></div>`;
+        this._playerNotifications.setComingNext(track, 29400);
     },
     _setUpPlayerControls() {
         this.playBtn.addEventListener('click', (evt) => {
@@ -1503,12 +1523,9 @@ FileBrowser.prototype = {
             track.setID3Tags(id3Tags);
             track.setTrackDuration(id3Tags.getDuration());
             tracklist.addTrackToList(track);
-            this._fileBrowserNotifications.setAddedTrack(this._renderAddedTrack(track), 6000);
+            this._fileBrowserNotifications.setAddedTrack(track, 6000);
             this.folderBrowserEvent.trigger('onSongAdded', track, this.player.getTrackList().getTracksNumber() - 1);
         });
-    },
-    _renderAddedTrack(track) {
-        return `<p>Track ${track.getTitle()} successfully added to your library</p>`;
     },
     fileBrowserCB(res) {
         this._openFileBrowser();
