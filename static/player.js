@@ -99,6 +99,11 @@ const fadeInOut = (element, cb) => {
         fadeIn(element, cb);
 };
 
+const uuidv4 = () => {
+    return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+      (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+    );
+  }
 
 const whileMousePressedAndMove = (element, cb, doMouseout) => {    
     if (typeof doMouseout === 'undefined')
@@ -229,130 +234,87 @@ ListEvents.prototype = {
 
 
 const NotificationBoxTemplate = {
-    notifParentNode: document.body,
+    notifParentNode: document.getElementById('notifications-cnt'),
     render(title, message) {
-        this._setUpTpl(title, message);
+        const tplUUID = this._setUpTpl(title, message);
         this._renderTpl();
+        return tplUUID;
     },
     _setUpTpl(title, message) {
+        const tplUUID = uuidv4();
         this.tpl = document.createElement('div');
-        this.tpl.id = 'notification-box';
+        this.tpl.className = 'notification-box';
         this.tpl.style.display = 'none';
+        this.tpl.dataset.tplId = tplUUID;
         this.tpl.innerHTML = `
-        <div class="notification-head">
-          <div class="notif-title" class="inline-block">
-            ${title}
-          </div><div class="notif-close" class="inline-block"><div class="close-cirlce"><i class="fa-solid fa-xmark"></i></div></div>
-        </div>
-        <div class="notification-message">
-          <p>${message}</p>
-        </div>
-        <div class="notification-timer">
-          <div class="notif-prog-bar">
-            <div class="notif-sub-prog-bar"></div>
-          </div>
-        </div>`
+            <div class="notification-head">
+                <div class="notif-title inline-block">
+                    ${title}
+                </div><div class="notif-close inline-block"><div class="close-cirlce "><i class="fa-solid fa-xmark"></i></div></div>
+                </div>
+                <div class="notification-message">
+                ${message}
+                </div>
+                <div class="notification-timer">
+                <div class="notif-prog-bar">
+                    <div class="notif-sub-prog-bar"></div>
+                </div>
+            </div>`
+
+        return tplUUID;
     },
     _renderTpl() {
-        this.notifParentNode.appendChild(this.tpl);
+        this.notifParentNode.prepend(this.tpl);
     }
 };
 
 
-const NotificationRendererV2 = function() {
+const NotificationRenderer = function() {
     this._notificationBoxTemplate = NotificationBoxTemplate;
     this.defaultTimeout = 5000;
-    this.timeoutStep = 10;
 };
-NotificationRendererV2.prototype = {
+NotificationRenderer.prototype = {
     render(notification, timeout) {
         timeout = timeout || this.defaultTimeout;
-        this._notificationBoxTemplate.render(notification.getTitle(), notification.getMessage());
-        this._displayNotificationBox(timeout);
+        const tplUUID = this._notificationBoxTemplate.render(notification.getTitle(), notification.getMessage());
+        const notificationBox = document.querySelector(`[data-tpl-id="${tplUUID}"]`);
+        const notifSubProgBar = document.querySelector(`[data-tpl-id="${tplUUID}"] .notif-prog-bar .notif-sub-prog-bar`);
+        const animation = this._setUpAnimation(timeout, notifSubProgBar);
+        notificationBox.addEventListener('click', this.close.bind(this, animation));
+        this._displayNotificationBox(notificationBox, animation);
+        return tplUUID;
     },
-    _displayNotificationBox(timeout) {
-        this.notifSubProgBar.style.width = '100%';
-        this.notificationBox.style.display = 'block';
-        this._timeoutTheBox(timeout, timeout);
+    close(animation) {
+        if (animation)
+            animation.finish();
     },
-    _timeoutTheBox(startTime, currentTime) {
-        if (currentTime < 0)
-            return this._hideNotificationBox();
-        let percentProg = (currentTime / startTime) * 100;
-        requestAnimationFrame(this._updateProgressBar.bind(this, percentProg.toFixed(2)));
-        setTimeout(this._timeoutTheBox.bind(this, startTime, currentTime - this.timeoutStep), this.timeoutStep);
+    remove(tplUUID) {
+        const notificationBox = document.querySelector(`[data-tpl-id="${tplUUID}"]`);
+        if (notificationBox)
+            this._hideNotificationBox(notificationBox);
     },
-    _hideNotificationBox() {
-        this.notificationBox.style.display = 'none';
+    _displayNotificationBox(notificationBox, animation) {
+        fadeIn(notificationBox, undefined, 0.6);
+        animation.play();
+        animation.onfinish = this._hideNotificationBox.bind(this, notificationBox);
     },
-    _updateProgressBar(percentProg) {
-        this.notifSubProgBar.style.width = `${percentProg}%`;
-    }
-};
-
-
-const NotificationRendererV1 = function(notificationBoxId, titleBox, messageBox, notifProgBar, notifSubProgBar, closeBtn) {
-    this.notificationBox = document.querySelector(notificationBoxId);
-    this.titleBox = document.querySelector(titleBox);
-    this.messageBox = document.querySelector(messageBox);
-    this.notifProgBar = document.querySelector(notifProgBar);
-    this.notifSubProgBar = document.querySelector(notifSubProgBar);
-    this.closeBtn = document.querySelector(closeBtn);
-    this.notificationBox.addEventListener('click', this.close.bind(this));
-    this.defaultTimeout = 5000;
-    this.timeoutStep = 10;
-};
-NotificationRendererV1.prototype = {
-    render(notification, timeout) {
-        timeout = timeout || this.defaultTimeout;
-        this._renderTitle(notification.getTitle());
-        this._renderMessage(notification.getMessage());
-        this._displayNotificationBox(timeout);
+    _hideNotificationBox(notificationBox) {
+        fadeOut(notificationBox, this._removeNotificationBox.bind(this), 0.3, notificationBox.style.opacity);
     },
-    close() {
-        // this._requestedClose = true;
-        if (this.animation)
-            this.animation.finish();
+    _removeNotificationBox(notificationBox) {
+        notificationBox.remove();
     },
-    remove() {
-        this._hideNotificationBox();
-    },
-    _renderTitle(title) {
-        this.titleBox.innerText = title;
-    },
-    _renderMessage(message) {
-        this.messageBox.innerHTML = message;
-    },
-    _displayNotificationBox(timeout) {
-        fadeIn(this.notificationBox, undefined, 0.6);
-        this.animation = this._setUpAnimation(timeout);
-        this.animation.play();
-        this.animation.onfinish = this._hideNotificationBox.bind(this);
-    },
-    _hideNotificationBox() {
-        fadeOut(this.notificationBox, undefined, 0.3, this.notificationBox.style.opacity);
-    },
-    _setUpAnimation(timeout) {
+    _setUpAnimation(timeout, notifSubProgBar) {
         const keyFrames = [{width: '100%'}, {width: '0%'}];
-        const kfEffect = new KeyframeEffect(this.notifSubProgBar, keyFrames, {
+        const kfEffect = new KeyframeEffect(notifSubProgBar, keyFrames, {
             duration: timeout,
-
         });
         return new Animation(kfEffect, document.timeline);
     }
 };
 
 
-window.NotificationRenderer = new NotificationRendererV1(
-    '#notification-box', 
-    '#notif-title', 
-    '#notification-message', 
-    '#notif-prog-bar', 
-    '#notif-sub-prog-bar',
-    '#notif-close',
-);
-
-window.NotificationRendererV2 = new NotificationRendererV2();
+window.NotificationRenderer = new NotificationRenderer();
 
 const Notification = function(title, message, level) {
     this.title = title;
@@ -380,13 +342,12 @@ Notification.prototype = {
         this.level = level;
     },
     render(timeout) {
-        this._notificationRenderer.render(this, timeout);
+        return this._notificationRenderer.render(this, timeout);
     },
-    remove() {
-        this._notificationRenderer.remove();
+    remove(tplUUID) {
+        this._notificationRenderer.remove(tplUUID);
     }
 };
-
 
 const NotificationCenter = {
     notifications: {},
@@ -408,13 +369,13 @@ const NotificationCenter = {
     displayNotification(key, timeout) {
         if (!this.notifications.hasOwnProperty(key))
             return console.error(`Notification key ${key} does not exists`);
-        this.notifications[key].render(timeout);
+        return this.notifications[key].render(timeout);
     },
-    hideNotification(key) {
+    hideNotification(key, tplUUID) {
         if (!this.notifications.hasOwnProperty(key))
             return console.error(`Notification key ${key} does not exists`);
 
-        this.notifications[key].remove();
+        this.notifications[key].remove(tplUUID);
     },
     _createNotification(title, message, level, key) {
         this.notifications[key] = new Notification(title, message, level);
@@ -437,17 +398,18 @@ const NotificationCenter = {
 const PlayerNotifications = function() {
     this.comingNextKey = 'player.comingNext';
     NotificationCenter.registerNotification({
-        title: 'Coming Next',
+        title: 'Coming Up Next',
         level: 'info',
     }, this.comingNextKey);
 };
 PlayerNotifications.prototype = {
     setComingNext(message, timeout) {
         NotificationCenter.modifyNotification({message}, this.comingNextKey);
-        NotificationCenter.displayNotification(this.comingNextKey, timeout);
+        this.ComingNextUUID = NotificationCenter.displayNotification(this.comingNextKey, timeout);
     },
     hideComingNext() {
-        NotificationCenter.hideNotification(this.comingNextKey);
+        NotificationCenter.hideNotification(this.comingNextKey, this.ComingNextUUID);
+        this.ComingNextUUID = null;
     },
 };
 
@@ -461,10 +423,10 @@ const FileBrowserNotifications = function() {
 FileBrowserNotifications.prototype = {
     setAddedTrack(message, timeout) {
         NotificationCenter.modifyNotification({message}, this.trackAddedKey);
-        NotificationCenter.displayNotification(this.trackAddedKey, timeout);
+        this.addedTrackUUID = NotificationCenter.displayNotification(this.trackAddedKey, timeout);
     },
     hideComingNext() {
-        NotificationCenter.hideNotification(this.trackAddedKey);
+        NotificationCenter.hideNotification(this.trackAddedKey, this.addedTrackUUID);
     },
 };
 
@@ -1138,10 +1100,10 @@ AudioPlayer.prototype = {
         this.audioElem.src = `/static/${track.trackUUid}.mp3`;
         this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
         this.audioPlayerEvents.trigger('playerSongChange');
-        if (this._nextratckFired === true)
+        if (this._comingNextFired === true)
             this._playerNotifications.hideComingNext();
         
-        this._nextratckFired = false;
+        this._comingNextFired = false;
         
         if (autoPlay === true)
             return this.play();
@@ -1327,22 +1289,22 @@ AudioPlayer.prototype = {
             const duration = target.duration;
             const currentTime = target.currentTime;
             
-            if (this._checkForNextTrack(currentTime, duration) && !this._nextratckFired) {
+            if (this._checkForNextTrack(currentTime, duration) && !this._comingNextFired) {
                 this._fireNotification();
-                this._nextratckFired = true;
+                this._comingNextFired = true;
             }
 
             this.tracklist.getCurrentTrack().setCurrentTime(target.currentTime);
         };
     },
     _checkForNextTrack(currentTime, duration) {
-        if (duration - currentTime <= 22) 
+        if (duration - currentTime <= 30) 
             return true;
         return false;
     },
     _fireNotification() {
         const track = this.tracklist.getNextTrackInList();
-        this._playerNotifications.setComingNext(this._renderNextTrack(track), 21840);
+        this._playerNotifications.setComingNext(this._renderNextTrack(track), 29400);
     },
     _renderNextTrack(track) {
         let album  = track.getAlbum();
@@ -1351,9 +1313,22 @@ AudioPlayer.prototype = {
             artist = 'N/A';
         if (!album || album.length == 0)
             album = 'N/A';
-         
-        return `<p class="no-wrap">${track.getTitle()} ~ ${album}</p>
-        <p class="no-wrap">${artist}</p>`;
+
+        const albumart  = track.getAlbumArt();
+        let data, format, imgSrc;
+        
+        if (albumart) {
+            [data, format] = albumart;
+        }
+
+        if (!data || data.length == 0) {
+            imgSrc = "/static/albumart.jpg";
+        } else {
+            imgSrc = `data:${format};base64,${data}`;
+        }
+
+        return `<div style="width: 15%" class="notif-logo"><img style="width: 100%" src="${imgSrc}"></div><div style="width: 70%; font-size: 15px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>
+        <p class="no-wrap">${artist}</p></div>`;
     },
     _setUpPlayerControls() {
         this.playBtn.addEventListener('click', (evt) => {
@@ -1528,7 +1503,7 @@ FileBrowser.prototype = {
             track.setID3Tags(id3Tags);
             track.setTrackDuration(id3Tags.getDuration());
             tracklist.addTrackToList(track);
-            this._fileBrowserNotifications.setAddedTrack(this._renderAddedTrack(track), 5500);
+            this._fileBrowserNotifications.setAddedTrack(this._renderAddedTrack(track), 6000);
             this.folderBrowserEvent.trigger('onSongAdded', track, this.player.getTrackList().getTracksNumber() - 1);
         });
     },
@@ -2466,7 +2441,7 @@ Drawing.prototype = {
             
             NotificationCenter.modifyNotification({
                 message: `<p>${this.tracklist.getTracksNumber()} tracks have been loaded!!<p>`
-            }, 'tracks.loaded')
+            }, 'tracks.loaded');
             NotificationCenter.displayNotification('tracks.loaded', 6000);
         }.bind(audioPlayer));
         

@@ -559,13 +559,20 @@ li.fa-solid.fa-file {
     padding: 8px 16px;/*6% 4%*/
 }
 
-#notification-box {
-    position: absolute;
+#notifications-cnt {
+    position: fixed;
+    width: 16%;
     right: 1%;
     bottom: 1.5%;
-    z-index: 2500;
-    width: 14%;
-    height: 8%;
+    z-index: 2600;
+    height: auto;
+    background: transparent;
+}
+
+.notification-box {
+    margin: 6px auto 0 auto;
+    width: 95%;
+    height: 134px;
     padding: 10px;
     border: 1px solid #313131;
     border-radius: 8px;
@@ -576,45 +583,45 @@ li.fa-solid.fa-file {
     cursor: pointer;
 }
 
-#notification-box #notification-head {
+.notification-box .notification-head {
     width: 100%;
     height: 30%;
     padding-bottom: 1%;
 }
 
-#notification-box #notification-head #notif-title {
+.notification-box .notification-head .notif-title {
     width: 94%;
     padding-left: 1%;
     height: 100%;
 }
 
-#notification-box #notification-head #notif-close {
+.notification-box .notification-head .notif-close {
     width: 5%;
     height: 100%;
 }
 
-#notification-box #notification-head #notif-close #close-cirlce {
+.notification-box .notification-head .notif-close .close-cirlce {
     border: 1px solid rgb(54, 54, 54);
     border-radius: 50%;
     text-align: center;
     cursor: pointer;
-    width: 100%;
-    height: 50%;
+    width: 94%;
+    height: 44%;
 }
 
-#notification-box:hover #notification-head #notif-close #close-cirlce {
-    background: #f40a0a;
+.notification-box:hover .notification-head .notif-close .close-cirlce {
+    background: #4f4f4f;
     color: #f4f4f4;
-    border-color: #f4f4f4;
+    border-color: #aeaeae;
 }
 
-#notification-box #notification-message {
+.notification-box .notification-message {
     width: 100%;
     height: 62%;
     padding-bottom: 1%;
 }
 
-#notification-box #notification-message p.no-wrap {
+.notification-box .notification-message p.no-wrap {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -622,18 +629,18 @@ li.fa-solid.fa-file {
     padding: 0 0 5px 0;
 }
 
-#notification-box #notification-timer {
+.notification-box .notification-timer {
     width: 100%;
     height: 3%;
 }
 
-#notification-box #notification-timer #notif-prog-bar {
+.notification-box .notification-timer .notif-prog-bar {
     height: 100%;
     width: 100%;
     background: transparent;
 }
 
-#notification-box #notification-timer #notif-prog-bar #notif-sub-prog-bar {
+.notification-box .notification-timer .notif-prog-bar .notif-sub-prog-bar {
     height: 100%;
     width: 0%;
     background: #ff4949;
@@ -641,4 +648,10 @@ li.fa-solid.fa-file {
 
 .dont-hide {
     overflow: visible!important;
+}
+
+.notif-logo, .notif-body {
+    display: inline-block;
+    vertical-align: top;
+    padding: 0 4px 0 3px;
 }
