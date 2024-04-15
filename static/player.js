@@ -228,7 +228,6 @@ ListEvents.prototype = {
             console.error(`Event ${eventKey} already register`);
             throw `Event ${eventKey} already register`;
         }
-
     },
 };
 
@@ -242,11 +241,11 @@ const NotificationMainBoxTemplate = {
     },
     _setUpTpl(title, message) {
         const tplUUID = uuidv4();
-        this.tpl = document.createElement('div');
-        this.tpl.className = 'notification-box';
-        this.tpl.style.display = 'none';
-        this.tpl.dataset.tplId = tplUUID;
-        this.tpl.innerHTML = `
+        this._tpl = document.createElement('div');
+        this._tpl.className = 'notification-box';
+        this._tpl.style.display = 'none';
+        this._tpl.dataset.tplId = tplUUID;
+        this._tpl.innerHTML = `
             <div class="notification-head">
                 <div class="notif-title inline-block">
                     ${title}
@@ -264,7 +263,7 @@ const NotificationMainBoxTemplate = {
         return tplUUID;
     },
     _renderTpl() {
-        this.notifParentNode.prepend(this.tpl);
+        this.notifParentNode.prepend(this._tpl);
     }
 };
 
@@ -304,7 +303,7 @@ TrackBoxTemplate.prototype = {
             imgSrc = `data:${format};base64,${data}`;
         }
 
-        this._tpl = `<div style="width: 15%" class="notif-logo"><img style="width: 100%" src="${imgSrc}"></div><div style="width: 70%; font-size: 15px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>
+        this._tpl = `<div style="width: 15%" class="notif-logo"><img style="width: 100%" src="${imgSrc}"></div><div style="width: 80%; font-size: 14px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>
         <p class="no-wrap">${artist}</p></div>`;
     }
 };
@@ -472,6 +471,38 @@ FileBrowserNotifications.prototype = {
     },
 };
 
+
+const TracklistBrowserNotifications = function() {
+    this.addedToQueueKey = 'track.addedToQueue';
+    this.removedTrackKey = 'track.removedTrack';
+
+    NotificationCenter.registerNotification({
+        title: 'Track added to queue!',
+        level: 'info',
+      }, this.addedToQueueKey);
+    
+    NotificationCenter.registerNotification({
+        title: '⚠️ Track removed!',
+        level: 'warning',
+      }, this.removedTrackKey);
+};
+TracklistBrowserNotifications.prototype = {
+    setAddedTrackToQueue(track, timeout) {
+        NotificationCenter.modifyNotification({message: new TrackBoxTemplate(track)}, this.addedToQueueKey);
+        NotificationCenter.displayNotification(this.addedToQueueKey, timeout);
+    },
+    hideAddedTrackToQueue() {
+        NotificationCenter.hideNotification(this.addedToQueueKey);
+    },
+    setARemovedTrack(track, timeout) {
+        NotificationCenter.modifyNotification({message: new TrackBoxTemplate(track)}, this.removedTrackKey);
+        NotificationCenter.displayNotification(this.removedTrackKey, timeout);
+    },
+    hideARemovedTrack() {
+        NotificationCenter.hideNotification(this.removedTrackKey);
+    },
+}
+
 const Api = function() {
     this.url = 'http://jsradio.me:3600/api';
     this.xhr = new XMLHttpRequest();
@@ -575,7 +606,7 @@ Api.prototype = {
         let xhr = this.getXhrPost(`${this.url}/create-playlist`);
         let data = JSON.stringify({
             'playlist_name': playlistName,
-            'traccklist': tracklist
+            'tracklist': tracklist
         });
 
         xhr.setRequestHeader('Content-type', 'application/json; charset=UTF-8');
@@ -778,7 +809,7 @@ TrackList.prototype = {
     },
     addToQueue(track) {
         this.addedToQueue.push(track);
-        this.trackListEvents.trigger('onAddedToQueue');
+        this.trackListEvents.trigger('onAddedToQueue', track);
     },
     hasQueue() {
         return this.addedToQueue.length > 0;
@@ -814,27 +845,28 @@ TrackList.prototype = {
 
         return tracks[0];
     },
+    geTrackByIndex(trackIndex) {
+        if (trackIndex > this.trackIndexMax)
+            return;
+        return this.tracklist[trackIndex];
+    },
     removeTrackFromTracklistByUUID(trackUUid) {
         const trackIndx = this.getTrackIndexByUUID(trackUUid);
         if (!trackIndx)
             return false;
-        let track = this.getTrackByUUID(trackUUid);
-        this.getTrackList().splice(trackIndx, 1);
+        const track = this.getTrackList().splice(trackIndx, 1)[0];
         this.substractTracklistTotalDuration(track.getTrackDuration());
-        track = null;
         --this.tracksNumber;
         this.trackIndexMax = this.tracksNumber - 1;
+        this.trackListEvents.trigger('onRemoveTrackFromTrackList', track);
         return true;
     },
+    onRemoveTrackFromTrackList(cb, subscriber) {
+        this.trackListEvents.onEventRegister({cb, subscriber}, 'onRemoveTrackFromTrackList');
+    },
     getNextTrackInList() {
-        if (this.hasQueue()) {
-            const queue = this.getQueue();
-            if (queue.length == 1) {
-                return queue[0];
-            }
-
-            return queue[1];
-        }
+        if (this.hasQueue())
+            return this.getQueue()[0];
 
         return this.getNextTrackInTrackList();
     },
@@ -1579,12 +1611,16 @@ const TrackListBrowser = function(tracklist, player) {
     this.player = player;
     this.loaded = false;
     this.trackSearch = new TrackSearch(this.tracklist, this);
+    this._tracklistBrowserNotifications = new TracklistBrowserNotifications();
+
+    this.tracklist.onAddedToQueue(this._notifyAddToQueue.bind(this));
+    this.tracklist.onRemoveTrackFromTrackList(this._notifyARemovedTrack.bind(this));
     this.trackSearch.onSearchResult(this.searchTrack.bind(this));
     this.trackSearch.onSearchVisibilityChange(this.restoreTracklistFromSearch.bind(this));
     this.player.onPlayerSongChange(this.setCurrentPlayingTrack.bind(this));
     this.player.onShuffle(this.reload.bind(this, true, true));
     this.itemsPerPage = 20;
-    this.eventTraclistBrowser = new ListEvents();
+    this.eventTracklistBrowser = new ListEvents();//
     this.overlayDiv.addEventListener('click', (evt) => {
         if (evt.target != evt.currentTarget)
             return;
@@ -1599,10 +1635,10 @@ TrackListBrowser.prototype = {
         if (keep !== true) {
             this._closeTrackExplorer();
         }
-        this.eventTraclistBrowser.trigger('onCloseTracklistBrowser');
+        this.eventTracklistBrowser.trigger('onCloseTracklistBrowser');
     },
     onCloseTracklistBrowser(cb, subscriber) {
-        this.eventTraclistBrowser.onEventRegister({cb, subscriber}, 'onCloseTracklistBrowser');
+        this.eventTracklistBrowser.onEventRegister({cb, subscriber}, 'onCloseTracklistBrowser');
     },
     openTracklistExplorer(kept) {
         this.load();
@@ -1744,6 +1780,12 @@ TrackListBrowser.prototype = {
     },
     hideActionMenu(divElem) {
         divElem.style.display = 'none';
+    },
+    _notifyAddToQueue(track) {
+        this._tracklistBrowserNotifications.setAddedTrackToQueue(track);
+    },
+    _notifyARemovedTrack(track) {
+        this._tracklistBrowserNotifications.setARemovedTrack(track);
     },
     _displayTrackExplorer() {
         this.isOpen = true;
