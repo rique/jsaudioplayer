@@ -1,4 +1,3 @@
-// slideUp(litsItemUl, listItemsElem, maxHeight, 40);
 const slideUp = (elem, parentElem, maxHeight, step, currentHeight, cb) => {
     let style = elem.style,
         parentStyle = parentElem.style;
@@ -17,7 +16,6 @@ const slideUp = (elem, parentElem, maxHeight, step, currentHeight, cb) => {
 };
 
 
-// slideDown(litsItemUl, listItemsElem, maxHeight, 40);
 const slideDown = (elem, parentElem, targetHeight, step, currentHeight, cb) => {
     let style = elem.style,
         parentStyle = parentElem.style;
@@ -52,58 +50,12 @@ const getFormatedDate = () => {
     return d.setLocale('es').toLocaleString(DateTime.TIME_WITH_SECONDS);
 }
 
-const fadeOut = (element, cb, speed, opacity) => {
-    opacity = opacity || 1;  // initial opacity
-    speed = speed || 0.1;
-    var timer = setInterval(() => {
-        if (opacity <= 0.1) {
-            clearInterval(timer);
-            element.style.display = 'none';
-            if (typeof cb === 'function')
-                cb(element);
-        }
-        requestAnimationFrame(() => {
-            element.style.opacity = opacity
-            element.style.filter = 'alpha(opacity=' + opacity * 100 + ")";
-        });
-        opacity -= opacity * speed;
-    }, 50);
-}
-
-const fadeIn = (element, cb, speed, opacity) => {
-    opacity = opacity || 0.1;
-    speed = speed || 0.1;
-    element.style.opacity = 0;
-    element.style.display = 'block';
-    const timerID = setInterval(() => {
-        if (opacity >= 1) {
-            
-            clearInterval(timerID);
-            if (typeof cb === 'function')
-                cb(element);
-        }
-        
-        requestAnimationFrame(() => {
-            element.style.opacity = opacity
-            element.style.filter = 'alpha(opacity=' + opacity * 100 + ")";
-        });
-        
-        opacity += opacity * speed;
-    }, 50);
-}
-
-const fadeInOut = (element, cb) => {
-    if (element.style.display == 'block')
-        fadeOut(element, cb);
-    else
-        fadeIn(element, cb);
-};
 
 const uuidv4 = () => {
     return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
       (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
     );
-  }
+};
 
 const whileMousePressedAndMove = (element, cb, doMouseout) => {    
     if (typeof doMouseout === 'undefined')
@@ -184,6 +136,51 @@ const blob2Uint8Array = (blob) => {
 const clearElementInnerHTML = (element) => {
     while(element.firstChild)
         element.removeChild(element.firstChild);
+};
+
+
+const Fader = function() {}; 
+Fader.prototype = {
+    fadeIn(elem, duration=500, startOpacity=0, maxOpacity=1, whenDone, ...args) {
+        this._fade(elem, duration, startOpacity, maxOpacity, false, whenDone, ...args);
+    },
+    fadeOut(elem, duration=500, startOpacity=1, minOpacity=0, whenDone, ...args) {
+        this._fade(elem, duration, startOpacity, minOpacity, true, whenDone, ...args);
+    },
+    cancelFade() {
+        if (this._animation) {
+            this._animation.cancel();
+        }
+    },
+    _fade(elem, duration, start, end, isFadingOut, whenDone, ...args) {
+        if (!isFadingOut && elem.style.display == 'none')
+            elem.style.display = 'block';
+
+        const keyFrames = [{opacity: start}, {opacity: end}];
+        const kfEffect = new KeyframeEffect(elem, keyFrames, {
+            duration,
+        });
+        
+        this._animation = new Animation(kfEffect, document.timeline);
+        this._animation.play();
+        
+        this._animation.onfinish = () => {
+            if (isFadingOut)
+                elem.style.display = 'none';
+            
+            if (typeof whenDone === 'function')
+                whenDone(elem, ...args);
+
+            this._animation = null;
+        };
+        
+        if (typeof whenDone === 'function') {
+            this._animation.oncancel = () => {
+                whenDone(elem, ...args);
+                this._animation = null;
+            };
+        }
+    }
 };
 
 
@@ -314,6 +311,7 @@ Object.setPrototypeOf(TrackBoxTemplate.prototype, BoxTemplateBase.prototype);
 const NotificationRenderer = function() {
     this._notificationMainBoxTemplate = NotificationMainBoxTemplate;
     this.defaultTimeout = 5000;
+    this._fader = new Fader();
 };
 NotificationRenderer.prototype = {
     render(notification, timeout) {
@@ -336,12 +334,12 @@ NotificationRenderer.prototype = {
             this._hideAndRemoveNotificationBox(notificationBox);
     },
     _displayNotificationBox(notificationBox, animation) {
-        fadeIn(notificationBox, undefined, 0.6);
+        this._fader.fadeIn(notificationBox, 250);
         animation.play();
         animation.onfinish = this._hideAndRemoveNotificationBox.bind(this, notificationBox);
     },
     _hideAndRemoveNotificationBox(notificationBox) {
-        fadeOut(notificationBox, this._removeNotificationBox.bind(this), 0.3, notificationBox.style.opacity);
+        this._fader.fadeOut(notificationBox, 400, notificationBox.style.opacity, 0, this._removeNotificationBox.bind(this));
     },
     _removeNotificationBox(notificationBox) {
         notificationBox.remove();
@@ -679,7 +677,6 @@ const Track = function(trackInfo) {
     this.trackName = trackInfo.track_name;
     this.trackUUid = trackInfo.track_uuid;
     this.trackOriginalPath = trackInfo.track_original_path;
-    this.trackDuration = undefined;
     this.currentTime = 0;
     this.isPlaying = false;
     this._eventTrack = new ListEvents();
@@ -702,7 +699,7 @@ Track.prototype = {
         return this.currentTime;
     },
     getTimeRemaining(formated) {
-        let remainigTime = this.trackDuration - this.getCurrentTime();
+        let remainigTime = this.getTrackDuration() - this.getCurrentTime();
         if (formated)
             return this._formatTime(remainigTime);
         return remainigTime;
@@ -1217,7 +1214,6 @@ AudioPlayer.prototype = {
         if (!this.tracklist.hasQueue())
             this.tracklist.nextTrack();
         this.setCurrentTrackFromTrackList(true);
-        this.play();
     },
     prev() {
         if (this.getCurrentTime() > 3.6) {
@@ -1230,7 +1226,6 @@ AudioPlayer.prototype = {
                 this.tracklist.previousTrack();
             this.setCurrentTrackFromTrackList(true);
         }
-        this.play();
     },
     btnRepeat() {
         if (this.repeatMode >= 2)
@@ -1264,7 +1259,7 @@ AudioPlayer.prototype = {
         this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onVolumeChange');
     },
     mute() {
-        this.audioElem.muted = !this.audioElem.muted
+        this.audioElem.muted = !this.audioElem.muted;
     },
     isMuted() {
         return this.audioElem.muted;
@@ -1312,8 +1307,7 @@ AudioPlayer.prototype = {
         this.timeTrackElem.innerText = ` - [${formatedTrackTime}]`;
     },
     audioLoaded(evt) {
-        let audioElem = evt.target;
-        this.progressBar(audioElem);
+        this.progressBar(evt.target);
     },
     progressBar(audioELem) {
         let currentTime = audioELem.currentTime,
@@ -1364,13 +1358,13 @@ AudioPlayer.prototype = {
             const target = evt.target;
             const duration = target.duration;
             const currentTime = target.currentTime;
+
+            this.tracklist.getCurrentTrack().setCurrentTime(target.currentTime);
             
             if (this._checkForNextTrack(currentTime, duration) && !this._comingNextFired) {
                 this._fireNotification();
                 this._comingNextFired = true;
             }
-
-            this.tracklist.getCurrentTrack().setCurrentTime(target.currentTime);
         };
     },
     _checkForNextTrack(currentTime, duration) {
@@ -1379,8 +1373,12 @@ AudioPlayer.prototype = {
         return false;
     },
     _fireNotification() {
-        const track = this.tracklist.getNextTrackInList();
-        this._playerNotifications.setComingNext(track, 29400);
+        this._playerNotifications.setComingNext(this._getNextTrackInList(), this.currentTrack.getTimeRemaining() * 1000);
+    },
+    _getNextTrackInList() {
+        if (this.repeatMode == 2)
+            return this.currentTrack;
+        return this.tracklist.getNextTrackInList();
     },
     _setUpPlayerControls() {
         this.playBtn.addEventListener('click', (evt) => {
@@ -1546,9 +1544,10 @@ FileBrowser.prototype = {
     },
     fileSelector(evt) {
         let target = evt.target;
-        let fileName = target.innerText.trim();
+        console.log("target.innerText", target.textContent);
+        let fileName = target.textContent.trim();
+        console.log('fileName', fileName)
         let tracklist = this.player.tracklist;
-        console.log('filename', fileName);
         this.api.addTrack(fileName, this.baseDir + fileName, (res) => {
             let track = new Track(res['track']),
                 id3Tags = new ID3Tags(res['ID3']);
@@ -1571,7 +1570,7 @@ FileBrowser.prototype = {
                 this.folderListBox.appendChild(liElem);
             }
         }
-    
+        
         if (res['file_list'].length > 0) {
             for (let fileName of res['file_list']) {
                 let liElem = document.createElement('li');
@@ -2557,7 +2556,11 @@ Drawing.prototype = {
 
     let volUpEvtId = -1;
     let volDownEvtId = -1;
+
+    const volumeFader = new Fader();
+
     keyCotrols.registerKeyDownAction('+', () => {
+        volumeFader.cancelFade();
         if (volUpEvtId >= 0) {
             clearTimeout(volUpEvtId);
             volUpEvtId = -1;
@@ -2571,11 +2574,13 @@ Drawing.prototype = {
     });
     keyCotrols.registerKeyUpAction('+', () => {
         volUpEvtId = setTimeout(() => {
-            fadeOut(volumeCnt, false, 0.35);
+            //fadeOut(volumeCnt, false, 0.35);
+            volumeFader.fadeOut(volumeCnt, 400, 1, 0);
         }, 568);
     });
     
     keyCotrols.registerKeyDownAction('-',  () => {
+        volumeFader.cancelFade();
         if (volDownEvtId >= 0) {
             clearTimeout(volDownEvtId);
             volDownEvtId = -1;
@@ -2589,7 +2594,7 @@ Drawing.prototype = {
     });
     keyCotrols.registerKeyUpAction('-', () => {
         volDownEvtId = setTimeout(() => {
-            fadeOut(volumeCnt, false, 0.35);
+            volumeFader.fadeOut(volumeCnt, 400, 1, 0);
         }, 568);
     });
 

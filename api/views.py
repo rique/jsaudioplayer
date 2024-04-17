@@ -33,7 +33,6 @@ def addTrack(request):
     
     track_original_path = params['track_original_path']
     
-    # track_original_path = track_original_path.replace('~', '\~')
     audio = ID3(track_original_path)
     mp3_file = MP3(track_original_path)
     keys = audio.keys()
@@ -167,16 +166,16 @@ def fileBrowser(request):
     res3 = subprocess.Popen(command3, stdout=subprocess.PIPE, stdin=res2.stdout)
     res2.stdout.close()
     res = res3.communicate()[0]
-    print('communicate', res)
+    
     # res = subprocess.run(f'ls -p  "{base_dir}" | grep -v /| grep -i mp3', shell=True, capture_output=True)
     # print('errors :', res3.stderr.decode())
     res_str = res.decode().strip()
     file_list = []
-
+    print('res_str', res_str)
     if len(res_str) > 0:
         file_list = res_str.split('\n')
-
-    return JsonResponse(data={'success': True, 'base_dir': base_dir, 'dir_list': dir_list, 'file_list': file_list})
+    print('file_list', file_list)# [ "08 Minha' All Mine.mp3" ]
+    return JsonResponse(data={'success': True, 'base_dir': base_dir, 'dir_list': dir_list, 'file_list': file_list, 'test': 'l  o  l'})
 
 
 @csrf_exempt
