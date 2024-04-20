@@ -823,7 +823,14 @@ TrackList.prototype = {
             return this.getCurrentTrack();
         }
         this.currentTrack = this.addedToQueue.splice(0, 1)[0];
+        this.trackListEvents.trigger('onDepletingQueue', this.currentTrack);
         return this.currentTrack;
+    },
+    isCurrentTrackInQueue() {
+        return this.addedToQueue.find(tr => tr.trackUUid == this.getCurrentTrack().trackUUid) !== undefined;
+    },
+    onDepletingQueue(cb, subscriber) {
+        this.trackListEvents.onEventRegister({cb, subscriber}, 'onDepletingQueue');
     },
     onAddedToQueue(cb, subscriber) {
         this.trackListEvents.onEventRegister({cb, subscriber}, 'onAddedToQueue');
@@ -834,6 +841,9 @@ TrackList.prototype = {
         if (this.tracksNumber > 0)
             return this.getTrackList()[this.trackIndex];
         return null;
+    },
+    getCurrentTrackIndex() {
+        return this.trackIndex;
     },
     getTrackByUUID(trackUUid) {
         let tracks = this.tracklist.filter(trk => trk.trackUUid == trackUUid);
@@ -1211,7 +1221,9 @@ AudioPlayer.prototype = {
     },
     next() {
         this.currentTrack.onTagChangeUnsub(this);
-        if (!this.tracklist.hasQueue())
+        const hasQueue = this.tracklist.hasQueue();
+        this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack, hasQueue);
+        if (!hasQueue)
             this.tracklist.nextTrack();
         this.setCurrentTrackFromTrackList(true);
     },
@@ -1222,7 +1234,9 @@ AudioPlayer.prototype = {
             this._comingNextFired = false;
         } else {
             this.currentTrack.onTagChangeUnsub(this);
-            if (!this.tracklist.hasQueue())
+            const hasQueue = this.tracklist.hasQueue();
+            this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack, hasQueue);
+            if (!hasQueue)
                 this.tracklist.previousTrack();
             this.setCurrentTrackFromTrackList(true);
         }
@@ -1320,6 +1334,7 @@ AudioPlayer.prototype = {
     },
     audioEnded() {
         let autoPlay, hasQueue = this.tracklist.hasQueue();
+        this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack, hasQueue);
         this.currentTrack.onTagChangeUnsub(this);
         if (this.tracklist.isLastTrack() && !hasQueue) {
             if (!this.repeatMode >= 1) {
@@ -1334,7 +1349,7 @@ AudioPlayer.prototype = {
                         this.tracklist.resetTrackListIndex();
                     else {
                         this.tracklist.shuffleTracklist();
-                        this.audioPlayerEvents.trigger('onShuffle');
+                        this.audioPlayerEvents.trigger('onShuffle', this.tracklist);
                     }
                 }
             }
@@ -1345,6 +1360,9 @@ AudioPlayer.prototype = {
         }
 
         this.setCurrentTrackFromTrackList(autoPlay);
+    },
+    onAudioEnded(cb, subscriber) {
+        this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onAudioEnded');
     },
     loadID3Tags(track) {
         this._manageTags(track.getID3Tags());
@@ -1604,6 +1622,116 @@ FileBrowser.prototype = {
 };
 
 
+const TrackListBrowserQueueSubTable = function(trackUUid, tracklistBrowser) {
+    this._trackUUid = trackUUid;
+    this._tracklistBrowser = tracklistBrowser;
+    this._buildSubTable();
+};
+TrackListBrowserQueueSubTable.prototype = {
+    insertQueuedTracks(track, prevIndex, queueIndex) {
+        const prevIsBlue = prevIndex % 2 == 0;
+        const trackUUid = track.trackUUid;
+        const trackIndex = 1;
+        let tr = document.createElement('tr'),
+            tdNumber = document.createElement('td'),
+            tdTitle = document.createElement('td'),
+            tdArtist = document.createElement('td'),
+            tdAlbum = document.createElement('td'),
+            tdDuration = document.createElement('td'),
+            tdTrackPlay = document.createElement('td'),            
+            tdAction = document.createElement('td'),
+            spanAction = document.createElement('span'),
+            liEllipsis = document.createElement('li'),
+            liPlay = document.createElement('li');
+
+        spanAction.dataset.trackId = trackUUid;
+        spanAction.classList.add('track-actions');
+        liEllipsis.className = 'fa-solid fa-ellipsis';
+        tdAction.className = 'small-cell-alt dont-hide';
+        tdTitle.dataset.fieldType = 'title';
+        tdArtist.dataset.fieldType = 'artist';
+        tdAlbum.dataset.fieldType = 'album';
+        tdAlbum.className = 'medium-cell';
+        tdTrackPlay.className = 'track-play';
+        tdTrackPlay.dataset.trackId = trackUUid;
+        tdTrackPlay.addEventListener('click', this._tracklistBrowser.playSongFromTracklist.bind(this._tracklistBrowser, trackIndex));
+        liPlay.className = "fa-solid fa-play";
+        tdTrackPlay.appendChild(liPlay);
+        tdTitle.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
+        tdArtist.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
+        tdAlbum.addEventListener('click', TrackEditor.onclickCell.bind(TrackEditor));
+        tdNumber.innerHTML = `Q${queueIndex}`;
+        tdTitle.innerHTML = track.getTitle();
+        tdArtist.innerHTML = track.getArtist();
+        tdAlbum.innerHTML = track.getAlbum();
+        tdDuration.innerHTML = track.formatTrackDuration();
+        
+        tdNumber.classList.add('small-cell');
+        tdDuration.classList.add('small-cell');
+
+        // liEllipsis.addEventListener('click', this._tracklistBrowser.showActionMenu.bind(this._tracklistBrowser));
+        spanAction.appendChild(liEllipsis);
+        tdAction.appendChild(spanAction);
+        tr.dataset.subTrackId = trackUUid;
+        tr.append(tdNumber, tdTitle, tdArtist, tdAlbum, tdDuration, tdAction, tdTrackPlay);
+
+        /*if (prevIsBlue && trackIndex % 2 == 0 || !prevIsBlue && !trackIndex % 2 == 0) {
+            tr.className = 'tr-blue';
+        }*/
+
+        this._tBody.appendChild(tr);
+    },
+    removeQueuedTrack(track) {
+        const tr = this._tBody.querySelector(`tr[data-sub-track-id="${track.trackUUid}"]`);
+        if (!tr)
+            return;
+        tr.remove();
+    },
+    getSubTable() {
+        return this._trQueueTrack;
+    },
+    insertSubTable(currentTrack) {
+        if (currentTrack)
+            this.setCurrentTrackStyle(currentTrack.trackUUid);
+        const tr = document.querySelector(`tr[data-track-id="${this._trackUUid}"]`);
+        if (tr)
+            document.querySelector(`tr[data-track-id="${this._trackUUid}"]`).insertAdjacentElement('afterend', this._trQueueTrack);
+    },
+    setTrackUUID(trackUUid) {
+        this._trackUUid = trackUUid;
+    },
+    setCurrentTrackStyle(trackUUid) {
+        const trNodes = this._tBody.children;
+        if (trNodes.length > 0) {
+            for (let i = 0; i < trNodes.length; ++i) {
+                let tr = trNodes[i];
+                if (tr.dataset.subTrackId == trackUUid) {
+                    tr.classList.add('currently-playing');
+                    break;
+                }
+            }
+        }
+    },
+    _buildSubTable() {
+        this._table = document.createElement('table');
+        this._trQueueTrack = document.createElement('tr');
+        this._tdQueueTrack = document.createElement('td');
+        this._tBody = document.createElement('tbody');
+
+        this._trQueueTrack.className = 'queued-track';
+        this._tdQueueTrack.setAttribute('colspan', '7');
+        this._tdQueueTrack.className = 'queue-td';
+        this._table.className = 'queue-table';
+
+        this._trQueueTrack.appendChild(this._tdQueueTrack);
+        this._tdQueueTrack.appendChild(this._table);
+        this._table.appendChild(this._tBody);
+        
+        this.insertSubTable();
+    },
+};
+
+
 const TrackListBrowser = function(tracklist, player) {
     this.overlayDiv = document.querySelector('.cnt-overlay');
     this.tracklist = tracklist;
@@ -1613,13 +1741,17 @@ const TrackListBrowser = function(tracklist, player) {
     this._tracklistBrowserNotifications = new TracklistBrowserNotifications();
 
     this.tracklist.onAddedToQueue(this._notifyAddToQueue.bind(this));
+    this.tracklist.onAddedToQueue(this._insertTrackToQueue.bind(this));
+    this.player.onAudioEnded(this._removeTrackFromQueue.bind(this));
+    this.player.onShuffle(this._theShuffleCB.bind(this));
+
     this.tracklist.onRemoveTrackFromTrackList(this._notifyARemovedTrack.bind(this));
     this.trackSearch.onSearchResult(this.searchTrack.bind(this));
     this.trackSearch.onSearchVisibilityChange(this.restoreTracklistFromSearch.bind(this));
     this.player.onPlayerSongChange(this.setCurrentPlayingTrack.bind(this));
     this.player.onShuffle(this.reload.bind(this, true, true));
     this.itemsPerPage = 20;
-    this.eventTracklistBrowser = new ListEvents();//
+    this.eventTracklistBrowser = new ListEvents();
     this.overlayDiv.addEventListener('click', (evt) => {
         if (evt.target != evt.currentTarget)
             return;
@@ -1682,13 +1814,15 @@ TrackListBrowser.prototype = {
         clearElementInnerHTML(this.tableBodyElem);
         console.log('tracklist', tracklist);
         if (tracklist.length == 0)
-            return false
+            return false;
         for (x = 0; x < tracklist.length; ++x) {
             let track = tracklist[x];
-            this._makeTracklistHTML(track, x, x % 2 == 0)
+            this._makeTracklistHTML(track, x, x % 2 == 0, this._hasQueue);
         }
-
-        return true
+        if (this._hasQueue) {
+            this._trackListBrowserQueueSubTable.insertSubTable(this.tracklist.getCurrentTrack());
+        }
+        return true;
     },
     playSongFromTracklist(trackIndex) {
         this.tracklist.getCurrentTrack().onTagChangeUnsub(this.player);
@@ -1707,6 +1841,7 @@ TrackListBrowser.prototype = {
             let track = tracks[x];
             this._makeTracklistHTML(track, x, x % 2 == 0);
         }
+        
         this.loaded = true;
     },
     restoreTracklistFromSearch(visible) {
@@ -1718,7 +1853,6 @@ TrackListBrowser.prototype = {
         const target = evt.target;
         
         const targetChildren = target.parentNode.getElementsByClassName('action-menu-cnt');
-        console.log('showActionMenu', targetChildren);
         if (targetChildren.length > 0 ) {
             return targetChildren[0].style.display = 'block';
         }
@@ -1780,6 +1914,35 @@ TrackListBrowser.prototype = {
     hideActionMenu(divElem) {
         divElem.style.display = 'none';
     },
+    _theShuffleCB() {
+        if (this._hasQueue) {
+            this._trackListBrowserQueueSubTable.setTrackUUID(this.tracklist.getTrackList()[0].trackUUid);
+        }
+    },
+    _insertTrackToQueue(track) {
+        this._hasQueue = true;
+        if (!this._trackListBrowserQueueSubTable) {
+            let currentlyPlaying = this.tracklist.getCurrentTrack();
+            this._trackListBrowserQueueSubTable = new TrackListBrowserQueueSubTable(currentlyPlaying.trackUUid, this);
+        }
+        const queueIndex = this.tracklist.getQueueLength();
+        const currentIndex = this.tracklist.getCurrentTrackIndex();
+        this._trackListBrowserQueueSubTable.insertQueuedTracks(track, currentIndex, queueIndex);
+    },
+    _insertQueueSubTable(subTable) {
+        const currentlyPlaying = document.querySelector('tr.currently-playing');
+        if (currentlyPlaying) {
+            currentlyPlaying.insertAdjacentElement('afterend', subTable);
+        }
+    },
+    _removeTrackFromQueue(track, hasQueue) {
+        if (this._hasQueue) {
+            this._trackListBrowserQueueSubTable.removeQueuedTrack(track);
+            this._hasQueue = hasQueue;
+            if (!this._hasQueue)
+                this._trackListBrowserQueueSubTable = undefined;
+        }
+    },
     _notifyAddToQueue(track) {
         this._tracklistBrowserNotifications.setAddedTrackToQueue(track);
     },
@@ -1800,6 +1963,9 @@ TrackListBrowser.prototype = {
         const currentlyPlaying = document.querySelector('tr.currently-playing');
         if (currentlyPlaying)
             currentlyPlaying.classList.remove('currently-playing');
+        if (this._hasQueue && !this.tracklist.isCurrentTrackInQueue()) {
+            return this._trackListBrowserQueueSubTable.setCurrentTrackStyle(trackUUid);
+        }
         const trELements = this.tableBodyElem.children;
         for (let i = 0; i < trELements.length; ++i) {
             let tr = trELements[i];
@@ -1809,14 +1975,14 @@ TrackListBrowser.prototype = {
             break;
         };
     },
-    _makeTracklistHTML(track, x, isEven) {
+    _makeTracklistHTML(track, x, isEven, hasQueue) {
         let tr = document.createElement('tr');
         let currentTrack = this.tracklist.getCurrentTrack();
         let trackUUid = track.trackUUid;
 
         if (isEven)
             tr.classList.add('tr-blue');
-        if (currentTrack.trackUUid == trackUUid)
+        if (currentTrack.trackUUid == trackUUid && !hasQueue)
             tr.classList.add('currently-playing');
 
         const trackIndex = this.tracklist.getTrackIndexByTrack(track);
