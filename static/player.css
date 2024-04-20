@@ -253,7 +253,7 @@ ul {
     text-align: center;
 }
 
-#window-content.track-browser .track-play:hover {
+#window-content.track-browser .track-play:hover, tr.queued-track table.queue-table tr:hover {
     background: #0aa0fe;
     color: #fff;
 }
@@ -662,7 +662,23 @@ tr.queued-track, tr.queued-track table.queue-table td {
 
 
 tr.queued-track table.queue-table td {
-    width: 26.3%;
+    width: 26.8%;
+}
+
+tr.queued-track table.queue-table tr {
+    background: #feca9d;
+    border-bottom: 1px solid #e2e2e2;
+}
+
+tr.queued-track table.queue-table tr.currently-playing {
+    background: #68d7ff;
+}
+
+tr.queued-track td.small-cell-alt { 
+    width: 5.5% !important;
+}
+tr.queued-track table.queue-table td.medium-cell {
+    width: 26.6%;
 }
 
 tr.queued-track td.queue-td {
@@ -678,5 +694,5 @@ tr.queued-track table.queue-table {
 }
 
 table.queue-table .small-cell {
-    width: 6%!important;
+    width: 5%!important;
 }
