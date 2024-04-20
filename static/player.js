@@ -1904,9 +1904,7 @@ TrackSearch.prototype = {
         this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchResult');
     },
     onSearchVisibilityChange(cb, subscriber) {
-        this.searchEvents.onEventRegister({'cb': () => {
-            cb(this._isSearchVisible());
-        }, subscriber}, 'onSearchVisibilityChange');
+        this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchVisibilityChange');
     },
     _isSearchVisible() {
         return this.inputSearchElem.style.visibility == 'visible';
@@ -1922,7 +1920,7 @@ TrackSearch.prototype = {
             this.term = '';
             this.searchInput.value = '';
         }
-        this.searchEvents.trigger('onSearchVisibilityChange');
+        this.searchEvents.trigger('onSearchVisibilityChange', this._isSearchVisible());
     },
     _setExclusivity() {
         console.log('Setting exclusivity');
@@ -1967,6 +1965,7 @@ const TrackEditor = {
         target.innerHTML = '';
         target.append(inputField, hiddenInputField);
         inputField.focus();
+        inputField.select();
     },
     onValidate({target}) {
         this._unsetExclusivity();
