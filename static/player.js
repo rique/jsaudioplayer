@@ -827,7 +827,10 @@ TrackList.prototype = {
         return this.currentTrack;
     },
     isCurrentTrackInQueue() {
-        return this.addedToQueue.find(tr => tr.trackUUid == this.getCurrentTrack().trackUUid) !== undefined;
+        return this.isTrackInQueue(this.getCurrentTrack());
+    },
+    isTrackInQueue(track) {
+        return this.addedToQueue.find(tr => tr.trackUUid == track.trackUUid) !== undefined;
     },
     onDepletingQueue(cb, subscriber) {
         this.trackListEvents.onEventRegister({cb, subscriber}, 'onDepletingQueue');
@@ -1787,6 +1790,9 @@ TrackListBrowser.prototype = {
     load() {
         if (!this.loaded) {
             this.loaded = this.displayTracklList(0);
+            if (this.loaded) {
+                this._scrollToCurrentTrack();
+            }
         }
     },
     unload() {
@@ -1829,8 +1835,10 @@ TrackListBrowser.prototype = {
         this.tracklist.setTrackIndex(trackIndex, true);
     },
     setCurrentPlayingTrack(track) {
-        if (this.loaded)
+        if (this.loaded) {
             this._setCurrentrackStyle(track.trackUUid);
+            this._scrollToCurrentTrack();
+        }
     },
     searchTrack(tracks) {
         if (tracks.length == 0)
@@ -1920,8 +1928,8 @@ TrackListBrowser.prototype = {
         }
     },
     _insertTrackToQueue(track) {
-        this._hasQueue = true;
-        if (!this._trackListBrowserQueueSubTable) {
+        if (!this._hasQueue) {
+            this._hasQueue = true;
             let currentlyPlaying = this.tracklist.getCurrentTrack();
             this._trackListBrowserQueueSubTable = new TrackListBrowserQueueSubTable(currentlyPlaying.trackUUid, this);
         }
@@ -1929,18 +1937,20 @@ TrackListBrowser.prototype = {
         const currentIndex = this.tracklist.getCurrentTrackIndex();
         this._trackListBrowserQueueSubTable.insertQueuedTracks(track, currentIndex, queueIndex);
     },
-    _insertQueueSubTable(subTable) {
-        const currentlyPlaying = document.querySelector('tr.currently-playing');
-        if (currentlyPlaying) {
-            currentlyPlaying.insertAdjacentElement('afterend', subTable);
-        }
-    },
     _removeTrackFromQueue(track, hasQueue) {
         if (this._hasQueue) {
             this._trackListBrowserQueueSubTable.removeQueuedTrack(track);
             this._hasQueue = hasQueue;
-            if (!this._hasQueue)
-                this._trackListBrowserQueueSubTable = undefined;
+        }
+    },
+    _scrollToCurrentTrack() {
+        const currentlyPlaying = document.querySelector('tr.currently-playing');
+        if (currentlyPlaying) {
+            setTimeout(() => {
+                currentlyPlaying.scrollIntoView({
+                    behavior: 'smooth'
+                });
+            }, 0);
         }
     },
     _notifyAddToQueue(track) {
@@ -1982,7 +1992,7 @@ TrackListBrowser.prototype = {
 
         if (isEven)
             tr.classList.add('tr-blue');
-        if (currentTrack.trackUUid == trackUUid && !hasQueue)
+        if (currentTrack.trackUUid == trackUUid && (!hasQueue || !this.tracklist.isTrackInQueue(currentTrack)))
             tr.classList.add('currently-playing');
 
         const trackIndex = this.tracklist.getTrackIndexByTrack(track);
@@ -2117,8 +2127,10 @@ const TrackEditor = {
         const target = evt.target;
         const inputField = document.createElement('input');
         const hiddenInputField = document.createElement('input');
-        const trackUUid = target.parentNode.dataset.trackId;
-
+        let trackUUid = target.parentNode.dataset.trackId;
+        if (!trackUUid)
+            trackUUid = target.parentNode.dataset.subTrackId;
+        console.log('trackUUid', trackUUid, target.parentNode.dataset);
         hiddenInputField.type = 'hidden';
 
         inputField.className = 'track-edit';
@@ -2137,11 +2149,13 @@ const TrackEditor = {
         this._unsetExclusivity();
         target.disabled = true;
         const targetValue = target.value;
+        console.log('target.dataset', target.dataset);
         const targetSibling = target.nextSibling;
         const targetParent = target.parentNode;
         if (targetSibling != null && targetValue != targetSibling.value) {
-            const trackUUid = targetParent.parentNode.dataset.trackId;
+            const trackUUid = target.dataset.trackId;
             const fieldType = targetParent.dataset.fieldType;
+            console.log('trackUUid2', trackUUid, targetParent.parentNode.dataset);
             window.playerApi.editTrack(fieldType, targetValue, trackUUid, (res) => {
                 if (res.success) {
                     targetParent.innerHTML = targetValue;
