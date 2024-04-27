@@ -300,7 +300,7 @@ TrackBoxTemplate.prototype = {
             imgSrc = `data:${format};base64,${data}`;
         }
 
-        this._tpl = `<div style="width: 15%" class="notif-logo"><img style="width: 100%" src="${imgSrc}"></div><div style="width: 80%; font-size: 14px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>
+        this._tpl = `<div class="notif-logo"><img style="width: 100%" src="${imgSrc}"></div><div style="width: 80%; font-size: 14px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>
         <p class="no-wrap">${artist}</p></div>`;
     }
 };
@@ -822,7 +822,7 @@ TrackList.prototype = {
             console.log('No tracks left in queue');
             return this.getCurrentTrack();
         }
-        this.currentTrack = this.addedToQueue.splice(0, 1)[0];
+        this.currentTrack = this.addedToQueue.shift();
         this.trackListEvents.trigger('onDepletingQueue', this.currentTrack);
         return this.currentTrack;
     },
@@ -1077,7 +1077,7 @@ const AudioPlayer = function(tracklist) {
 
     this.disableProgress = false;
 
-    this.playPauseBtn = document.querySelector('.player-action .fa-solid');
+    this.playPauseBtn = document.querySelector('#play-button .player-action .fa-solid');
 
     this.albumImg = document.getElementById('album-art');
     this.titleTrack = document.getElementById('track-title');
@@ -1119,13 +1119,13 @@ AudioPlayer.prototype = {
         this.shuffleBtn.addEventListener('click', this.shuffle.bind(this));
 
         this.progressBarDiv.addEventListener('mouseenter', (evt) => {
-            percentWidth = this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv) * 100;
-            this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(3, 207, 252, 0.6) ${percentWidth}%, #181717 ${percentWidth}%)`;
+            percentWidth = (this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv) * 100).toFixed(2);
+            this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(255, 124, 120, 0.6) ${percentWidth}%, #292929 0%)`;
         });
 
         this.progressBarDiv.addEventListener('mousemove', (evt) => {//3, 207, 252 - 255, 143, 143
             percentWidth = (this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv) * 100).toFixed(2);
-            this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(3, 207, 252, 0.6) ${percentWidth}%, #181717 ${percentWidth}%)`;
+            this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(255, 124, 120, 0.6) ${percentWidth}%, #292929 0%)`;
         });
 
         this.progressBarDiv.addEventListener('mouseleave', () => {
@@ -1344,8 +1344,7 @@ AudioPlayer.prototype = {
                 console.log('End of session');
                 this.tracklist.nextTrack();
                 autoPlay = false;
-            }
-            else {
+            } else {
                 autoPlay = true;
                 if (this.repeatMode == 1) {
                     if (!this.tracklist.isShuffleOn())
@@ -1436,7 +1435,7 @@ AudioPlayer.prototype = {
         
         let album = ''
         if (tags.album)
-            album = ` ~ ${tags.album}`
+            album = ` ~ ${tags.album}`;
         
         let artist = tags.artist;
         
@@ -1565,9 +1564,8 @@ FileBrowser.prototype = {
     },
     fileSelector(evt) {
         let target = evt.target;
-        console.log("target.innerText", target.textContent);
         let fileName = target.textContent.trim();
-        console.log('fileName', fileName)
+        console.log('fileName', fileName);
         let tracklist = this.player.tracklist;
         this.api.addTrack(fileName, this.baseDir + fileName, (res) => {
             let track = new Track(res['track']),

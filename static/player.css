@@ -28,7 +28,7 @@ ul {
 #foto-box, #album-art {
     width: 100px;
     margin-top: 5px;
-    border-radius: 4%;
+    border-radius: 2%;
 }
 
 #cotrols {
@@ -122,7 +122,8 @@ ul {
 #progress {
     width: 100%;
     margin-top: 14px;
-    height: 3px;
+    height: 8px;
+    position: relative;
 }
 
 #main-volume-bar {
@@ -142,7 +143,7 @@ ul {
 }
 
 #volume-bar-container, 
-#progress:hover, #prog-bar:hover {
+#progress:hover, #prog-bar:hover, #progress:hover #prog-bar {
     height: 10px;
 }
 
@@ -155,12 +156,15 @@ ul {
     height: 10px;
 }*/
 
-#prog-bar, #volume-bar {
-    height: 100%;
+#prog-bar {
+    height: 28%;
+    position: absolute;
+    bottom: 0;
+    background: rgb(250, 50, 50);
 }
 
-#prog-bar {
-    background: rgb(250, 50, 50);
+#volume-bar {
+    height: 100%;
 }
 
 #volume-bar {
@@ -528,18 +532,18 @@ li.fa-solid.fa-file {
 #open-menu {
     width: 12%;
     background: #181717;
-    font-size: 26px;
+    font-size: 25px;
     text-align: center;
-    padding: 5px 0;
+    padding: 8px 0;
     cursor: pointer;
     border-radius: 5px 0 0 5px;
 }
 
 #open-menu:hover {
-    width: 11.95%;
+    /*width: 11.95%;
     border-left: 1px solid rgba(84, 84, 84, 0.4);
     border-top: 0px solid rgba(84, 84, 84, 0.4);
-    border-bottom: 1px solid rgba(84, 84, 84, 0.4);
+    border-bottom: 1px solid rgba(84, 84, 84, 0.4);*/
 }
 
 .is-open #open-menu:hover {
@@ -585,7 +589,7 @@ li.fa-solid.fa-file {
 
 .notification-box .notification-head {
     width: 100%;
-    height: 30%;
+    height: 24%;
     padding-bottom: 1%;
 }
 
@@ -604,8 +608,8 @@ li.fa-solid.fa-file {
     border-radius: 50%;
     text-align: center;
     cursor: pointer;
-    width: 94%;
-    height: 44%;
+    width: 98%;
+    height: 52%;
 }
 
 .notification-box:hover .notification-head .notif-close .close-cirlce {
@@ -630,7 +634,7 @@ li.fa-solid.fa-file {
 
 .notification-box .notification-timer {
     width: 100%;
-    height: 3%;
+    height: 2px;
 }
 
 .notification-box .notification-timer .notif-prog-bar {
@@ -649,10 +653,18 @@ li.fa-solid.fa-file {
     overflow: visible!important;
 }
 
+.notif-logo {
+    width: 16%;
+}
+
+.notif-logo img {
+    border-radius: 1%;
+}
+
 .notif-logo, .notif-body {
     display: inline-block;
     vertical-align: top;
-    padding: 0 4px 0 3px;
+    padding: 0 6px 0 0;
 }
 
 
