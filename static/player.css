@@ -2,6 +2,9 @@
     margin: 0;
     padding: 0;
 }
+html {
+    height: 100%;
+}
 body {
     margin: 0;
     padding: 0;
@@ -9,6 +12,7 @@ body {
     font-family:  Arial, Helvetica, sans-serif!important;
     color: #f6f6f6;
     overflow-x: hidden;
+    height: 100%;
 }
 
 ul {
@@ -585,6 +589,7 @@ li.fa-solid.fa-file {
     font-family: Arial, Helvetica, sans-serif;
     filter: drop-shadow(0 0 2px #6a6a6a4a);
     cursor: pointer;
+    font-size: 18px;
 }
 
 .notification-box .notification-head {

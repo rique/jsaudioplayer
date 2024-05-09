@@ -65,7 +65,7 @@ def addTrack(request):
 
     track_uuid = str(uuid4())
 
-    res = subprocess.run(f'ln -s "{track_original_path}" "{settings.BASE_DIR}/static/{track_uuid}.mp3"', shell=True, capture_output=True)
+    res = subprocess.run(f'ln -s "{track_original_path}" "{settings.BASE_DIR}/static/tracks/{track_uuid}.mp3"', shell=True, capture_output=True)
     print('stderr addTrack', res.stderr.decode(), res.stdout.decode())
 
     track.track_original_path = track_original_path
@@ -99,7 +99,7 @@ def editTrack(request):
         return JsonResponse(data={'success': False, 'code': 'dose_not_exist'}, status=404, reason=f"Object or ressource with uuid {track_uuid} not found")
 
     # track_original_path = track_original_path.replace('~', '\~')
-    audio = ID3(f'./static/{track_uuid}.mp3')
+    audio = ID3(f'./static/tracks/{track_uuid}.mp3')
     # mp3_file = MP3(track_original_path)
 
     try:
@@ -130,7 +130,7 @@ def deleteTrack(request):
         return JsonResponse(data={'success': False, 'code': 'dose_not_exist'}, status=404, reason=f"Object or ressource with uuid {track_uuid} not found")
 
     print('Proceeding to delete file ', track_uuid)
-    subprocess.run(f'rm -f "{settings.BASE_DIR}/static/{track_uuid}.mp3"', shell=True)
+    subprocess.run(f'rm -f "{settings.BASE_DIR}/static/tracks/{track_uuid}.mp3"', shell=True)
     print('Removed link ', track_uuid)
     track.delete()
     print('Deleted file ', track_uuid)
@@ -188,8 +188,8 @@ def loadTrackList(request):
     nb_tracks = len(tracks)
     duration = 0
     for trk in tracks:
-        audio = ID3(f'./static/{trk.track_uuid}.mp3')
-        mp3_file = MP3(f'./static/{trk.track_uuid}.mp3')
+        audio = ID3(f'./static/tracks/{trk.track_uuid}.mp3')
+        mp3_file = MP3(f'./static/tracks/{trk.track_uuid}.mp3')
         keys = audio.keys()
         
         title = ''
@@ -236,7 +236,7 @@ def loadTrackList(request):
 def loadBGImages(request):
 
     img_dir = './static/imgc/'
-    res = subprocess.run(f'find -L "{img_dir}" -type f | grep -i --include=*.{{jpg,jpeg,png}} "" | sort -R', shell=True, capture_output=True, check=False)
+    res = subprocess.run(f'find -L "{img_dir}" -type f | grep -i --include=*.{{jpg,jpeg,png,webp}} "" | sort -R', shell=True, capture_output=True, check=False)
     res_str = res.stdout.decode().strip()
 
     return JsonResponse(data={"success": True, 'img_list': [r.replace('./', '') for r in res_str.split('\n')]})

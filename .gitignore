@@ -4,6 +4,9 @@ static/*
 !static/.keep
 !static/*.js
 !static/*.css
+!static/js
+!static/css
+!static/tracks/.keep
 db.sqlite3
 */**/__pycache__/
 __pycache__/

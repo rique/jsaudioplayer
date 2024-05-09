@@ -1,0 +1,158 @@
+@keyframes stretchdown {
+    from {
+        padding-bottom: 0px;
+        border-bottom: 0px;
+    }
+    to {
+        padding-bottom: 32px;
+        border-bottom: 1px solid #ff4f4f;
+    }
+}
+
+:root {
+    --grid-border-color: #929292;
+
+    --font-color-default: #252525;
+    --font-color-dropped: #fafafa;
+
+    --outline-input-color: #458bdc;
+
+    --cell-sorted-bg: #dadada;
+
+    --row-even-bg-color: #bbe3fc;
+    --row-odd-bg-color: #f0f0f0;
+    --row-even-hover-bg-color: #a5c9e1;
+    --row-odd-hover-bg-color: #eaeaea;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    height: 100%;
+    font-size: 2vw;
+}
+
+body {
+    background: #0f0f0f;
+    height: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+#table-content {
+    width: 100%;
+    height: 100%;
+    background: #f0f0f0;
+    /*margin: auto;*/
+    position: relative;
+    /*border-left: 1px solid var(--grid-border-color);
+    border-right: 1px solid var(--grid-border-color);*/
+    user-select: none;
+    overflow: auto;
+}
+
+.row {
+    width: 100%;
+    border-bottom: 1px solid var(--grid-border-color);
+    background: #f7f8f8;
+    font-size: 0.3em;
+    color: #252525;
+    user-select: none;
+}
+
+.row.head {
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    left: 0;
+}
+
+.row:has(.empty), .row.hovered {
+    animation: 70ms 1 forwards stretchdown
+}
+
+.row:first-child {
+    border-top: 1px solid var(--grid-border-color);
+}
+
+.row.lonely:nth-child(even) {
+    background: var(--row-even-bg-color);
+}
+
+.row.lonely:nth-child(even):hover {
+    background: var(--row-even-hover-bg-color);
+}
+
+.row:nth-child(odd):hover {
+    background: var(--row-odd-hover-bg-color);
+}
+
+.empty {
+    height: 0px;
+    display: block;
+    width: 100%;
+    background:#f7f8f8;
+    border-top: 1px solid var(--grid-border-color);
+}
+
+.row.dragged {
+    border: 1px dashed var(--grid-border-color);
+    font-size: 0.25em;
+    filter: drop-shadow(0 0 8px rgba(85, 85, 85, 0.5));
+    filter: opacity(74%);
+}
+
+.cell {
+    border-right: 1px solid var(--grid-border-color);
+    display: inline-block;
+    vertical-align: top;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cell.sorted {
+    background: var(--cell-sorted-bg);
+}
+
+.cell.editable, .cell.sortable {
+    cursor: pointer;
+}
+
+.cell input {
+    width: 97%;
+    display: block;
+    padding: 9px 4px;
+    margin: auto;
+    border: none;
+    outline: 2px solid var(--outline-input-color);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.draggable {
+    cursor: move!important;
+}
+
+.cell.draggable {
+    text-align: center;
+}
+
+.row.hovered .cell {
+    border-bottom: 1px solid #ff4f4f;
+}
+
+.cell, .cell.editable:has(input) {
+    cursor: default;
+}
+
+.cell.editable:has(input) {
+    padding: 0;
+}
+
+.cell:last-child {
+    border: 0;
+}

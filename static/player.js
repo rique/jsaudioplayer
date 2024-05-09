@@ -139,6 +139,18 @@ const clearElementInnerHTML = (element) => {
 };
 
 
+function getRandomInt(min, max) {       
+    const randomBuffer = new Uint32Array(1);
+
+    window.crypto.getRandomValues(randomBuffer);
+
+    let randomNumber = randomBuffer[0] / (0xffffffff + 1);
+
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(randomNumber * (max - min + 1)) + min;
+}
+
 const Fader = function() {}; 
 Fader.prototype = {
     fadeIn(elem, duration=500, startOpacity=0, maxOpacity=1, whenDone, ...args) {
@@ -981,7 +993,8 @@ TrackList.prototype = {
         if (!isNaN(trackIndex))
             track = tracklist.splice(trackIndex, 1)[0];
         for (let i = tracklist.length - 1; i > 0; i--) {
-            let j = Math.floor(Math.random() * (i + 1));
+            let j = Math.floor(getRandomInt(0, i + 1));
+            //let j = Math.floor(Math.random() * (i + 1));
             [tracklist[i], tracklist[j]] = [tracklist[j], tracklist[i]];
         }
         if (track)
@@ -1181,7 +1194,7 @@ AudioPlayer.prototype = {
     setPlayerSong(track, autoPlay) {
         this.currentTrack = track;
         this.currentTrack.isPlaying = autoPlay;
-        this.audioElem.src = `/static/${track.trackUUid}.mp3`;
+        this.audioElem.src = `/static/tracks/${track.trackUUid}.mp3`;
         this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
         this.audioPlayerEvents.trigger('playerSongChange');
         if (this._comingNextFired === true)

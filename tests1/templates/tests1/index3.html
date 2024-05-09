@@ -1,0 +1,116 @@
+{% extends "main.html" %}
+{% load static %}
+{% block user_style %}
+<link href="/static/player.css" rel="stylesheet">
+<link href="/static/node_modules/@fortawesome/fontawesome-free/css/all.css" rel="stylesheet">
+<link href="/static/css/grid.css" rel="stylesheet">
+{% endblock %}
+{% block content %}
+<div id="content">
+  <div id="player">
+    <div id="info-box">
+      <div id="foto-box">
+        <img src="/static/albumart.jpg" id="album-art">  
+      </div><div id="track-box">
+        <p id="track-title"><span id="name-track">No track</span><span id="name-album"></span><span id="time-track"></span></p>
+        <p id="artist-name"></p>
+      </div>
+    </div>
+    <div id="player-controls">
+      <div class="inline-block action-cnt" id="play-button">
+        <span>
+          <a href="" class="player-action">
+            <i class="fa-solid fa-play"></i>
+          </a>
+        </span>
+      </div><div class="inline-block action-cnt" id="stop-button">
+        <span>
+          <a href="" class="player-action">
+            <i class="fa-solid fa-stop"></i>
+          </a>
+        </span>
+      </div><div class="inline-block action-cnt" id="prev-button">
+        <span>
+          <a href="" class="player-action">
+            <i class="fa-solid fa-backward-step"></i>
+          </a>
+        </span>
+      </div><div class="inline-block action-cnt" id="next-button">
+        <span>
+          <a href="" class="player-action">
+            <i class="fa-solid fa-forward-step"></i>
+          </a>
+        </span>
+      </div><div class="inline-block action-cnt" id="shuffle-button">
+        <span>
+          <a href="" class="player-action">
+            <i class="fa-solid fa-shuffle"></i>
+          </a>
+        </span>
+      </div><div class="inline-block action-cnt" id="repeat-button">
+        <span>
+          <a href="" class="player-action">
+            <i class="fa-solid fa-repeat"></i>
+            <div class="repeat-one">1</div>
+          </a>
+        </span>
+      </div>
+    </div>
+    
+    <div id="progress">
+      <div id="prog-bar"></div>
+    </div>
+    <!--<canvas id="vu-meters"></canvas>-->
+    <div id="main-left-menu">
+      <div id="open-menu" style="vertical-align: top;" class="inline-block">
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </div><div id="left-menu" style="vertical-align: top;" class="inline-block">
+        <div id="cotrols" class="inline-block">
+          <div id="file-browser-action">
+            <button class="open-file-browser">Browse Files</button>
+            <button class="open-tracklist-browser">View tracks</button>
+            <button class="open-playlist-create">Create new playlist</button>
+          </div>
+          <div id="volume-control">
+            VOL : <span class="vol-up">
+              <i class="fa-solid fa-plus"></i>
+            </span><span class="vol-down">
+              <i class="fa-solid fa-minus"></i>
+            </span><span class="vol-val">100</span>
+            <div id="volume-bar-container">
+              <div id="main-volume-bar"><div id="volume-bar"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div style="display: none;" id="volume-display">
+  <span class="vol-val">100</span>
+</div>
+<div style="display: none;" id="muted-display">
+  <i id="mute-on" style="display: none;" class="fa-solid fa-volume-xmark"></i>
+  <i id="mute-off" style="display: none;" class="fa-solid fa-volume-high"></i>
+</div>
+<div style="display: block;" class="cnt-overlay">
+  <div style="display: block;" id="window-content">
+    <div id="table-content"></div>
+  </div>
+</div>
+<div id="notifications-cnt">
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="text/javascript" src="/static/node_modules/luxon/src/luxonjs.js"></script>
+<script type="text/javascript" src="/static/js/utils.js"></script>
+<script type="text/javascript" src="/static/js/event-manager.js"></script>
+<script type="text/javascript" src="/static/js/dragdrop.js"></script>
+<script type="text/javascript" src="/static/js/html-items.js"></script>
+<script type="text/javascript" src="/static/js/grid.js"></script>
+<script type="text/javascript" src="/static/js/effects.js"></script>
+<script type="text/javascript" src="/static/js/api.js"></script>
+<script type="text/javascript" src="/static/js/notificatios.js"></script>
+<script type="text/javascript" src="/static/js/tracks.js"></script>
+<script type="text/javascript" src="/static/js/main.js"></script>
+{% endblock %}
