@@ -1,5 +1,6 @@
 .venv/
 .git/
+static/tracks/*
 static/*
 !static/.keep
 !static/*.js
@@ -7,6 +8,7 @@ static/*
 !static/js
 !static/css
 !static/tracks/.keep
+!*/**/.keep
 db.sqlite3
 */**/__pycache__/
 __pycache__/
