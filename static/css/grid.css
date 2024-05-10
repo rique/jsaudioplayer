@@ -10,7 +10,7 @@
 }
 
 :root {
-    --grid-border-color: #929292;
+    --grid-border-color: #c2c2c2;
 
     --font-color-default: #252525;
     --font-color-dropped: #fafafa;
@@ -36,7 +36,6 @@ html {
 }
 
 body {
-    background: #0f0f0f;
     height: 100%;
     font-family: Arial, Helvetica, sans-serif;
 }

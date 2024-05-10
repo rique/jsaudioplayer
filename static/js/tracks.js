@@ -1,4 +1,6 @@
-(function(window, document, ListEvents, undefined) {
+(function(window, document, JSPlayer, undefined) {
+    const ListEvents = JSPlayer.ListEvents;
+    const getRandomInt = JSPlayer.Utils.getRandomInt;
 
     const ID3Tags = function(tags) {
         this.tags = tags;
@@ -383,4 +385,4 @@
 
     window.JSPlayer.Tracks = {Track, TrackList, ID3Tags};
 
-})(this, document, window.JSPlayer.ListEvents);
+})(this, document, window.JSPlayer);

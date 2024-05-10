@@ -206,5 +206,8 @@
     };
 
     window.JSPlayer.NotificationCenter = NotificationCenter;
+    window.JSPlayer.NotificationTemplates = {
+        TrackBoxTemplate
+    }
 
 })(this, document, this.JSPlayer);

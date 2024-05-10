@@ -405,6 +405,9 @@
         onEdit(onEdit, onValidate) {
             this.addEventListener('click', evt =>  this._edit(evt, onEdit, onValidate));
         },
+        textAlign(textAlign) {
+            this.css({textAlign});
+        },
         _edit(evt, onEdit, onValidate) {
             if (this.isEditing)
                 return;
@@ -439,7 +442,7 @@
 
     };
 
-    const SortableCell = function() {
+    const SortableCell = function(type) {
         Cell.call(this);
         this.sorted = false;
         this.reversed = false;
@@ -449,9 +452,16 @@
             DESC: 2,
         }
         this._sortMode = this.sortModes.NONE;
+        this._type = type;
         this.onSortedCell(this.switchSortedClass.bind(this), this);
     };
     SortableCell.prototype = {
+        getType() {
+            return this._type;
+        },
+        setType(type) {
+            this._type = type;
+        },
         setupCell() {
             this.classAdd('sortable');
             Cell.prototype.setupCell.call(this);

@@ -190,11 +190,12 @@
             rows.forEach(row => this.parentCnt.append(row.render()));
         },
         _sortGrid(colIndex, reversed) {
+            const type = this.head.getCellByIndex(colIndex).getType();
             this.sortedRows = [...this.rows].sort((row1, row2) => {
                 if (row1.isHead())
                     return 0;
-                const cnt1 = row1.getCellByIndex(colIndex).innerContent();
-                const cnt2 = row2.getCellByIndex(colIndex).innerContent();
+                const cnt1 = type && type == 'int' ? parseInt(row1.getCellByIndex(colIndex).innerContent()) : row1.getCellByIndex(colIndex).innerContent();
+                const cnt2 = type && type == 'int' ? parseInt(row2.getCellByIndex(colIndex).innerContent()) : row2.getCellByIndex(colIndex).innerContent();
 
                 if (cnt1 > cnt2) return reversed ? -1 : 1;
                 if (cnt1 < cnt2) return reversed ? 1 : -1;
@@ -251,7 +252,7 @@
                 let c = cells[i];
                 let cell;
                 if (this.sortable && row.isHead() && c.sorterCell) {
-                    cell = new SortableCell();
+                    cell = new SortableCell(c.type);
                     cell.addEventListener('click', this.grid.sortGridByCell.bind(this.grid, cell));
                 } else
                     cell = new Cell();
@@ -271,16 +272,20 @@
                     cell.onDropped(c.onDropped);
                 }
                 
-                if (c.content.trim() == '')
+                if (c.type && c.type == 'str' && c.content.trim() == '')
                         c.content = '&nbsp;'
 
                 cell.innerContent(c.content);
+
+                if (c.textAlign)
+                    cell.textAlign(c.textAlign);
+
                 row.addCell(cell);
             }
 
             if (!this.byCell && !row.isHead())
                 row.setDraggable(this.draggable);
-            
+
             if (this.sortable)
                 row.setIndex(idx);
             
