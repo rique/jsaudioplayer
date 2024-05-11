@@ -1,5 +1,5 @@
 (function(window, document, JSPlayer, undefined) {
-    const ListEvents = JSPlayer.ListEvents;
+    const ListEvents = JSPlayer.EventsManager.ListEvents;
     const getRandomInt = JSPlayer.Utils.getRandomInt;
 
     const ID3Tags = function(tags) {

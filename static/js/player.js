@@ -1,5 +1,5 @@
 (function(window, document, JSPlayer, undefined) {
-    const ListEvents = JSPlayer.ListEvents;
+    const ListEvents = JSPlayer.EventsManager.ListEvents;
     const PlayerNotifications = JSPlayer.Notifications.PlayerNotifications;
     const whileMousePressed = JSPlayer.Utils.whileMousePressed;
     const whileMousePressedAndMove = JSPlayer.Utils.whileMousePressedAndMove;

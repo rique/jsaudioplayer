@@ -6,7 +6,7 @@
     const SortableCell = JSPlayer.HTMLItems.SortableCell;
     const Row = JSPlayer.HTMLItems.Row;
     const SortableRow = JSPlayer.HTMLItems.SortableRow;
-    const ListEvents = JSPlayer.ListEvents;
+    const ListEvents = JSPlayer.EventsManager.ListEvents;
     const DragitManager = JSPlayer.DragitManager;
 
     const BaseColumn = function() {
@@ -105,10 +105,43 @@
                 this.parentCnt.append(this.head.render());
             this.rows.forEach(row => this.parentCnt.append(row.render()));
         }
+    };
+
+    const SearchableGrid = function(parentCnt) {
+        BaseGrid.call(this, parentCnt);
+    };
+    SearchableGrid.prototype = {
+        search(term, cb) {
+            cb = cb || this._doSearch.bind(this);
+            this.filteredRows = this.rows.filter((r) => cb(r, term));
+            this.render(true);
+        },
+        render(filter) {
+            clearElementInnerHTML(this.parentCnt);
+            if (this.head)
+                this.parentCnt.append(this.head.render());
+            
+            let rows = this.rows;
+            
+            if (filter)
+                rows = this.filteredRows;
+
+            rows.forEach(row => this.parentCnt.append(row.render()));
+        },
+        _doSearch(row, term) {
+            const cells = row.getCells();
+            for (let i = 0; i < cells.length; ++i) {
+                let cell = cells[i];
+                if (cell.innerContent().includes(term))
+                    return true;
+            }
+
+            return false;
+        }
     }
 
     const SortableGrid = function(parentCnt) {
-        BaseGrid.call(this, parentCnt);
+        SearchableGrid.call(this, parentCnt);
         this.indexedColumns = {};
         this.eventsList = new ListEvents();
     };
@@ -176,22 +209,10 @@
             this.rows.splice((newIdx - 1), 0, row);
             Object.keys(this.indexedColumns).forEach(colIndex => this.indexedColumns[colIndex] = this.getColumnByIndex(colIndex));
             this.render();
-        },
-        render(sorted) {
-            clearElementInnerHTML(this.parentCnt);
-            if (this.head)
-                this.parentCnt.append(this.head.render());
-            
-            let rows = this.rows;
-            
-            if (sorted)
-                rows = this.sortedRows;
-
-            rows.forEach(row => this.parentCnt.append(row.render()));
-        },
+        },  
         _sortGrid(colIndex, reversed) {
             const type = this.head.getCellByIndex(colIndex).getType();
-            this.sortedRows = [...this.rows].sort((row1, row2) => {
+            this.filteredRows = [...this.rows].sort((row1, row2) => {
                 if (row1.isHead())
                     return 0;
                 const cnt1 = type && type == 'int' ? parseInt(row1.getCellByIndex(colIndex).innerContent()) : row1.getCellByIndex(colIndex).innerContent();
@@ -205,7 +226,8 @@
     }
 
     Object.setPrototypeOf(IndexedColumn.prototype, BaseColumn.prototype);
-    Object.setPrototypeOf(SortableGrid.prototype, BaseGrid.prototype);
+    Object.setPrototypeOf(SearchableGrid.prototype, BaseGrid.prototype);
+    Object.setPrototypeOf(SortableGrid.prototype, SearchableGrid.prototype);
 
     const GridMaker = function(parentCnt, sortable) {
         this.rows = [];
@@ -272,6 +294,11 @@
                     cell.onDropped(c.onDropped);
                 }
                 
+                if (typeof c.data === 'object') {
+                    let data = c.data;
+                    Object.keys(c.data).forEach(k => cell.data(k, data[k]));
+                }
+
                 if (c.type && c.type == 'str' && c.content.trim() == '')
                         c.content = '&nbsp;'
 

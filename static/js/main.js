@@ -7,63 +7,149 @@
     const GridMaker = window.JSPlayer.GridMaker;
     const draw = JSPlayer.Vizualizer.draw;
     const AudioPlayer = JSPlayer.AudioPlayer;
+    const KeyCotrols = JSPlayer.EventsManager.KeyCotrols;
+    const Fader = JSPlayer.Effects.Fader;
+    const LeftMenu = JSPlayer.Components.LeftMenu;
 
     const imgList = [];
     const api = new JSPlayer.Api();
     const gridMaker = new GridMaker(document.getElementById('table-content'), true);
     const mainTracklist = new TrackList();
     const audioPlayer = new AudioPlayer(mainTracklist);
+    const leftMenu = new LeftMenu();
+    leftMenu.init();
+
+    const keyCotrols = new KeyCotrols();
 
     NotificationCenter.registerNotification({
         title: 'Tracks Loaded!!',
         level: 'info'
     }, 'tracks.loaded');
 
-    api.loadBGImages(function(res) {
-            imgList.push(...res['img_list']);
+    api.loadBGImages((res) => {
+        imgList.push(...res['img_list']);
+        draw(audioPlayer, imgList);
+    });
 
-        api.loadTrackList(function(res) {
-            gridMaker.setDraggable(true, true);
-            audioPlayer.init();
-            
+    api.loadTrackList(function(res) {
+        gridMaker.setDraggable(true, true);
+        audioPlayer.init();
+        
+        gridMaker.makeRowIdx([{
+            content: 'N°',
+            sorterCell: true,
+            width: 8,
+            unit: '%',
+            type: 'int',
+            textAlign: 'center',
+        },{
+            content: 'Title',
+            sorterCell: true,
+            width: 24,
+            unit: '%',
+            type: 'str',
+            textAlign: 'center',
+        },{
+            content: 'Artist',
+            sorterCell: true,
+            width: 24,
+            unit: '%',
+            type: 'str',
+            textAlign: 'center',
+        },{
+            content: 'Album',
+            sorterCell: true,
+            width: 24,
+            unit: '%',
+            type: 'str',
+            textAlign: 'center',
+        }, {
+            content: 'duration',
+            sorterCell: true,
+            width: 8,
+            unit: '%',
+            type: 'str',
+            textAlign: 'center',
+        }, {
+            content: '&nbsp;',
+            width: 4,
+            unit: '%'
+        }, {
+            content: '&nbsp;',
+            width: 4,
+            unit: '%'
+        }, {
+            content: '&nbsp;',
+            width: 4,
+            unit: '%'
+        }], true, true, 0); 
+        
+        for (let i in res['tracklist']) {
+            let trackInfo = res['tracklist'][i];
+            let track = new Track(trackInfo['track']),
+                id3Tags = new ID3Tags(trackInfo['ID3']);
+            track.setID3Tags(id3Tags);
+            track.setTrackDuration(id3Tags.getDuration());
+
             gridMaker.makeRowIdx([{
-                content: 'N°',
-                sorterCell: true,
+                content: parseInt(i) + 1,
                 width: 8,
                 unit: '%',
                 type: 'int',
-                textAlign: 'center',
             },{
-                content: 'Title',
-                sorterCell: true,
+                content: track.getTitle(),
+                editable: true,
+                onEdit: (evt) => {
+                    console.log('Title editing!', evt);
+                    keyCotrols.setExlcusivityCallerKeyUpV2('tarck.edit');
+                },
+                onValidate: (evt, cell, value) => {
+                    console.log('Title validate value', cell, cell.data('trackId'), value);
+                    keyCotrols.unsetExlcusivityCallerKeyUpV2('tarck.edit');
+                },
                 width: 24,
                 unit: '%',
                 type: 'str',
-                textAlign: 'center',
+                data: {
+                    trackId: track.trackUUid,
+                }
             },{
-                content: 'Artist',
-                sorterCell: true,
+                content: track.getArtist(),
+                editable: true,
+                onEdit: (evt) => {
+                    console.log('Artist editing!', evt);
+                    keyCotrols.setExlcusivityCallerKeyUpV2('tarck.edit');
+                },
+                onValidate: (evt, cell, value) => {
+                    console.log('Artist validate value', cell, cell.data('trackId'), value);
+                    keyCotrols.unsetExlcusivityCallerKeyUpV2('tarck.edit');
+                },
                 width: 24,
                 unit: '%',
                 type: 'str',
-                textAlign: 'center',
+                data: {
+                    trackId: track.trackUUid,
+                }
             },{
-                content: 'Album',
-                sorterCell: true,
+                content: track.getAlbum(),
+                editable: true,
+                onEdit: (evt) => {
+                    console.log('Album editing!', evt);
+                    keyCotrols.setExlcusivityCallerKeyUpV2('tarck.edit');
+                },
+                onValidate: (evt, cell, value) => {
+                    console.log('Album validate value', cell, cell.data('trackId'), value);
+                    keyCotrols.unsetExlcusivityCallerKeyUpV2('tarck.edit');
+                },
                 width: 24,
                 unit: '%',
                 type: 'str',
-                textAlign: 'center',
+                data: {
+                    trackId: track.trackUUid,
+                }
             }, {
-                content: 'duration',
-                sorterCell: true,
+                content: track.getTrackDuration(true),
                 width: 8,
-                unit: '%',
-                type: 'str',
-                textAlign: 'center',
-            }, {
-                content: '&nbsp;',
-                width: 4,
                 unit: '%'
             }, {
                 content: '&nbsp;',
@@ -73,143 +159,106 @@
                 content: '&nbsp;',
                 width: 4,
                 unit: '%'
-            }], true, true, 0); 
-            
-            for (let i in res['tracklist']) {
-                let trackInfo = res['tracklist'][i];
-                let track = new Track(trackInfo['track']),
-                    id3Tags = new ID3Tags(trackInfo['ID3']);
-                track.setID3Tags(id3Tags);
-                track.setTrackDuration(id3Tags.getDuration());
+            }, {
+                content: 'drag',
+                draggable: true,
+                onDragged: (evt) => {
+                    evt.detail.HTMLItem.innerContent('Drop me!!');
+                },
+                onDropped: (evt) => {
+                    evt.detail.HTMLItem.innerContent('drag');
+                },
+                width: 4,
+                unit: '%'
+            }], true, false, parseInt(i) + 1);
 
-                gridMaker.makeRowIdx([{
-                    content: parseInt(i) + 1,
-                    width: 8,
-                    unit: '%',
-                    type: 'int',
-                },{
-                    content: track.getTitle(),
-                    editable: true,
-                    onEdit: (evt) => {
-                        console.log('Title editing!', evt);
-                    },
-                    onValidate: (evt, value) => {
-                        console.log('Title validate value', value);
-                    },
-                    width: 24,
-                    unit: '%',
-                    type: 'str',
-                },{
-                    content: track.getArtist(),
-                    editable: true,
-                    onEdit: (evt) => {
-                        console.log('Artist editing!', evt);
-                    },
-                    onValidate: (evt, value) => {
-                        console.log('Artist validate value', value);
-                    },
-                    width: 24,
-                    unit: '%',
-                    type: 'str',
-                },{
-                    content: track.getAlbum(),
-                    editable: true,
-                    onEdit: (evt) => {
-                        console.log('Album editing!', evt);
-                    },
-                    onValidate: (evt, value) => {
-                        console.log('Album validate value', value);
-                    },
-                    width: 24,
-                    unit: '%',
-                    type: 'str',
-                }, {
-                    content: track.getTrackDuration(true),
-                    width: 8,
-                    unit: '%'
-                }, {
-                    content: '&nbsp;',
-                    width: 4,
-                    unit: '%'
-                }, {
-                    content: '&nbsp;',
-                    width: 4,
-                    unit: '%'
-                }, {
-                    content: 'drag',
-                    draggable: true,
-                    onDragged: (evt) => {
-                        evt.detail.HTMLItem.innerContent('Drop me!!');
-                    },
-                    onDropped: (evt) => {
-                        evt.detail.HTMLItem.innerContent('drag');
-                    },
-                    width: 4,
-                    unit: '%'
-                }], true, false, parseInt(i) + 1);
+            mainTracklist.addTrackToList(track);
+        }
+        audioPlayer.setCurrentTrackFromTrackList(false);
+        gridMaker.render();
 
-                mainTracklist.addTrackToList(track);
-            }
-            audioPlayer.setCurrentTrackFromTrackList(false);
-            gridMaker.render();
+        NotificationCenter.modifyNotification({
+            message: `<p>${mainTracklist.getTracksNumber()} tracks have been loaded!!<p>`
+        }, 'tracks.loaded');
+        NotificationCenter.displayNotification('tracks.loaded', 6000);
+    
+    });
 
-            NotificationCenter.modifyNotification({
-                message: `<p>${mainTracklist.getTracksNumber()} tracks have been loaded!!<p>`
-            }, 'tracks.loaded');
-            NotificationCenter.displayNotification('tracks.loaded', 6000);
-        
-        });
+    const volumeCnt = document.querySelector('#volume-display');
+    const volumeCntDisplay = document.querySelector('#volume-display .vol-val');
+    const muteCnt = document.querySelector('#muted-display');
+    const muteOn = document.querySelector('#muted-display #mute-on');
+    const muteOff = document.querySelector('#muted-display #mute-off');
 
-        const audioCtx = new AudioContext();
-        const audioSourceNode = audioCtx.createMediaElementSource(audioPlayer.audioElem);
+    audioPlayer.onVolumeChange((volume) => {
+        volumeCntDisplay.innerText = Math.round(volume * 100);
+    });
 
-        //Create analyser node
-        const analyserNode = audioCtx.createAnalyser();
-        analyserNode.fftSize = 256;
-        const bufferLength = analyserNode.frequencyBinCount;
-        const dataArray = new Float32Array(bufferLength);
+    keyCotrols.setPlayer(audioPlayer);
 
-        //Set up audio node network
-        audioSourceNode.connect(analyserNode);
-        analyserNode.connect(audioCtx.destination);
-
-        //Create 2D canvas
-        const canvas = document.createElement("canvas");
-        
-        canvas.width = window.innerWidth - 36;
-        canvas.height = window.innerHeight - 204;
-        canvas.style.display = 'block';
-        canvas.style.margin = 'auto';
-        
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth - 36;
-            canvas.height = window.innerHeight - 204;
-        });
-        
-        document.body.appendChild(canvas);
-        
-        const canvasCtx = canvas.getContext("2d");
-        canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-        let curImg = 'img1.jpg';
-        let background = new Image();
-        background.src = `http://jsradio.me:3600/static/${curImg}`;
-
-        background.onload = () => {
-            console.log('img loaded', background.width, background.height, canvas.width, canvas.height);
-            let width = 0, height = 0, x = 0, y = 0;
-            //let coef = (canvas.width / background.width) * .8;
-            let coef = (canvas.height / background.height) * 1.05;
-            width =  background.width * coef;
-            height = background.height * coef;
-            x = parseInt((canvas.width / 2) - (width / 2));
-            canvasCtx.globalAlpha = .1;
-            canvasCtx.drawImage(background, x, y, width, height);
-            canvasCtx.globalAlpha = 1;
-
-            draw(0, true, 0, analyserNode, dataArray, bufferLength, canvasCtx, canvas, background, imgList);
+    keyCotrols.registerKeyDownAction('m', () => {
+        audioPlayer.mute();
+        muteCnt.style.display = 'block';
+        if (audioPlayer.isMuted()) {
+            muteOn.style.display = 'block';
+            muteOff.style.display = 'none';
+        } else {
+            muteOn.style.display = 'none';
+            muteOff.style.display = 'block';
         }
 
-        
+        setTimeout(() => {
+            muteOn.style.display = 'none';
+            muteOff.style.display = 'none';
+            muteCnt.style.display = 'none';
+        }, 1668);
+    });
+
+    keyCotrols.registerKeyDownAction('a', evt => document.querySelector('.cnt-overlay').style.display = 'block', 'trackListBrowserRenderer');
+    keyCotrols.registerKeyDownAction('Escape', evt => document.querySelector('.cnt-overlay').style.display = 'none', 'trackListBrowserRenderer');
+
+    let volUpEvtId = -1;
+    let volDownEvtId = -1;
+    
+    const volumeFader = new Fader();
+
+    keyCotrols.registerKeyDownAction('+', () => {
+        volumeFader.cancelFade();
+        if (volUpEvtId >= 0) {
+            clearTimeout(volUpEvtId);
+            volUpEvtId = -1;
+        }
+        if (volDownEvtId >= 0) {
+            clearTimeout(volDownEvtId);
+            volDownEvtId = -1;
+        }
+        volumeCnt.style.opacity = 1;
+        volumeCnt.style.display = 'block';
+    });
+    keyCotrols.registerKeyUpAction('+', () => {
+        volUpEvtId = setTimeout(() => {
+            //fadeOut(volumeCnt, false, 0.35);
+            volumeFader.fadeOut(volumeCnt, 400, 1, 0);
+        }, 568);
+    });
+    
+    keyCotrols.registerKeyDownAction('-',  () => {
+        volumeFader.cancelFade();
+        if (volDownEvtId >= 0) {
+            clearTimeout(volDownEvtId);
+            volDownEvtId = -1;
+        }
+        if (volUpEvtId >= 0) {
+            clearTimeout(volUpEvtId);
+            volUpEvtId = -1;
+        }
+        volumeCnt.style.opacity = 1;
+        volumeCnt.style.display = 'block';
+    });
+    keyCotrols.registerKeyUpAction('-', () => {
+        volDownEvtId = setTimeout(() => {
+            volumeFader.fadeOut(volumeCnt, 400, 1, 0);
+        }, 568);
     });
 
 })(this, document, this.JSPlayer);

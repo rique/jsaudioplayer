@@ -27,8 +27,12 @@ ul {
     width: 98.5%;
     height: auto;
     margin: auto;
-
 }
+
+#info-box {
+    height: 103px;
+}
+
 #foto-box, #album-art {
     width: 100px;
     margin-top: 5px;
@@ -45,7 +49,7 @@ ul {
 }
 
 #foto-box, #track-box {
-    padding: 6px 6px 6px 0;
+    padding: 6px 6px 0 0;
     display: inline-block;
     vertical-align: top;
 }
@@ -221,7 +225,7 @@ ul {
 .cnt-overlay #window-content {
     position: relative;
     width: 62%;
-    height: 62%;
+    height: 68%;
     background: #2d2d2d;
     border-radius: 10px;
     padding: 16px;

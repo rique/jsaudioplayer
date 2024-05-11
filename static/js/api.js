@@ -4,17 +4,18 @@
 
     const Api = function() {
         this.url = 'http://jsradio.me:3600/api';
-        this.xhr = new XMLHttpRequest();
         this.csrftoken = readCookie('csrftoken');
     };
     Api.prototype = {
         getXhrPost(url) {
-            this.xhr.open('POST', url, true);
-            return this.xhr;
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', url, true);
+            return xhr;
         },
         getXhrGet(url) {
-            this.xhr.open('GET', url, true);
-            return this.xhr;
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', url, true);
+            return xhr;
         },
         browseFiles(baseDir, callback) {
             let xhr = this.getXhrPost(`${this.url}/file-browser`);

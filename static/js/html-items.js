@@ -1,6 +1,6 @@
 (function(window, document, JSPlayer, undefined) {
 
-    const ListEvents = JSPlayer.ListEvents;
+    const ListEvents = JSPlayer.EventsManager.ListEvents;
     const getLastParent = JSPlayer.Utils.getLastParent;
 
     const getOffsetLeft = (elem) => {
@@ -13,40 +13,12 @@
     }
  
      const getOffsetTop  = (elem) => {
-         /*let marginTop = 0;
-         while (elem.parentElement) {
-             elem = elem.parentElement;
-             marginTop += parseInt(getComputedStyle(elem).marginTop);
-         }*/
-         
          const bounds = elem.getBoundingClientRect();
-
          return bounds.top;
-
-         // return marginTop;
      }
  
      const getOffsetBottom  = (elem, depth) => {
-         /*let marginBottom = 0,
-             counter = 0;
- 
-         while (elem.parentElement) {
-             if (elem == document.body)
-                 break;
- 
-             elem = elem.parentElement;
-             marginBottom += elem.offsetHeight - marginBottom;
- 
-             if (typeof depth === 'number' && depth < counter) {
-                 break;
-             }
-             ++counter;
-         }*/
-         // console.log('getOffsetBottom', elem);
-         // marginBottom = window.innerHeight - elem.offsetHeight;        
-         // return marginBottom / 2;
          const bounds = elem.getBoundingClientRect();
-         //console.log(elem.getBoundingClientRect(), elem.parentElement.getBoundingClientRect(), elem.parentElement.offsetTop, elem.parentElement.offsetHeight, elem.parentElement.offsetTop + elem.parentElement.offsetHeight);
          return bounds.bottom;
 
      }
@@ -169,8 +141,13 @@
 
             Object.keys(style).forEach(k => this.element.style[k] = style[k]);
         },
-        data({name, value}) {
-            this.element.dataset[name] = value;
+        data(name, value) {
+            if (name && value) {      
+                this.element.dataset[name] = value;
+            } else if (name)
+                return this.element.dataset[name];
+            else
+                return this.element.dataset;
         },
         insertItemAfter(itemInstance) {
             itemInstance.element.insertAdjacentElement('afterend', this.render());
@@ -202,7 +179,7 @@
     HTMLIndexedItems.prototype = {
         setIndex(index) {
             this.index = index;
-            this.data({name: 'index', value: index});
+            this.data('index', index);
         },
         updateIndex(index) {
             this.eventsList.trigger('onIndexUpdate', index, this.index, this);
@@ -434,7 +411,7 @@
             let inputValue = this.input.value();
 
             if (inputValue != this.hidden.value()) {
-                cb(evt, inputValue);
+                cb(evt, this, inputValue);
             }
             this.innerContent(inputValue);
             this.isEditing = false;
