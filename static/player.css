@@ -536,7 +536,7 @@ li.fa-solid.fa-file {
 .action-menu-cnt {
     position: absolute;
     padding: 10px;
-    z-index: 200;
+    z-index: 450;
     top: 94%;
     left: -152%;
     background: #444;
