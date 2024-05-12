@@ -4,22 +4,22 @@
     const Track = JSPlayer.Tracks.Track;
     const TrackList = JSPlayer.Tracks.TrackList;
     const ID3Tags = JSPlayer.Tracks.ID3Tags;
-    const GridMaker = window.JSPlayer.GridMaker;
+    const TracklistGrid = JSPlayer.Grids.TracklistGrid;
     const draw = JSPlayer.Vizualizer.draw;
     const AudioPlayer = JSPlayer.AudioPlayer;
-    const KeyCotrols = JSPlayer.EventsManager.KeyCotrols;
+    const keyCotrols = JSPlayer.EventsManager.KeyCotrols;
     const Fader = JSPlayer.Effects.Fader;
     const LeftMenu = JSPlayer.Components.LeftMenu;
 
     const imgList = [];
-    const api = new JSPlayer.Api();
-    const gridMaker = new GridMaker(document.getElementById('table-content'), true);
     const mainTracklist = new TrackList();
     const audioPlayer = new AudioPlayer(mainTracklist);
+    const api = new JSPlayer.Api();
+    const tracklistGrid = new TracklistGrid('#table-content', audioPlayer);
+    
+    
     const leftMenu = new LeftMenu();
     leftMenu.init();
-
-    const keyCotrols = new KeyCotrols();
 
     NotificationCenter.registerNotification({
         title: 'Tracks Loaded!!',
@@ -32,57 +32,7 @@
     });
 
     api.loadTrackList(function(res) {
-        gridMaker.setDraggable(true, true);
         audioPlayer.init();
-        
-        gridMaker.makeRowIdx([{
-            content: 'N°',
-            sorterCell: true,
-            width: 8,
-            unit: '%',
-            type: 'int',
-            textAlign: 'center',
-        },{
-            content: 'Title',
-            sorterCell: true,
-            width: 24,
-            unit: '%',
-            type: 'str',
-            textAlign: 'center',
-        },{
-            content: 'Artist',
-            sorterCell: true,
-            width: 24,
-            unit: '%',
-            type: 'str',
-            textAlign: 'center',
-        },{
-            content: 'Album',
-            sorterCell: true,
-            width: 24,
-            unit: '%',
-            type: 'str',
-            textAlign: 'center',
-        }, {
-            content: 'duration',
-            sorterCell: true,
-            width: 8,
-            unit: '%',
-            type: 'str',
-            textAlign: 'center',
-        }, {
-            content: '&nbsp;',
-            width: 4,
-            unit: '%'
-        }, {
-            content: '&nbsp;',
-            width: 4,
-            unit: '%'
-        }, {
-            content: '&nbsp;',
-            width: 4,
-            unit: '%'
-        }], true, true, 0); 
         
         for (let i in res['tracklist']) {
             let trackInfo = res['tracklist'][i];
@@ -90,92 +40,12 @@
                 id3Tags = new ID3Tags(trackInfo['ID3']);
             track.setID3Tags(id3Tags);
             track.setTrackDuration(id3Tags.getDuration());
-
-            gridMaker.makeRowIdx([{
-                content: parseInt(i) + 1,
-                width: 8,
-                unit: '%',
-                type: 'int',
-            },{
-                content: track.getTitle(),
-                editable: true,
-                onEdit: (evt) => {
-                    console.log('Title editing!', evt);
-                    keyCotrols.setExlcusivityCallerKeyUpV2('tarck.edit');
-                },
-                onValidate: (evt, cell, value) => {
-                    console.log('Title validate value', cell, cell.data('trackId'), value);
-                    keyCotrols.unsetExlcusivityCallerKeyUpV2('tarck.edit');
-                },
-                width: 24,
-                unit: '%',
-                type: 'str',
-                data: {
-                    trackId: track.trackUUid,
-                }
-            },{
-                content: track.getArtist(),
-                editable: true,
-                onEdit: (evt) => {
-                    console.log('Artist editing!', evt);
-                    keyCotrols.setExlcusivityCallerKeyUpV2('tarck.edit');
-                },
-                onValidate: (evt, cell, value) => {
-                    console.log('Artist validate value', cell, cell.data('trackId'), value);
-                    keyCotrols.unsetExlcusivityCallerKeyUpV2('tarck.edit');
-                },
-                width: 24,
-                unit: '%',
-                type: 'str',
-                data: {
-                    trackId: track.trackUUid,
-                }
-            },{
-                content: track.getAlbum(),
-                editable: true,
-                onEdit: (evt) => {
-                    console.log('Album editing!', evt);
-                    keyCotrols.setExlcusivityCallerKeyUpV2('tarck.edit');
-                },
-                onValidate: (evt, cell, value) => {
-                    console.log('Album validate value', cell, cell.data('trackId'), value);
-                    keyCotrols.unsetExlcusivityCallerKeyUpV2('tarck.edit');
-                },
-                width: 24,
-                unit: '%',
-                type: 'str',
-                data: {
-                    trackId: track.trackUUid,
-                }
-            }, {
-                content: track.getTrackDuration(true),
-                width: 8,
-                unit: '%'
-            }, {
-                content: '&nbsp;',
-                width: 4,
-                unit: '%'
-            }, {
-                content: '&nbsp;',
-                width: 4,
-                unit: '%'
-            }, {
-                content: 'drag',
-                draggable: true,
-                onDragged: (evt) => {
-                    evt.detail.HTMLItem.innerContent('Drop me!!');
-                },
-                onDropped: (evt) => {
-                    evt.detail.HTMLItem.innerContent('drag');
-                },
-                width: 4,
-                unit: '%'
-            }], true, false, parseInt(i) + 1);
-
             mainTracklist.addTrackToList(track);
         }
         audioPlayer.setCurrentTrackFromTrackList(false);
-        gridMaker.render();
+        tracklistGrid.setTracklist(mainTracklist);
+        tracklistGrid.buildGrid();
+        tracklistGrid.render();
 
         NotificationCenter.modifyNotification({
             message: `<p>${mainTracklist.getTracksNumber()} tracks have been loaded!!<p>`

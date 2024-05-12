@@ -95,8 +95,19 @@
 </div>
 <div style="display: none;" class="cnt-overlay">
   <div style="display: block;" id="window-content">
-    <div class="tracklist-head"><div class="tracklist-title inline-block">Track list</div><div class="tracklist-search inline-block"><div class="img-cnt inline-block"><img src="/static/mag-glass2-white.svg"></div><div class="input-cnt inline-block" style="visibility: visible;"><input class="search-input"></div></div></div>
-    <div id="table-content"></div>
+    <div class="tracklist-head">
+      <div class="tracklist-title inline-block">Track list</div><div class="tracklist-search inline-block">
+        <div class="img-cnt inline-block"><img src="/static/mag-glass2-white.svg"></div><div class="input-cnt inline-block" style="visibility: visible;"><input class="search-input"></div>
+      </div>
+    </div>
+    <div class="tracklist-content-div">
+      <div id="table-content"></div>
+      <div class="tracklist-info-cnt">
+        <span class="tracklist-info-nb">
+          <span class="nb-tracks">606</span> Total Tracks</span><span class="tracklist-info-duration">
+            <span class="duration-tracks">45:28:38</span>Total Duration</span>
+      </div>
+    </div>
   </div>
 </div>
 <div id="notifications-cnt">
@@ -106,16 +117,16 @@
 <script type="text/javascript" src="/static/node_modules/luxon/src/luxonjs.js"></script>
 <script type="text/javascript" src="/static/js/utils.js"></script>
 <script type="text/javascript" src="/static/js/event-manager.js"></script>
+<script type="text/javascript" src="/static/js/api.js"></script>
+<script type="text/javascript" src="/static/js/tracks.js"></script>
 <script type="text/javascript" src="/static/js/components.js"></script>
 <script type="text/javascript" src="/static/js/dragdrop.js"></script>
 <script type="text/javascript" src="/static/js/html-items.js"></script>
 <script type="text/javascript" src="/static/js/grid.js"></script>
 <script type="text/javascript" src="/static/js/effects.js"></script>
 <script type="text/javascript" src="/static/js/visualizer.js"></script>
-<script type="text/javascript" src="/static/js/api.js"></script>
 <script type="text/javascript" src="/static/js/notifications-center.js"></script>
 <script type="text/javascript" src="/static/js/notifications.js"></script>
-<script type="text/javascript" src="/static/js/tracks.js"></script>
 <script type="text/javascript" src="/static/js/player.js"></script>
 <script type="text/javascript" src="/static/js/main.js"></script>
 {% endblock %}

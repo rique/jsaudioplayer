@@ -380,7 +380,10 @@
             return this.editable;
         },
         onEdit(onEdit, onValidate) {
-            this.addEventListener('click', evt =>  this._edit(evt, onEdit, onValidate));
+            this.onClick(evt =>  this._edit(evt, onEdit, onValidate));
+        },
+        onClick(cb) {
+            this.addEventListener('click', cb);
         },
         textAlign(textAlign) {
             this.css({textAlign});
@@ -408,12 +411,8 @@
         _validate(evt, cb) {
             if (!this.isEditing)
                 return;
-            let inputValue = this.input.value();
 
-            if (inputValue != this.hidden.value()) {
-                cb(evt, this, inputValue);
-            }
-            this.innerContent(inputValue);
+            cb(evt, this, this.input.value(), this.hidden.value());
             this.isEditing = false;
         }
 

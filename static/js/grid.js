@@ -8,6 +8,7 @@
     const SortableRow = JSPlayer.HTMLItems.SortableRow;
     const ListEvents = JSPlayer.EventsManager.ListEvents;
     const DragitManager = JSPlayer.DragitManager;
+    const TrackEditor = JSPlayer.Tracks.TrackEditor;
 
     const BaseColumn = function() {
         this.cells = [];
@@ -238,7 +239,11 @@
         } else {
             this.grid = new BaseGrid(parentCnt);
         }
-
+        window.addEventListener('keydown', (evt) => {
+            if(evt.key == ' ' && evt.target == parentCnt) {
+                evt.preventDefault();
+            }
+        });
     };
     GridMaker.prototype = {
         setRows(rows) {
@@ -294,13 +299,14 @@
                     cell.onDropped(c.onDropped);
                 }
                 
+                if (c.hasOwnProperty('onClick')) {
+                    cell.onClick(c.onClick);
+                }
+
                 if (typeof c.data === 'object') {
                     let data = c.data;
                     Object.keys(c.data).forEach(k => cell.data(k, data[k]));
                 }
-
-                if (c.type && c.type == 'str' && c.content.trim() == '')
-                        c.content = '&nbsp;'
 
                 cell.innerContent(c.content);
 
@@ -360,43 +366,154 @@
         }
     }
 
-    const demo = (divId) => {
-        const gridMaker = new GridMaker(document.getElementById(divId), true);
-
-        const nbRows = 35;
-        const nbCells = 11;
-        const letters = ["1", '2', '3', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm'];
-        gridMaker.setDraggable(true, true);
-
-        for (let i = 0; i < nbRows; ++i) {
-            let cells = [];
-            for (let y = 0; y < nbCells; ++y) {
-                cells.push({
-                    content: i == 0 && y == nbCells - 1 ? 'Drag them!!' : y == nbCells - 1 ? 'Drag me!!' : generateLoremText(1, 6),
-                    sorterCell: i == 0 && y < nbCells - 1,
-                    unit: 'px',
-                    editable: y < nbCells - 1 && i > 0 && y % 2 != 0,
-                    onEdit: (evt) => {
-                        console.log('editing!', evt);
-                    },
-                    onValidate: (evt, value) => {
-                        console.log('validate value', value);
-                    },
-                    draggable: y == nbCells - 1 && i > 0,
-                    onDragged: (evt) => {
-                        evt.detail.HTMLItem.innerContent('Drop me!!');
-                    },
-                    onDropped: (evt) => {
-                        evt.detail.HTMLItem.innerContent('Drag me!!');
-                    }
-                });
-            }
-            gridMaker.makeRowIdx(cells, true, i == 0, i);
-        }
-
-        gridMaker.render();
+    const TracklistGrid = function(selector, audioPlayer) {
+        selector = selector || '#table-content';
+        this.gridMaker = new GridMaker(document.querySelector(selector), true);
+        this.gridMaker.setDraggable(true, true);
+        this.audioPlayer = audioPlayer;        
     };
-
-   JSPlayer.GridMaker = GridMaker;
+    TracklistGrid.prototype = {
+        setTracklist(tracklist) {
+            this.tracklist = tracklist;
+            TrackEditor.tracklist = tracklist;
+        },
+        addTrackToGrid({track, index}) {
+            this.gridMaker.makeRowIdx([{
+                content: parseInt(index) + 1,
+                width: 8,
+                unit: '%',
+                type: 'int',
+            },{
+                content: track.getTitle(),
+                editable: true,
+                onEdit: TrackEditor.onclickCell.bind(TrackEditor),
+                onValidate: TrackEditor.onValidate.bind(TrackEditor),
+                width: 24,
+                unit: '%',
+                type: 'str',
+                data: {
+                    trackId: track.trackUUid,
+                    fieldType: 'title',
+                }
+            },{
+                content: track.getArtist(),
+                editable: true,
+                onEdit: TrackEditor.onclickCell.bind(TrackEditor),
+                onValidate: TrackEditor.onValidate.bind(TrackEditor),
+                width: 24,
+                unit: '%',
+                type: 'str',
+                data: {
+                    trackId: track.trackUUid,
+                    fieldType: 'artist',
+                }
+            },{
+                content: track.getAlbum(),
+                editable: true,
+                onEdit: TrackEditor.onclickCell.bind(TrackEditor),
+                onValidate: TrackEditor.onValidate.bind(TrackEditor),
+                width: 24,
+                unit: '%',
+                type: 'str',
+                data: {
+                    trackId: track.trackUUid,
+                    fieldType: 'album',
+                }
+            }, {
+                content: track.getTrackDuration(true),
+                width: 8,
+                unit: '%'
+            }, {
+                content: `<span data-track-id="${track.trackUUid}" class="track-actions"><li class="fa-solid fa-ellipsis"></li></span>`,
+                width: 4,
+                unit: '%'
+            }, {
+                content: '<div class="action-play"><li class="fa-solid fa-play"></li></div>',
+                width: 4,
+                unit: '%',
+                onClick: this.playSongFromTracklist.bind(this, index),
+                textAlign: 'center',
+            }, {
+                content: 'drag',
+                draggable: true,
+                onDragged: (evt) => {
+                    evt.detail.HTMLItem.innerContent('Drop me!!');
+                },
+                onDropped: (evt) => {
+                    evt.detail.HTMLItem.innerContent('drag');
+                },
+                width: 4,
+                unit: '%'
+            }], true, false, parseInt(index) + 1);
+        },
+        buildGrid() {
+            this._buildHeaders();
+            this._buildBody();
+        },
+        render() {
+            this.gridMaker.render();
+        },
+        playSongFromTracklist(trackIndex) {
+            this.tracklist.getCurrentTrack().onTagChangeUnsub(this.audioPlayer);
+            this.tracklist.setTrackIndex(trackIndex, true);
+        },
+        _buildHeaders() {
+            this.gridMaker.makeRowIdx([{
+                content: 'N°',
+                sorterCell: true,
+                width: 8,
+                unit: '%',
+                type: 'int',
+                textAlign: 'center',
+            },{
+                content: 'Title',
+                sorterCell: true,
+                width: 24,
+                unit: '%',
+                type: 'str',
+                textAlign: 'center',
+            },{
+                content: 'Artist',
+                sorterCell: true,
+                width: 24,
+                unit: '%',
+                type: 'str',
+                textAlign: 'center',
+            },{
+                content: 'Album',
+                sorterCell: true,
+                width: 24,
+                unit: '%',
+                type: 'str',
+                textAlign: 'center',
+            }, {
+                content: 'duration',
+                sorterCell: true,
+                width: 8,
+                unit: '%',
+                type: 'str',
+                textAlign: 'center',
+            }, {
+                content: '&nbsp;',
+                width: 4,
+                unit: '%'
+            }, {
+                content: '&nbsp;',
+                width: 4,
+                unit: '%'
+            }, {
+                content: '&nbsp;',
+                width: 4,
+                unit: '%'
+            }], true, true, 0); 
+        },
+        _buildBody() {
+            for (let trackIdx of this.tracklist.iterOverTrack()) {
+                this.addTrackToGrid(trackIdx);
+            }
+        },
+    }
+    
+   JSPlayer.Grids = {TracklistGrid};
 
 })(this, document, this.JSPlayer);

@@ -1,6 +1,8 @@
 (function(window, document, JSPlayer, undefined) {
     const ListEvents = JSPlayer.EventsManager.ListEvents;
     const getRandomInt = JSPlayer.Utils.getRandomInt;
+    const keyCotrols = JSPlayer.EventsManager.KeyCotrols;
+    const api = new JSPlayer.Api();
 
     const ID3Tags = function(tags) {
         this.tags = tags;
@@ -342,6 +344,11 @@
                 return this._formatTime(this.tracklistTotalDuration);
             return this.tracklistTotalDuration;
         },
+        *iterOverTrack() {
+            for (let index = 0; index < this.tracksNumber; ++index) {
+                yield {index, track: this.tracklist[index]};
+            }
+        },
         _setCurrentTrack() {
             this.currentTrack = this.getTrackList()[this.trackIndex];
         },
@@ -383,6 +390,42 @@
         }
     };
 
-    window.JSPlayer.Tracks = {Track, TrackList, ID3Tags};
+    const TrackEditor = {
+        tracklist: '',
+        onclickCell() {
+            this._setExclusivity();
+        },
+        onValidate(evt, cell, value, oldValue) {
+            this._unsetExclusivity();
+            const trackUUid = cell.data('trackId');
+            const fieldType = cell.data('fieldType');
+
+            if (oldValue == value) {
+                cell.innerContent(oldValue);
+                return;
+            }
+
+            api.editTrack(fieldType, value, trackUUid, (res) => {
+                if (res.success) {
+                    cell.innerContent(value);
+                    const track = this.tracklist.getTrackByUUID(trackUUid);
+                    track.setTag(fieldType, value);
+                } else {
+                    cell.innerContent(oldValue);
+                }
+            });
+            
+        },
+        _setExclusivity() {
+            keyCotrols.setExlcusivityCallerKeyUpV2(this);
+            keyCotrols.setExlcusivityCallerKeyDownV2(this);
+        },
+        _unsetExclusivity() {
+            keyCotrols.unsetExlcusivityCallerKeyUpV2();
+            keyCotrols.unsetExlcusivityCallerKeyDownV2();
+        },
+    };
+
+    window.JSPlayer.Tracks = {Track, TrackList, ID3Tags, TrackEditor};
 
 })(this, document, window.JSPlayer);

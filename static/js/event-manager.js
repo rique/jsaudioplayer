@@ -176,7 +176,7 @@
                     if (typeof obj.cb !== 'function')
                         continue;
                     if (exclusiveCallers && exclusiveCallers.length > 0) {
-                        exclusiveCallers.map(caller => obj.caller == caller && obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target}));
+                        exclusiveCallers.forEach(caller => obj.caller == caller && obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target}));
                     } else {
                         obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target})
                     }
@@ -228,5 +228,5 @@
         },
     };
 
-    window.JSPlayer.EventsManager = {ListEvents, KeyCotrols};
+    window.JSPlayer.EventsManager = {ListEvents, KeyCotrols: new KeyCotrols()};
 })(this, document);

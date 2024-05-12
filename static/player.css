@@ -232,6 +232,7 @@ ul {
     overflow: auto;
     display: none;
     margin: 10% auto 0 auto;
+    overflow: hidden;
 }
 
 .cnt-overlay .file-browser,
@@ -301,6 +302,25 @@ ul {
     border-radius: 3px;
 }
 
+.action-play, .track-actions {
+    cursor: pointer;
+}
+
+.action-play {
+    width: 100%;
+    height: 100%;
+}
+
+.cell:has(.action-play):hover {
+    background: #c7695f;
+    color: #fff;
+}
+
+.cell:has(.action-play):active {
+    background: #c75a4d;
+    color: #fff;
+}
+
 .track-actions li {
     width: 100%;
     height: 100%;
@@ -356,14 +376,16 @@ ul {
 }
 
 .tracklist-content-div {
-    height: 34px;
+    height: 94%;
     padding: 6px;
     background: transparent;
+    overflow: scroll;
 }
 
 .tracklist-content-div  .tracklist-info-cnt {
 	margin: 35px 0;
 	background: transparent;
+    font-size: 18px;
 }
 
 .tracklist-content-div .tracklist-info-nb,
