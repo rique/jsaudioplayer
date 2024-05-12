@@ -355,15 +355,27 @@ ul {
     margin-bottom: 10px;
 }
 
+.tracklist-content thead {
+    position: sticky;
+    top: 0;
+    left: 0;
+    background: #f7f8f8;
+    z-index: 400;
+}
+
 .tracklist-content-div {
     height: 34px;
-    padding: 6px;
+    padding: 0 6px 6px 6px;
     background: transparent;
 }
 
-.tracklist-content-div  .tracklist-info-cnt {
-	margin: 35px 0;
-	background: transparent;
+.tracklist-info-cnt {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    z-index: 400;
+    background: #2d2d2d !important;
+    padding: 18px 0 30px 0;
 }
 
 .tracklist-content-div .tracklist-info-nb,
