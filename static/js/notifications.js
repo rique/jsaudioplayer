@@ -2,6 +2,37 @@
     const NotificationCenter = JSPlayer.NotificationCenter;
     const TrackBoxTemplate = JSPlayer.NotificationTemplates.TrackBoxTemplate;
 
+    const TracklistBrowserNotifications = function() {
+        this.addedToQueueKey = 'track.addedToQueue';
+        this.removedTrackKey = 'track.removedTrack';
+    
+        NotificationCenter.registerNotification({
+            title: 'Track added to queue!',
+            level: 'info',
+          }, this.addedToQueueKey);
+        
+        NotificationCenter.registerNotification({
+            title: '⚠️ Track removed!',
+            level: 'warning',
+          }, this.removedTrackKey);
+    };
+    TracklistBrowserNotifications.prototype = {
+        setAddedTrackToQueue(track, timeout) {
+            NotificationCenter.modifyNotification({message: new TrackBoxTemplate(track)}, this.addedToQueueKey);
+            NotificationCenter.displayNotification(this.addedToQueueKey, timeout);
+        },
+        hideAddedTrackToQueue() {
+            NotificationCenter.hideNotification(this.addedToQueueKey);
+        },
+        setARemovedTrack(track, timeout) {
+            NotificationCenter.modifyNotification({message: new TrackBoxTemplate(track)}, this.removedTrackKey);
+            NotificationCenter.displayNotification(this.removedTrackKey, timeout);
+        },
+        hideARemovedTrack() {
+            NotificationCenter.hideNotification(this.removedTrackKey);
+        },
+    }
+
     const PlayerNotifications = function() {
         this.comingNextKey = 'player.comingNext';
         NotificationCenter.registerNotification({
@@ -37,6 +68,7 @@
       };
 
     JSPlayer.Notifications = {
+        TracklistBrowserNotifications,
         PlayerNotifications,
         FileBrowserNotifications,
     }

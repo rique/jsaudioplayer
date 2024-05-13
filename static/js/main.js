@@ -65,6 +65,8 @@
     const fileBrowserRenderer = new FileBrowserRenderer(fileBrowser, fileBrowserLayout, document.querySelector('#file-browser-action button.open-file-browser'));
     layoutHTML.addHTMLLayout(fileBrowserLayout);
 
+    fileBrowser.onSongAdded(tracklistGrid.appendTrackToGrid.bind(tracklistGrid));
+
     const volumeCnt = document.querySelector('#volume-display');
     const volumeCntDisplay = document.querySelector('#volume-display .vol-val');
     const muteCnt = document.querySelector('#muted-display');
@@ -95,8 +97,10 @@
         }, 1668);
     });
 
-    keyCotrols.registerKeyDownAction('a', evt => document.querySelector('.cnt-overlay').style.display = 'block', 'trackListBrowserRenderer');
-    keyCotrols.registerKeyDownAction('Escape', evt => document.querySelector('.cnt-overlay').style.display = 'none', 'trackListBrowserRenderer');
+    keyCotrols.registerKeyDownAction('a', tracklistGrid.open.bind(tracklistGrid), 'trackListBrowserRenderer');
+    keyCotrols.registerKeyDownAction('Escape', tracklistGrid.close.bind(tracklistGrid), 'trackListBrowserRenderer');
+
+    document.querySelector('#file-browser-action button.open-tracklist-browser').addEventListener('click', tracklistGrid.open.bind(tracklistGrid));
 
     let volUpEvtId = -1;
     let volDownEvtId = -1;

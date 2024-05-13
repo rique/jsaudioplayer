@@ -119,6 +119,9 @@
         append(...elements) {
             this.element.append(...elements.map(el => el.render()));
         },
+        remove() {
+            this.element.remove();
+        },
         classAdd(className) {
             this.element.classList.add(className);
         },

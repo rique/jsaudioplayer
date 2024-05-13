@@ -254,7 +254,7 @@
             --this.tracksNumber;
             this.trackIndexMax = this.tracksNumber - 1;
             this.trackListEvents.trigger('onRemoveTrackFromTrackList', track);
-            return true;
+            return {trackIndx, track};
         },
         onRemoveTrackFromTrackList(cb, subscriber) {
             this.trackListEvents.onEventRegister({cb, subscriber}, 'onRemoveTrackFromTrackList');

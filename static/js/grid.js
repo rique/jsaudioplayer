@@ -9,6 +9,7 @@
     const DragitManager = JSPlayer.DragitManager;
     const TrackEditor = JSPlayer.Tracks.TrackEditor;
     const TrackSearch = JSPlayer.Tracks.TrackSearch;
+    const TracklistBrowserNotifications = JSPlayer.Notifications.TracklistBrowserNotifications;
 
     const BaseColumn = function() {
         this.cells = [];
@@ -103,6 +104,16 @@
         },
         clear() {
             this.rows = [];
+        },
+        removeRow(index) {
+            const row = this.rows.splice(index, 1)[0];
+            row.remove(); 
+        },
+        open() {
+            this.parentCnt.style.display = 'block';
+        },
+        close() {
+            this.parentCnt.style.display = 'none';
         },
         render() {
             clearElementInnerHTML(this.parentCnt);
@@ -275,9 +286,12 @@
             }
         },
         clearRows() {
-            console.log('clear');
             this.rows = [];
             this.grid.clear();
+        },
+        removeRowFromGrid(index) {
+            this.grid.removeRow(index);
+            this.rows.splice(index, 0);
         },
         getGrid() {
             return this.grid;
@@ -365,6 +379,12 @@
             if (this.isDraggable())
                 this._setDraggableGrid();
         },
+        open() {
+            this.grid.open();
+        },
+        close() {
+            this.grid.close();
+        },
         getDraggableRows() {
             return this.grid.getRows().filter(r => r.isDraggable());
         },
@@ -407,10 +427,14 @@
         this.trackSearch = new TrackSearch(this.gridMaker.getGrid());
         this.trackSearch.init();
         this.overlayDiv = document.querySelector('.cnt-overlay');
+        this.isVisible = false;
+        this._tracklistBrowserNotifications = new TracklistBrowserNotifications();
         this.overlayDiv.addEventListener('click', (evt) => {
             if (evt.target != evt.currentTarget)
                 return;
-            this.overlayDiv.style.display = 'none';
+            if (this.isVisible) {
+                this.close();
+            }
         });
     };
     TracklistGrid.prototype = {
@@ -423,7 +447,12 @@
                 this.render();
             }, this);
 
-            this._displayTracklistInfo();
+            this.tracklist.onAddedToQueue(this._notifyAddToQueue.bind(this));
+            this.tracklist.onRemoveTrackFromTrackList(this._notifyARemovedTrack.bind(this));
+        },
+        appendTrackToGrid(track, index) {
+            this.addTrackToGrid({track, index});
+            this.render();
         },
         addTrackToGrid({track, index}) {
             this.gridMaker.makeRowIdx([{
@@ -477,7 +506,8 @@
             }, {
                 content: `<span data-track-id="${track.trackUUid}" class="track-actions"><li class="fa-solid fa-ellipsis"></li></span>`,
                 width: 4,
-                unit: '%'
+                unit: '%',
+                onClick: this.showActionMenu.bind(this),
             }, {
                 content: '<div class="action-play"><li class="fa-solid fa-play"></li></div>',
                 width: 4,
@@ -503,10 +533,97 @@
         },
         render() {
             this.gridMaker.render();
+            this._displayTracklistInfo();
+        },
+        open() {
+            this.overlayDiv.style.display = 'block';
+            this.isVisible = true;
+            this.gridMaker.open();
+        },
+        close() {
+            this.overlayDiv.style.display = 'none';
+            this.isVisible = false;
+            this.gridMaker.close();
         },
         playSongFromTracklist(trackIndex) {
             this.tracklist.getCurrentTrack().onTagChangeUnsub(this.audioPlayer);
             this.tracklist.setTrackIndex(trackIndex, true);
+        },
+        showActionMenu(evt) {
+            const target = evt.target;
+            this.hideAllActionMenus();
+            
+            const targetChildren = target.parentNode.getElementsByClassName('action-menu-cnt');
+            if (targetChildren.length > 0 ) {
+                return targetChildren[0].style.display = 'block';
+            }
+    
+            const trackUUid = target.parentNode.dataset.trackId;
+            const divElem = document.createElement('div');
+            const ulAction = document.createElement('ul');
+            const liAddToQueue = document.createElement('li');
+            const liDelete = document.createElement('li');
+            const liFavorite = document.createElement('li');
+    
+            divElem.className = 'action-menu-cnt';
+            divElem.dataset.trackId = trackUUid;
+    
+            liAddToQueue.innerText = 'Add to queue';
+            liDelete.innerText = 'Remove track';
+            liFavorite.innerText = 'Add to favorites';
+    
+            liAddToQueue.addEventListener('click', () => {
+                this.addToQueueAction(divElem, trackUUid);
+            });
+    
+            liDelete.addEventListener('click', () => {
+                this.deleteTrackAction(liDelete, divElem, trackUUid);
+            });
+    
+            liFavorite.addEventListener('click', () => {
+                this.addToFavoriteAction(liFavorite, divElem, trackUUid);
+            });
+    
+            ulAction.appendChild(liAddToQueue);
+            ulAction.appendChild(liFavorite);
+            ulAction.appendChild(liDelete);
+            divElem.appendChild(ulAction);
+    
+            divElem.addEventListener('mouseleave', () => {
+                this.hideActionMenu(divElem);
+            });
+    
+            target.parentNode.appendChild(divElem);
+        },
+        hideActionMenu(divElem) {
+            divElem.style.display = 'none';
+        },
+        hideAllActionMenus() {
+            document.querySelectorAll('.action-menu-cnt').forEach(el => el.style.display = 'none');
+        },
+        addToQueueAction(divElem, trackUUid) {
+            this.tracklist.addToQueue(this.tracklist.getTrackByUUID(trackUUid));
+            divElem.style.display = 'none';
+        },
+        deleteTrackAction(liDelete, divElem, trackUUid) {
+            const api = new window.JSPlayer.Api();
+            api.deleteTrack(trackUUid, (res) => {
+                if (res.success) {
+                    const {trackIndx, track} = this.tracklist.removeTrackFromTracklistByUUID(trackUUid);
+                    this.gridMaker.removeRowFromGrid(trackIndx);
+                    this._displayTracklistInfo();
+                } else
+                    alert('Error deleting file!');
+            });
+        },
+        addToFavoriteAction(liFavorite, divElem, trackUUid) {
+            console.log('not implemented :|', trackUUid);
+        },
+        _notifyAddToQueue(track) {
+            this._tracklistBrowserNotifications.setAddedTrackToQueue(track);
+        },
+        _notifyARemovedTrack(track) {
+            this._tracklistBrowserNotifications.setARemovedTrack(track);
         },
         _buildHeaders() {
             this.gridMaker.makeRowIdx([{

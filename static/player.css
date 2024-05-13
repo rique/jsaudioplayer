@@ -234,6 +234,10 @@ ul {
     overflow: hidden;
 }
 
+.cnt-overlay .file-browser {
+    overflow: auto;
+}
+
 .cnt-overlay .file-browser,
 .cnt-overlay #window-content.file-browser {
     font-size: 18px;
@@ -297,7 +301,6 @@ ul {
 .track-actions {
     display: block;
     text-align: center;
-    position: relative;
     border-radius: 3px;
 }
 
@@ -532,14 +535,14 @@ li.fa-solid.fa-file {
 
 .action-menu-cnt {
     position: absolute;
-    padding: 10px;
-    z-index: 450;
-    top: 94%;
-    left: -152%;
+    padding: 0;
+    z-index: 1450;
     background: #444;
     color: #eee;
     width: 149px;
     text-align: left;
+    right: 30px;
+    margin: 0;
 }
 
 .action-menu-cnt ul li {
@@ -553,7 +556,8 @@ li.fa-solid.fa-file {
 
 .action-menu-cnt ul li {
     cursor: pointer;
-    padding: 4px 0;
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .action-menu-cnt ul li:hover {
