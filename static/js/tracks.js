@@ -345,8 +345,9 @@
             return this.tracklistTotalDuration;
         },
         *iterOverTrack() {
+            const tracklist = this.isShuffleOn() ? this.tracklistShuffle : this.tracklist;
             for (let index = 0; index < this.tracksNumber; ++index) {
-                yield {index, track: this.tracklist[index]};
+                yield {index, track: tracklist[index]};
             }
         },
         _setCurrentTrack() {

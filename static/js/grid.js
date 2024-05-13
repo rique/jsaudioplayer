@@ -101,6 +101,9 @@
         getParentCnt() {
             return this.parentCnt;
         },
+        clear() {
+            this.rows = [];
+        },
         render() {
             clearElementInnerHTML(this.parentCnt);
             if (this.head)
@@ -128,6 +131,7 @@
             this.eventsList.onEventRegister({cb, subscriber}, 'onSearchResult');
         },
         render() {
+            console.log('render SearchableGrid');
             clearElementInnerHTML(this.parentCnt);
             if (this.head)
                 this.parentCnt.append(this.head.render());
@@ -270,6 +274,11 @@
                 this.makeRow(rows[i]);
             }
         },
+        clearRows() {
+            console.log('clear');
+            this.rows = [];
+            this.grid.clear();
+        },
         getGrid() {
             return this.grid;
         },
@@ -351,6 +360,7 @@
                 this.grid.addRow(row);
         },
         render() {
+            console.log('render GridMaker');
             this.grid.render();
             if (this.isDraggable())
                 this._setDraggableGrid();
@@ -407,6 +417,13 @@
         setTracklist(tracklist) {
             this.tracklist = tracklist;
             TrackEditor.tracklist = tracklist;
+            this.tracklist.onShuffleTracklist(() => {
+                this.gridMaker.clearRows();
+                this.buildGrid();
+                this.render();
+            }, this);
+
+            this._displayTracklistInfo();
         },
         addTrackToGrid({track, index}) {
             this.gridMaker.makeRowIdx([{
@@ -542,9 +559,15 @@
             }], true, true, 0); 
         },
         _buildBody() {
-            for (let trackIdx of this.tracklist.iterOverTrack()) {
-                this.addTrackToGrid(trackIdx);
+            for (let {index, track} of this.tracklist.iterOverTrack()) {
+                this.addTrackToGrid({index, track});
             }
+        },
+        _displayTracklistInfo() {
+            const nbTracksElem = document.querySelector('.tracklist-info-cnt .tracklist-info-nb .nb-tracks');
+            const totalDurationElem = document.querySelector('.tracklist-info-cnt .tracklist-info-duration .duration-tracks');
+            nbTracksElem.innerText = this.tracklist.getTracksNumber();
+            totalDurationElem.innerText = this.tracklist.getTrackListTotalDuration(true);
         },
     }
     

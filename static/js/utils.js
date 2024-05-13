@@ -245,6 +245,7 @@
         
         
         const clearElementInnerHTML = (element) => {
+            console.log('clearElementInnerHTML', element);
             while(element.firstChild)
                 element.removeChild(element.firstChild);
         };

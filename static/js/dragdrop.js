@@ -240,9 +240,6 @@
             const res = X > target.offsetLeft(true) && X < target.offsetRight(true) &&
                         Y > target.offsetTop(true)  && Y < target.offsetBottom(true, 0);
 
-            /*if (target.getParent().dataset.index == '5991')
-                console.log('res', target.getParent(),  Y, target.offsetTop(true), Y > target.offsetTop(true));*/
-
             return res;
         },
         _findCursorHoveredDrag(cursor, cb) {
