@@ -385,6 +385,12 @@
         onClick(cb) {
             this.addEventListener('click', cb);
         },
+        setSearchable(searchable) {
+            this.searchable = searchable;
+        },
+        isSearchable() {
+            return this.searchable;
+        },
         textAlign(textAlign) {
             this.css({textAlign});
         },
@@ -407,6 +413,13 @@
             this.input.focus();
             this.input.select();
             onEdit(evt);
+        },
+        toObject() {
+            return {
+                element: this.element,
+                innerContent: this.innerContent(),
+                index: this.getIndex(),
+            }
         },
         _validate(evt, cb) {
             if (!this.isEditing)
@@ -452,6 +465,10 @@
             this._updateSortMode();
             this.eventsList.trigger('onSortedCell', this);
         },
+        reset() {
+            this._sortMode = this.sortModes.NONE;
+            this.eventsList.trigger('onSortedCell', this);
+        },
         onSortedCell(cb, subscriber) {
             this.eventsList.onEventRegister({cb, subscriber}, 'onSortedCell');
         },
@@ -466,6 +483,15 @@
                     cell.classAdd('sorted');
                     break;
             }
+        },
+        toObject() {
+            const cellData = {
+                sorted: this.sorted,
+                reversed: this.reversed,
+                index: this.getIndex(),
+                sortMode: this._sortMode,
+            }
+            return {...Cell.prototype.toObject.call(this), ...cellData}
         },
         _updateSortMode() {
             if (this._sortMode == this.sortModes.DESC)
@@ -515,6 +541,17 @@
         getCells() {
             return this.cells;
         },
+        getSearchableCells() {
+            return this.cells.filter(c => c.isSearchable());
+        },
+        toObject() {
+            const cellList = [];
+            for (let i = 0; i < this.cells.length; ++i) {
+                cellList.push(this.cells[i].toObject())
+            }
+
+            return {isHead: !!this._isHead, cellList};
+        }
         
     };
 

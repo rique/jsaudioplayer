@@ -225,11 +225,10 @@ ul {
 .cnt-overlay #window-content {
     position: relative;
     width: 62%;
-    height: 68%;
+    height: 70%;
     background: #2d2d2d;
     border-radius: 10px;
     padding: 16px;
-    overflow: auto;
     display: none;
     margin: 10% auto 0 auto;
     overflow: hidden;
@@ -384,16 +383,14 @@ ul {
 }
 
 .tracklist-content-div {
-    height: 34px;
-    padding: 0 6px 6px 6px;
+    height: 100%;
+    /*padding: 0 6px 6px 6px;*/
     background: transparent;
-    overflow: scroll;
+    overflow: auto;
 }
 
 
 .tracklist-content-div  .tracklist-info-cnt {
-    margin: 35px 0;
-    background: transparent;
     font-size: 18px;
 }
 
@@ -403,7 +400,7 @@ ul {
     left: 0;
     z-index: 400;
     background: #2d2d2d !important;
-    padding: 18px 0 30px 0;
+    padding: 32px 0 0 0;
 }
 
 .tracklist-content-div .tracklist-info-nb,

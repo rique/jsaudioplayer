@@ -1,6 +1,5 @@
 (function(window, document, JSPlayer, undefined) {
 
-    const generateLoremText = JSPlayer.Utils.generateLoremText;
     const clearElementInnerHTML = JSPlayer.Utils.clearElementInnerHTML;
     const Cell = JSPlayer.HTMLItems.Cell;
     const SortableCell = JSPlayer.HTMLItems.SortableCell;
@@ -9,6 +8,7 @@
     const ListEvents = JSPlayer.EventsManager.ListEvents;
     const DragitManager = JSPlayer.DragitManager;
     const TrackEditor = JSPlayer.Tracks.TrackEditor;
+    const TrackSearch = JSPlayer.Tracks.TrackSearch;
 
     const BaseColumn = function() {
         this.cells = [];
@@ -86,6 +86,7 @@
     const BaseGrid = function(parentCnt) {
         this.rows = [];
         this.parentCnt = parentCnt;
+        this.eventsList = new ListEvents();
     };
     BaseGrid.prototype = {
         getRows() {
@@ -115,25 +116,35 @@
         search(term, cb) {
             cb = cb || this._doSearch.bind(this);
             this.filteredRows = this.rows.filter((r) => cb(r, term));
-            this.render(true);
+            this.eventsList.trigger('onSearchResult');
+            this.render();
         },
-        render(filter) {
+        clearSearch() {
+            this.filteredRows = [];
+            this.eventsList.trigger('onSearchResult');
+            this.render();
+        },
+        onSearchResult(cb, subscriber) {
+            this.eventsList.onEventRegister({cb, subscriber}, 'onSearchResult');
+        },
+        render() {
             clearElementInnerHTML(this.parentCnt);
             if (this.head)
                 this.parentCnt.append(this.head.render());
             
             let rows = this.rows;
             
-            if (filter)
+            if (this.filteredRows && this.filteredRows.length > 0)
                 rows = this.filteredRows;
 
             rows.forEach(row => this.parentCnt.append(row.render()));
         },
         _doSearch(row, term) {
-            const cells = row.getCells();
+            term = term.toLowerCase();
+            const cells = row.getSearchableCells();
             for (let i = 0; i < cells.length; ++i) {
                 let cell = cells[i];
-                if (cell.innerContent().includes(term))
+                if (cell.innerContent().toLowerCase().includes(term))
                     return true;
             }
 
@@ -144,7 +155,7 @@
     const SortableGrid = function(parentCnt) {
         SearchableGrid.call(this, parentCnt);
         this.indexedColumns = {};
-        this.eventsList = new ListEvents();
+        this.onSearchResult(this._checkResult.bind(this), this);
     };
     SortableGrid.prototype = {
         addRow(row) {
@@ -184,11 +195,13 @@
             const reversed = cell.isReversed();
             const isSorted = cell.isSorted();
 
-            if (isSorted)
+            if (isSorted) {
                 this._sortGrid(colIndex, reversed)
-
+            } else {
+                this.filteredRows = [];
+            }
             this.eventsList.trigger('onSortedGrid', isSorted, reversed);
-            this.render(isSorted);
+            this.render();
         },
         onSortedGrid(cb, subscriber) {
             this.eventsList.onEventRegister({cb, subscriber}, 'onSortedGrid');
@@ -223,6 +236,11 @@
                 if (cnt1 < cnt2) return reversed ? 1 : -1;
                 return 0;
             });
+        },
+        _checkResult() {
+            if (this.filteredRows.length == 0) {
+                this.head.clearSortedCells();
+            }
         }
     }
 
@@ -230,9 +248,10 @@
     Object.setPrototypeOf(SearchableGrid.prototype, BaseGrid.prototype);
     Object.setPrototypeOf(SortableGrid.prototype, SearchableGrid.prototype);
 
-    const GridMaker = function(parentCnt, sortable) {
+    const GridMaker = function(parentCnt, sortable, searchable) {
         this.rows = [];
         this.sortable = sortable;
+        this.searchable = searchable;
         if (sortable) {
             this.grid = new SortableGrid(parentCnt);
             this.grid.onSortedGrid(this._onSortedGrid.bind(this));
@@ -250,6 +269,9 @@
             for (let i = 0; i < rows.length; ++i) {
                 this.makeRow(rows[i]);
             }
+        },
+        getGrid() {
+            return this.grid;
         },
         setDraggable(draggable, byCell) {
             this.draggable = draggable;
@@ -309,6 +331,7 @@
                 }
 
                 cell.innerContent(c.content);
+                cell.setSearchable(c.searchable);
 
                 if (c.textAlign)
                     cell.textAlign(c.textAlign);
@@ -370,7 +393,15 @@
         selector = selector || '#table-content';
         this.gridMaker = new GridMaker(document.querySelector(selector), true);
         this.gridMaker.setDraggable(true, true);
-        this.audioPlayer = audioPlayer;        
+        this.audioPlayer = audioPlayer;
+        this.trackSearch = new TrackSearch(this.gridMaker.getGrid());
+        this.trackSearch.init();
+        this.overlayDiv = document.querySelector('.cnt-overlay');
+        this.overlayDiv.addEventListener('click', (evt) => {
+            if (evt.target != evt.currentTarget)
+                return;
+            this.overlayDiv.style.display = 'none';
+        });
     };
     TracklistGrid.prototype = {
         setTracklist(tracklist) {
@@ -391,6 +422,7 @@
                 width: 24,
                 unit: '%',
                 type: 'str',
+                searchable: true,
                 data: {
                     trackId: track.trackUUid,
                     fieldType: 'title',
@@ -403,6 +435,7 @@
                 width: 24,
                 unit: '%',
                 type: 'str',
+                searchable: true,
                 data: {
                     trackId: track.trackUUid,
                     fieldType: 'artist',
@@ -415,6 +448,7 @@
                 width: 24,
                 unit: '%',
                 type: 'str',
+                searchable: true,
                 data: {
                     trackId: track.trackUUid,
                     fieldType: 'album',

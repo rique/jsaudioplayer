@@ -426,6 +426,61 @@
         },
     };
 
-    window.JSPlayer.Tracks = {Track, TrackList, ID3Tags, TrackEditor};
+    const TrackSearch = function(searchableGrid) {
+        this.searchEvents = new ListEvents();
+        this.term = '';
+        this.searchableGrid = searchableGrid;
+    }
+    TrackSearch.prototype = {
+        init() {
+            this.magGlassElem = document.querySelector('.tracklist-head .tracklist-search .img-cnt');
+            this.inputSearchElem = document.querySelector('.tracklist-head .tracklist-search .input-cnt');
+            this.searchInput = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
+            this.magGlassElem.addEventListener('click', this._toggleInputSearchVisibility.bind(this));
+            this.inputSearchElem.addEventListener('keyup', this.search.bind(this));
+        },
+        setTrackList(trackList) {
+            this.tracklist = trackList;
+        },
+        search(evt) {
+            this.result = this.searchableGrid.search(evt.target.value);
+            this.searchEvents.trigger('onSearchResult', this.result);
+        },
+        onSearchResult(cb, subscriber) {
+            this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchResult');
+        },
+        onSearchVisibilityChange(cb, subscriber) {
+            this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchVisibilityChange');
+        },
+        _isSearchVisible() {
+            return this.inputSearchElem.style.visibility == 'visible';
+        },
+        _toggleInputSearchVisibility() {
+            if (!this._isSearchVisible()) {
+                this._setExclusivity();
+                this.inputSearchElem.style.visibility = 'visible';
+                this.searchInput.focus();
+            } else {
+                this._unsetExclusivity();
+                this.inputSearchElem.style.visibility = 'hidden';
+                this.term = '';
+                this.searchInput.value = '';
+                this.searchableGrid.clearSearch();
+            }
+            this.searchEvents.trigger('onSearchVisibilityChange', this._isSearchVisible());
+        },
+        _setExclusivity() {
+            console.log('Setting exclusivity');
+            keyCotrols.setExlcusivityCallerKeyUpV2(this);
+            keyCotrols.setExlcusivityCallerKeyDownV2(this);
+        },
+        _unsetExclusivity() {
+            console.log('Unsetting exclusivity');
+            keyCotrols.unsetExlcusivityCallerKeyUpV2(this);
+            keyCotrols.unsetExlcusivityCallerKeyDownV2(this);
+        },
+    }
+
+    window.JSPlayer.Tracks = {Track, TrackList, ID3Tags, TrackSearch, TrackEditor};
 
 })(this, document, window.JSPlayer);
