@@ -499,14 +499,14 @@
             else
                 this._sortMode++;
         }
-    }
+    };
 
     const Row = function(head) {
         HTMLDraggableItems.call(this, 'div');
         this.cells = [];
         this._isHead = head;
         this.setupRow();
-    }
+    };
     Row.prototype = {
         setupRow() {
             let className;

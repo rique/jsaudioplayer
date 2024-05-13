@@ -11,12 +11,17 @@
     const Fader = JSPlayer.Effects.Fader;
     const LeftMenu = JSPlayer.Components.LeftMenu;
 
+
+    const FileBrowser = JSPlayer.Components.FileBrowser;
+    const FileBrowserRenderer = JSPlayer.Components.FileBrowserRenderer;
+    const Layout = JSPlayer.Components.Layout;
+    const layoutHTML = JSPlayer.Components.layoutHTML;
+
     const imgList = [];
     const mainTracklist = new TrackList();
     const audioPlayer = new AudioPlayer(mainTracklist);
     const api = new JSPlayer.Api();
     const tracklistGrid = new TracklistGrid('#table-content', audioPlayer);
-    
     
     const leftMenu = new LeftMenu();
     leftMenu.init();
@@ -53,6 +58,12 @@
         NotificationCenter.displayNotification('tracks.loaded', 6000);
     
     });
+
+    const windowContentElem = document.getElementById('window-folder');
+    const fileBrowser = new FileBrowser(audioPlayer);
+    const fileBrowserLayout = new Layout(windowContentElem, 'folderBroser');
+    const fileBrowserRenderer = new FileBrowserRenderer(fileBrowser, fileBrowserLayout, document.querySelector('#file-browser-action button.open-file-browser'));
+    layoutHTML.addHTMLLayout(fileBrowserLayout);
 
     const volumeCnt = document.querySelector('#volume-display');
     const volumeCntDisplay = document.querySelector('#volume-display .vol-val');

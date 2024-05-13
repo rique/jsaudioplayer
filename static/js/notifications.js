@@ -19,8 +19,26 @@
         },
     };
 
+    const FileBrowserNotifications = function() {
+        this.trackAddedKey = 'filebrowser.added';
+        NotificationCenter.registerNotification({
+          title: 'New track successfully added!',
+          level: 'info',
+        }, this.trackAddedKey);
+      };
+      FileBrowserNotifications.prototype = {
+          setAddedTrack(track, timeout) {
+              NotificationCenter.modifyNotification({message: new TrackBoxTemplate(track)}, this.trackAddedKey);
+              NotificationCenter.displayNotification(this.trackAddedKey, timeout);
+          },
+          hideAddedTrack() {
+              NotificationCenter.hideNotification(this.trackAddedKey);
+          },
+      };
+
     JSPlayer.Notifications = {
         PlayerNotifications,
+        FileBrowserNotifications,
     }
 
 })(this, document, this.JSPlayer);
