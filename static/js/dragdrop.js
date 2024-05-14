@@ -30,11 +30,12 @@
         },
         moveTo(x, y) {
              if (this.prevX && this.prevY) {
-                 let dragX = this.dragme.offsetLeft() + (x - this.prevX),
+                let dragX = this.dragme.offsetLeft() + (x - this.prevX),
                     dragY = this.dragme.offsetTop() + (y - this.prevY);
-                 requestAnimationFrame(this.dragme.setLeftTop.bind(this.dragme, dragX, dragY));
+
+                requestAnimationFrame(this.dragme.setLeftTop.bind(this.dragme, dragX, dragY));
              }
- 
+
              this.prevX = x;
              this.prevY = y;
         },
@@ -93,7 +94,6 @@
             this.pressed = true;
  
             this.getDragme().dispatchEvent('dragged');
- 
             this.dragMover.moveTo(cursor.X, cursor.Y);
         },
         dragmove(cursor, seekParent) {
@@ -154,6 +154,7 @@
             this.activated = true;
         },
         setDrags(elementsArray) {
+            this.drags = [];
             for (let i = 0; i < elementsArray.length; ++i) {
                 this.drags.push(new DragIt(new DragmeMover(elementsArray[i])));
             }
@@ -172,11 +173,22 @@
  
             this.activated = false;
         },
+        reactivate() {
+            this.deactivate();
+            this.activate(undefined, this.seekParent);
+        },
         _dragit(evt) {
-            this._findCursorHoveredDrag(getCursor(evt), (drag, cursor) => {
+            if (this.currentDrag) {
+                return;
+            }
+
+            const cursor = getCursor(evt);
+            drag = this._findCursorHoveredDrag(cursor);
+
+            if (drag) {
                 drag.dragit(cursor, this.seekParent);
                 this.currentDrag = drag;
-            });
+            }
         },
         _dragmove(evt) {
             if (!this.currentDrag)
@@ -248,7 +260,7 @@
                 if (this._TargetContainsCursor(cursor, drag.getDragme())) {
                     if (typeof cb === 'function')
                         cb(drag, cursor);
-                    break;
+                    return drag;
                 }
             }
         },

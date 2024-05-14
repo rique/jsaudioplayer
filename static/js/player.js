@@ -55,7 +55,7 @@
     
         this.audioElem = new Audio();
         this.jsmediatags = window.jsmediatags;
-        this._playerNotifications = new PlayerNotifications();
+        this._playerNotifications = PlayerNotifications;
     };
     AudioPlayer.prototype = {
         init() {
@@ -130,7 +130,7 @@
             this.currentTrack.isPlaying = autoPlay;
             this.audioElem.src = `/static/tracks/${track.trackUUid}.mp3`;
             this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
-            this.audioPlayerEvents.trigger('playerSongChange');
+            this.audioPlayerEvents.trigger('onPlayerSongChange', this.currentTrack, this.tracklist.getCurrentTrackIndex());
             if (this._comingNextFired === true)
                 this._playerNotifications.hideComingNext();
             
@@ -141,9 +141,7 @@
             return this.stop();
         },
         onPlayerSongChange(cb, subscriber) {
-            this.audioPlayerEvents.onEventRegister({'cb': () => {
-                cb(this.currentTrack);
-            }, subscriber}, 'playerSongChange');
+            this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onPlayerSongChange');
         },
         playPause() {
             if (this.isPaused)
@@ -231,10 +229,10 @@
         shuffle(evt) {
             evt.preventDefault();
             this.tracklist.shuffle(!this.isPaused);
+            this.audioPlayerEvents.trigger('onShuffle', this.tracklist);
             if (this.isPaused)
                 this.setCurrentTrackFromTrackList(false);
             this._setShuffleBtnStyle(this.tracklist.isShuffle);
-            this.audioPlayerEvents.trigger('onShuffle', this.tracklist);
         },
         onShuffle(cb, subscriber) {
             this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onShuffle');

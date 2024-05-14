@@ -99,6 +99,7 @@
             return this.element.offsetHeight;
         },
         setLeftTop(left, top) {
+            //console.log(this.element, {left, top});
             this.element.style.left = `${left}px`;
             this.element.style.top = `${top}px`;
         },
@@ -125,9 +126,6 @@
         classAdd(className) {
             this.element.classList.add(className);
         },
-        setClassName(className) {
-            this.element.className = className;
-        },
         classRemove(className) {
             this.element.classList.remove(className);
         },
@@ -136,6 +134,9 @@
         },
         classToggle(className) {
             this.element.classList.toggle(className);
+        },
+        setClassName(className) {
+            this.element.className = className;
         },
         css(style, replace) {
             style = style || {};
@@ -154,6 +155,13 @@
         },
         insertItemAfter(itemInstance) {
             itemInstance.element.insertAdjacentElement('afterend', this.render());
+        },
+        scrollTo() {
+            this.element.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+                inline: 'nearest',
+            });
         },
         addEventListener(evtName, cb) {
             this.element.addEventListener(evtName, cb);
@@ -255,7 +263,7 @@
                 zIndex: 100,
             });
 
-            this.element.classList.add('dragged');
+            this.element.classList.replace('dropped', 'dragged');
 
             return true;
         },
@@ -267,7 +275,7 @@
             const droppedAnimation = new DroppedAnimation(this.element);
             
             droppedAnimation.start(790, (element) => {
-                element.classList.remove('dragged');
+                element.classList.replace('dragged', 'dropped');
             });
 
             if (this.seekParent)
@@ -373,6 +381,10 @@
     Cell.prototype = {
         setupCell() {
             this.classAdd('cell');
+            this.createCustomEvent('myClick');
+            this.addEventListener('click', () => {
+                this.dispatchEvent('myClick');
+            });
         },
         setEditable(editable, onEdit, onValidate) {
             this.onEdit(onEdit, onValidate);
@@ -386,7 +398,7 @@
             this.onClick(evt =>  this._edit(evt, onEdit, onValidate));
         },
         onClick(cb) {
-            this.addEventListener('click', cb);
+            this.addEventListener('myClick', cb);
         },
         setSearchable(searchable) {
             this.searchable = searchable;
@@ -396,6 +408,13 @@
         },
         textAlign(textAlign) {
             this.css({textAlign});
+        },
+        toObject() {
+            return {
+                element: this.element,
+                innerContent: this.innerContent(),
+                index: this.getIndex(),
+            }
         },
         _edit(evt, onEdit, onValidate) {
             if (this.isEditing)
@@ -416,13 +435,6 @@
             this.input.focus();
             this.input.select();
             onEdit(evt);
-        },
-        toObject() {
-            return {
-                element: this.element,
-                innerContent: this.innerContent(),
-                index: this.getIndex(),
-            }
         },
         _validate(evt, cb) {
             if (!this.isEditing)
@@ -517,7 +529,7 @@
                 className = 'head';
             else
                 className = 'lonely';
-            this.element.classList.add('row', className);
+            this.element.classList.add('row', className, 'dropped');
         },
         setGrid(grid) {
             this.grid = grid;

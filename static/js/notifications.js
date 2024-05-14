@@ -68,9 +68,9 @@
       };
 
     JSPlayer.Notifications = {
-        TracklistBrowserNotifications,
-        PlayerNotifications,
-        FileBrowserNotifications,
+        TracklistBrowserNotifications: new TracklistBrowserNotifications(),
+        PlayerNotifications: new PlayerNotifications(),
+        FileBrowserNotifications: new FileBrowserNotifications(),
     }
 
 })(this, document, this.JSPlayer);

@@ -6,6 +6,7 @@
     const FileBrowserNotifications = JSPlayer.Notifications.FileBrowserNotifications;
     const clearElementInnerHTML = JSPlayer.Utils.clearElementInnerHTML;
     const Api = window.JSPlayer.Api;
+    const TracklistBrowserNotifications = JSPlayer.Notifications.TracklistBrowserNotifications;
 
     const LeftMenu = function() {};
     LeftMenu.prototype = {
@@ -136,7 +137,7 @@
         this.player = player;
         this.overlayDiv.addEventListener('click', this.closeFileBrowser.bind(this));
         this.folderBrowserEvent = new ListEvents();
-        this._fileBrowserNotifications = new FileBrowserNotifications();
+        this._fileBrowserNotifications = FileBrowserNotifications;
     };
     FileBrowser.prototype = {
         closeFileBrowser(evt) {
@@ -229,8 +230,147 @@
         },
     };
 
+    const TrackListBrowser = function(audioPlayer, grid, tracklist) {
+        this._tracklistBrowserNotifications = TracklistBrowserNotifications;
+        this.audioPlayer = audioPlayer;
+        this.audioPlayer.onPlayerSongChange(this.setCurrentlyPlayingTrack.bind(this), this);
+        this.grid = grid;
+        this.tracklist = tracklist;
+        this.overlayDiv = document.querySelector('.cnt-overlay');
+        this.isVisible = false;
+
+        this.overlayDiv.addEventListener('click', (evt) => {
+            if (evt.target != evt.currentTarget)
+                return;
+            if (this.isVisible) {
+                this.hide();
+            }
+        });
+    };
+    TrackListBrowser.prototype = {
+        setTracklist(tracklist) {
+            this.tracklist = tracklist;
+            this.tracklist.onAddedToQueue(this._notifyAddToQueue.bind(this));
+            this.tracklist.onRemoveTrackFromTrackList(this._notifyARemovedTrack.bind(this));
+        },
+        setGrid(grid) {
+            this.grid = grid;
+        },
+        show() {
+            this.overlayDiv.style.display = 'block';
+            this.isVisible = true;
+            this.scrollToCurrentTrack();
+        },
+        hide() {
+            this.overlayDiv.style.display = 'none';
+            this.isVisible = false;
+        },
+        playSongFromTracklist(evt) {
+            this.tracklist.getCurrentTrack().onTagChangeUnsub(this.audioPlayer);
+            const cell = evt.detail.HTMLItem;
+            this.tracklist.setTrackIndex(cell.getParentItem().getIndex() - 1, true);
+        },
+        showActionMenu(evt) {
+            const target = evt.target;
+            this.hideAllActionMenus();
+            const targetChildren = target.getElementsByClassName('action-menu-cnt');
+            if (targetChildren.length > 0 ) {
+                return targetChildren[0].style.display = 'block';
+            }
+    
+            const trackUUid = target.dataset.trackId;
+            const divElem = document.createElement('div');
+            const ulAction = document.createElement('ul');
+            const liAddToQueue = document.createElement('li');
+            const liDelete = document.createElement('li');
+            const liFavorite = document.createElement('li');
+    
+            divElem.className = 'action-menu-cnt';
+            divElem.dataset.trackId = trackUUid;
+    
+            liAddToQueue.innerText = 'Add to queue';
+            liDelete.innerText = 'Remove track';
+            liFavorite.innerText = 'Add to favorites';
+    
+            liAddToQueue.addEventListener('click', () => {
+                this.addToQueueAction(divElem, trackUUid);
+            });
+    
+            liDelete.addEventListener('click', () => {
+                this.deleteTrackAction(liDelete, divElem, trackUUid);
+            });
+    
+            liFavorite.addEventListener('click', () => {
+                this.addToFavoriteAction(liFavorite, divElem, trackUUid);
+            });
+    
+            ulAction.appendChild(liAddToQueue);
+            ulAction.appendChild(liFavorite);
+            ulAction.appendChild(liDelete);
+            divElem.appendChild(ulAction);
+    
+            divElem.addEventListener('mouseleave', () => {
+                this.hideActionMenu(divElem);
+            });
+    
+            target.parentNode.appendChild(divElem);
+        },
+        hideActionMenu(divElem) {
+            divElem.style.display = 'none';
+        },
+        hideAllActionMenus() {
+            document.querySelectorAll('.action-menu-cnt').forEach(el => el.style.display = 'none');
+        },
+        addToQueueAction(divElem, trackUUid) {
+            this.tracklist.addToQueue(this.tracklist.getTrackByUUID(trackUUid));
+            divElem.style.display = 'none';
+        },
+        deleteTrackAction(liDelete, divElem, trackUUid) {
+            const api = new window.JSPlayer.Api();
+            api.deleteTrack(trackUUid, (res) => {
+                if (res.success) {
+                    const {trackIndx, track} = this.tracklist.removeTrackFromTracklistByUUID(trackUUid);
+                    this.gridMaker.removeRowFromGrid(trackIndx);
+                    this._displayTracklistInfo();
+                } else
+                    alert('Error deleting file!');
+            });
+        },
+        addToFavoriteAction(liFavorite, divElem, trackUUid) {
+            console.log('not implemented :|', trackUUid);
+        },
+        setCurrentlyPlayingTrack(track, index) {
+            const row = this.grid.getRowByIndex(index);
+            this.clearAllCurrentlyPlaying();
+            row.classAdd("currently-playing");
+            row.scrollTo();
+        },
+        clearAllCurrentlyPlaying() {
+            document.querySelectorAll('.currently-playing').forEach(el => el.classList.remove('currently-playing'));
+        },
+        scrollToCurrentTrack() {
+            const currentlyPlaying = document.querySelector('div.row.currently-playing');
+            if (currentlyPlaying) {
+                setTimeout(() => {
+                    currentlyPlaying.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'nearest',
+                    });
+                }, 0);
+            }
+        },
+        _notifyAddToQueue(track) {
+            this._tracklistBrowserNotifications.setAddedTrackToQueue(track);
+        },
+        _notifyARemovedTrack(track) {
+            this._tracklistBrowserNotifications.setARemovedTrack(track);
+        },
+    }
+
     JSPlayer.Components = {
         LeftMenu,
+        TrackListBrowser,
         FileBrowser,
         FileBrowserRenderer,
         Layout,

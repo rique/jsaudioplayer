@@ -47,11 +47,13 @@
             track.setTrackDuration(id3Tags.getDuration());
             mainTracklist.addTrackToList(track);
         }
-        audioPlayer.setCurrentTrackFromTrackList(false);
+        
         tracklistGrid.setTracklist(mainTracklist);
         tracklistGrid.buildGrid();
         tracklistGrid.render();
-
+        audioPlayer.setCurrentTrackFromTrackList(false);
+        
+        
         NotificationCenter.modifyNotification({
             message: `<p>${mainTracklist.getTracksNumber()} tracks have been loaded!!<p>`
         }, 'tracks.loaded');
@@ -97,8 +99,8 @@
         }, 1668);
     });
 
-    keyCotrols.registerKeyDownAction('a', tracklistGrid.open.bind(tracklistGrid), 'trackListBrowserRenderer');
-    keyCotrols.registerKeyDownAction('Escape', tracklistGrid.close.bind(tracklistGrid), 'trackListBrowserRenderer');
+    keyCotrols.registerKeyDownAction('a', tracklistGrid.open.bind(tracklistGrid), tracklistGrid);
+    keyCotrols.registerKeyDownAction('Escape', tracklistGrid.close.bind(tracklistGrid), tracklistGrid);
 
     document.querySelector('#file-browser-action button.open-tracklist-browser').addEventListener('click', tracklistGrid.open.bind(tracklistGrid));
 

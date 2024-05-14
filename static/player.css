@@ -540,9 +540,9 @@ li.fa-solid.fa-file {
     background: #444;
     color: #eee;
     width: 149px;
-    text-align: left;
-    right: 30px;
-    margin: 0;
+    text-align: justify;
+    right: -1px;
+    margin: 30px;
 }
 
 .action-menu-cnt ul li {
@@ -558,10 +558,12 @@ li.fa-solid.fa-file {
     cursor: pointer;
     padding: 8px 10px;
     border-bottom: 1px solid #f0f0f0;
+    width: 87%;
 }
 
 .action-menu-cnt ul li:hover {
     color: #53f7ff;
+    background: #5c5c5c;
 }
 
 .action-menu-cnt .fa-solid.fa-ellipsis {
@@ -570,7 +572,7 @@ li.fa-solid.fa-file {
   }
 
 #main-left-menu {
-    height: 98%;
+    height: 98.9%;
     background: transparent;
     width: 16%;
     position: absolute;

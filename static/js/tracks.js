@@ -189,6 +189,19 @@
             this.trackIndexMax = this.tracksNumber - 1;
             this.addToTrackListTotalDuration(track.getTrackDuration());
         },
+        switchTrackIndex(oldIndex, newIndex) {
+            const tracklist = this.getTrackList();
+            
+            if (oldIndex == this.trackIndex)
+                this.trackIndex = newIndex;
+            else if (newIndex == this.trackIndex)
+                --this.trackIndex;
+            else if (oldIndex > newIndex && this.trackIndex < oldIndex && this.trackIndex > newIndex) {
+                ++this.trackIndex;
+            }
+
+            tracklist.splice(newIndex, 0, tracklist.splice(oldIndex, 1)[0]);
+        },
         addToQueue(track) {
             this.addedToQueue.push(track);
             this.trackListEvents.trigger('onAddedToQueue', track);
@@ -224,10 +237,12 @@
             this.trackListEvents.onEventRegister({cb, subscriber}, 'onAddedToQueue');
         },
         getCurrentTrack() {
-            if (this.currentTrack != null)
+            if (typeof this.currentTrack !== 'undefined' && this.currentTrack != null)
                 return this.currentTrack;
-            if (this.tracksNumber > 0)
+            if (this.tracksNumber > 0) {
                 return this.getTrackList()[this.trackIndex];
+            }
+                
             return null;
         },
         getCurrentTrackIndex() {
@@ -346,6 +361,7 @@
         },
         *iterOverTrack() {
             const tracklist = this.isShuffleOn() ? this.tracklistShuffle : this.tracklist;
+            console.log('iterOverTrack', tracklist);
             for (let index = 0; index < this.tracksNumber; ++index) {
                 yield {index, track: tracklist[index]};
             }
