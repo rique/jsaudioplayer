@@ -343,7 +343,7 @@
             const row = this.grid.getRowByIndex(index);
             this.clearAllCurrentlyPlaying();
             row.classAdd("currently-playing");
-            row.scrollTo();
+            row.scrollTo(this.grid.getGrid().getParentCnt());
         },
         clearAllCurrentlyPlaying() {
             document.querySelectorAll('.currently-playing').forEach(el => el.classList.remove('currently-playing'));
@@ -351,11 +351,12 @@
         scrollToCurrentTrack() {
             const currentlyPlaying = document.querySelector('div.row.currently-playing');
             if (currentlyPlaying) {
+                const scrollTo = currentlyPlaying.offsetTop - currentlyPlaying.offsetHeight;
                 setTimeout(() => {
-                    currentlyPlaying.scrollIntoView({
+                    this.grid.getGrid().getParentCnt().scrollTo({
                         behavior: 'smooth',
-                        block: 'center',
-                        inline: 'nearest',
+                        left: 0,
+                        top: scrollTo,
                     });
                 }, 0);
             }

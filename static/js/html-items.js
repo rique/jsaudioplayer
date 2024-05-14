@@ -17,7 +17,7 @@
          return bounds.top;
      }
  
-     const getOffsetBottom  = (elem, depth) => {
+     const getOffsetBottom  = (elem) => {
          const bounds = elem.getBoundingClientRect();
          return bounds.bottom;
 
@@ -108,13 +108,24 @@
             this.render().style.left = `${left}px`;
             this.render().style.top = `${top}px`;
         },
-        scrollTop() {
-            const parentElem = getLastParent(this.render(), 0);
+        scrollTop(parentElem) {
+            parentElem = parentElem || getLastParent(this.render(), 0);
             return parentElem.scrollTop;
         },
-        scrollLeft() {
-            const parentElem = getLastParent(this.render(), 0);
+        scrollLeft(parentElem) {
+            parentElem = parentElem || getLastParent(this.render(), 0);
             return parentElem.scrollLeft;
+        },
+        scrollTo(parentElem) {
+            parentElem = parentElem || getLastParent(this.render(), 0);
+            const scrollTo = this.offsetTop() - this.offsetHeight();
+            setTimeout(() => {
+                parentElem.scrollTo({
+                    behavior: 'smooth',
+                    left: 0,
+                    top: scrollTo,
+                })
+            }, 0);
         },
         innerContent(content) {
             if (typeof content !== 'undefined')
@@ -160,13 +171,6 @@
         },
         insertItemAfter(itemInstance) {
             itemInstance.render().insertAdjacentElement('afterend', this.render());
-        },
-        scrollTo() {
-            this.render().scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-                inline: 'nearest',
-            });
         },
         addEventListener(evtName, cb) {
             this.render().addEventListener(evtName, cb);

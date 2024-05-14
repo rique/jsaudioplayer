@@ -431,7 +431,7 @@
         this.gridMaker = new GridMaker(document.querySelector(selector), true);
         this.gridMaker.setDraggable(true, true);
         this.audioPlayer = audioPlayer;
-        this.trackSearch = new TrackSearch(this.gridMaker.getGrid());
+        this.trackSearch = new TrackSearch(this.getGrid());
         this.trackSearch.init();
         
         this._trackListBrowser = new TrackListBrowser(this.audioPlayer, this);
@@ -541,6 +541,9 @@
             if (doRender) {
                 this.render();
             }
+        },
+        getGrid() {
+            return this.gridMaker.getGrid();
         },
         render() {
             this.gridMaker.render();

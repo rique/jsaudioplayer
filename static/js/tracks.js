@@ -451,10 +451,11 @@
     TrackSearch.prototype = {
         init() {
             this.magGlassElem = document.querySelector('.tracklist-head .tracklist-search .img-cnt');
-            this.inputSearchElem = document.querySelector('.tracklist-head .tracklist-search .input-cnt');
-            this.searchInput = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
+            this.searchElemCnt = document.querySelector('.tracklist-head .tracklist-search .input-cnt');
+            this.searchInputElem = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
             this.magGlassElem.addEventListener('click', this._toggleInputSearchVisibility.bind(this));
-            this.inputSearchElem.addEventListener('keyup', this.search.bind(this));
+            this.searchInputElem.addEventListener('blur', this._closeSearch.bind(this));
+            this.searchElemCnt.addEventListener('keyup', this.search.bind(this));
         },
         setTrackList(trackList) {
             this.tracklist = trackList;
@@ -470,21 +471,27 @@
             this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchVisibilityChange');
         },
         _isSearchVisible() {
-            return this.inputSearchElem.style.visibility == 'visible';
+            return this.searchElemCnt.style.visibility == 'visible';
         },
         _toggleInputSearchVisibility() {
             if (!this._isSearchVisible()) {
-                this._setExclusivity();
-                this.inputSearchElem.style.visibility = 'visible';
-                this.searchInput.focus();
+                this._openSearch();
             } else {
-                this._unsetExclusivity();
-                this.inputSearchElem.style.visibility = 'hidden';
-                this.term = '';
-                this.searchInput.value = '';
+                this._closeSearch();    
                 this.searchableGrid.clearSearch();
             }
             this.searchEvents.trigger('onSearchVisibilityChange', this._isSearchVisible());
+        },
+        _openSearch() {
+            this._setExclusivity();
+            this.searchElemCnt.style.visibility = 'visible';
+            this.searchInputElem.focus();
+        },
+        _closeSearch() {
+            this._unsetExclusivity();
+            this.searchElemCnt.style.visibility = 'hidden';
+            this.term = '';
+            this.searchInputElem.value = '';
         },
         _setExclusivity() {
             console.log('Setting exclusivity');

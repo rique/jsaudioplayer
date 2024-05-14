@@ -255,7 +255,7 @@
             while(elem.parentElement && elem.parentElement != document.body) {
                 elem = elem.parentElement;
 
-                if (typeof depth === 'number' && depth < counter) {
+                if (typeof depth === 'number' && depth > counter) {
                     break;
                 }
                 ++counter;
