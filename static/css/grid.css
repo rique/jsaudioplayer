@@ -23,7 +23,7 @@
     --row-odd-bg-color: #f0f0f0;
     --row-even-hover-bg-color: #5fa7d9;
     --row-odd-hover-bg-color: #e5e5e5;
-    --row-currently-playing-bg: #ee4f4f;
+    --row-currently-playing-bg: #ed5858;
 }
 
 * {
@@ -118,7 +118,7 @@ body {
 
 .row.lonely.currently-playing {
     background: var(--row-currently-playing-bg);
-    color: #ed5858;
+    color: #fafafa;
 }
 
 .cell {

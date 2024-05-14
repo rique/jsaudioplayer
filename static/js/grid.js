@@ -315,13 +315,14 @@
         },
         makeRowIdx(cells, autoWidth, head, idx) {
             let row;
-            if (this.sortable)
+            if (this.sortable) {
                 row = new SortableRow(head);
-            else
+            } else
                 row = new Row(head);
+            
             const nbCells = cells.length;
-
             let percentage;
+
             if (autoWidth) {
                 let parentCnt = this.grid.getParentCnt();
                 percentage = (parentCnt.clientWidth / nbCells) / (parentCnt.clientWidth / 100);
@@ -374,7 +375,7 @@
 
             if (this.sortable)
                 row.setIndex(idx);
-            
+
             if (row.isHead())
                 this.grid.setHead(row);
             else
@@ -453,7 +454,7 @@
             this.render();
         },
         addTrackToGrid({track, index}) {
-            this.gridMaker.makeRowIdx([{
+            const row = [{
                 content: parseInt(index) + 1,
                 width: 5,
                 unit: '%',
@@ -529,11 +530,17 @@
                 },
                 width: 4,
                 unit: '%'
-            }], true, false, parseInt(index) + 1);
+            }];
+
+            this.gridMaker.makeRowIdx(row, false, false, parseInt(index) + 1);
         },
-        buildGrid() {
+        buildGrid(doRender) {
             this._buildHeaders();
             this._buildBody();
+
+            if (doRender) {
+                this.render();
+            }
         },
         render() {
             this.gridMaker.render();
@@ -551,7 +558,7 @@
             return this.gridMaker.getRowByIndex(index);
         },
         _buildHeaders() {
-            this.gridMaker.makeRowIdx([{
+            const head = [{
                 content: 'N°',
                 sorterCell: true,
                 width: 5,
@@ -598,7 +605,9 @@
                 content: '&nbsp;',
                 width: 4,
                 unit: '%'
-            }], true, true, 0); 
+            }];
+
+            this.gridMaker.makeRowIdx(head, false, true, 0);
         },
         _buildBody() {
             for (let {index, track} of this.tracklist.iterOverTrack()) {

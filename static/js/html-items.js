@@ -28,8 +28,14 @@
         this.events = {};
     };
     HTMLItems.prototype = {
-        render() {
-            return this.element;
+        render(getReal) {
+            return this.seekParent && !getReal ? this.getParent() : this.element;
+        },
+        setSeekParent() {
+            this.seekParent = true;
+        },
+        unsetSeekParent() {
+            this.seekParent = false;
         },
         getParent() {
             return this.element.parentElement;
@@ -37,78 +43,77 @@
         setParentItem(htmlItem) {
             this.parentItem = htmlItem;
         },
-        getParentItem(htmlItem) {
+        getParentItem() {
             return this.parentItem;
         },
         width(width, unit) {
             if (typeof width === 'number')
-                this.element.style.width = `${width}${unit}`;
+                this.render().style.width = `${width}${unit}`;
             else
-                return this.element.style.width;
+                return this.render().style.width;
         },
         height(height, unit) {
             if (typeof height === 'number')
-                this.element.style.height = `${height}${unit}`;
+                this.render().style.height = `${height}${unit}`;
             else
-                return this.element.style.height;
+                return this.render().style.height;
         },
         left(left, unit) {
             if (typeof left === 'number')
-                this.element.style.left = `${left}${unit}`;
+                this.render().style.left = `${left}${unit}`;
             else
-                return this.element.style.left;
+                return this.render().style.left;
         },
         top(top, unit) {
             if (typeof top === 'number')
-                this.element.style.top = `${top}${unit}`;
+                this.render().style.top = `${top}${unit}`;
             else
-                return this.element.style.top;
+                return this.render().style.top;
         },
         offsetTop(doMargin) {
             let margin = 0;
             if (doMargin) {
-                return getOffsetTop(this.element);
+                return getOffsetTop(this.render());
             }
-            return this.element.offsetTop + margin;
+            return this.render().offsetTop + margin;
         },
         offsetLeft(doMargin) {
             let margin = 0;
             if (doMargin) {
-                margin = getOffsetLeft(this.element);
+                margin = getOffsetLeft(this.render());
             }
-            return this.element.offsetLeft + margin;
+            return this.render().offsetLeft + margin;
         },
         offsetRight(doMargin) {
             let margin = 0;
             if (doMargin) {
-                margin = getOffsetLeft(this.element);
+                margin = getOffsetLeft(this.render());
             }
-            return this.element.offsetLeft + this.element.offsetWidth + margin;
+            return this.render().offsetLeft + this.render().offsetWidth + margin;
         },
         offsetBottom(doMargin, depth) {
             let margin = 0;
             if (doMargin) {
-                return getOffsetBottom(this.element, depth);
+                return getOffsetBottom(this.render(), depth);
             }
-            return this.element.offsetTop + this.element.offsetHeight + margin;
+            return this.render().offsetTop + this.render().offsetHeight + margin;
         },
         offsetWidth() {
-            return this.element.offsetWidth;
+            return this.render().offsetWidth;
         },
         offsetHeight() {
-            return this.element.offsetHeight;
+            return this.render().offsetHeight;
         },
         setLeftTop(left, top) {
-            //console.log(this.element, {left, top});
-            this.element.style.left = `${left}px`;
-            this.element.style.top = `${top}px`;
+            this.render().style.left = `${left}px`;
+            this.render().style.top = `${top}px`;
         },
         scrollTop() {
-            const parentElem = getLastParent(this.element, 0);
+            const parentElem = getLastParent(this.render(), 0);
             return parentElem.scrollTop;
         },
         scrollLeft() {
-            const parentElem = getLastParent(this.element, 0);
+            const parentElem = getLastParent(this.render(), 0);
             return parentElem.scrollLeft;
         },
         innerContent(content) {
@@ -118,53 +123,53 @@
                 return this.render(true).innerHTML;
         },
         append(...elements) {
-            this.element.append(...elements.map(el => el.render()));
+            this.render().append(...elements.map(el => el.render()));
         },
         remove() {
-            this.element.remove();
+            this.render().remove();
         },
         classAdd(className) {
-            this.element.classList.add(className);
+            this.render().classList.add(className);
         },
         classRemove(className) {
-            this.element.classList.remove(className);
+            this.render().classList.remove(className);
         },
         classReplace(className, replaceWith) {
-            this.element.classList.replace(className, replaceWith);
+            this.render().classList.replace(className, replaceWith);
         },
         classToggle(className) {
-            this.element.classList.toggle(className);
+            this.render().classList.toggle(className);
         },
         setClassName(className) {
-            this.element.className = className;
+            this.render().className = className;
         },
         css(style, replace) {
             style = style || {};
             if (!replace)
-                style = {...this.element.style, ...style};
+                style = {...this.render().style, ...style};
 
-            Object.keys(style).forEach(k => this.element.style[k] = style[k]);
+            Object.keys(style).forEach(k => this.render().style[k] = style[k]);
         },
         data(name, value) {
             if (name && value) {      
-                this.element.dataset[name] = value;
+                this.render().dataset[name] = value;
             } else if (name)
-                return this.element.dataset[name];
+                return this.render().dataset[name];
             else
-                return this.element.dataset;
+                return this.render().dataset;
         },
         insertItemAfter(itemInstance) {
-            itemInstance.element.insertAdjacentElement('afterend', this.render());
+            itemInstance.render().insertAdjacentElement('afterend', this.render());
         },
         scrollTo() {
-            this.element.scrollIntoView({
+            this.render().scrollIntoView({
                 behavior: 'smooth',
                 block: 'center',
                 inline: 'nearest',
             });
         },
         addEventListener(evtName, cb) {
-            this.element.addEventListener(evtName, cb);
+            this.render().addEventListener(evtName, cb);
         },
         createCustomEvent(evtName, options) {
             if (this.events.hasOwnProperty(evtName))
@@ -207,7 +212,7 @@
             if (this.index > thisInstanceIdx)
                 thisInstanceIdx++;
             this.updateIndex(thisInstanceIdx);
-            cellInstance.element.insertAdjacentElement('afterend', this.render());
+            cellInstance.render().insertAdjacentElement('afterend', this.render());
         }
     }
 
@@ -216,20 +221,6 @@
         this._setupEvents();
     }
     HTMLDraggableItems.prototype = {
-        render(getReal) {
-            if (getReal && this.seekParent) {
-                return this.element.querySelector('.draggable');
-            }
-            return this.element;
-        },
-        setSeekParent() {
-            this.seekParent = true;
-            this.element =  this.element.parentElement;
-        },
-        unsetSeekParent() {
-            this.seekParent = false;
-            this.element = this.element.querySelector('.draggable');
-        },
         toggleHovered() {
             this.classToggle('hovered')
         },
@@ -263,7 +254,7 @@
                 zIndex: 100,
             });
 
-            this.element.classList.replace('dropped', 'dragged');
+            this.render().classList.replace('dropped', 'dragged');
 
             return true;
         },
@@ -272,7 +263,7 @@
                 position: 'static',
             });
 
-            const droppedAnimation = new DroppedAnimation(this.element);
+            const droppedAnimation = new DroppedAnimation(this.render());
             
             droppedAnimation.start(790, (element) => {
                 element.classList.replace('dragged', 'dropped');
@@ -345,26 +336,26 @@
         hidden(hidden) {
             if (hidden) {
                 this.isHidden = true;
-                this.element.setAttribute('type', 'hidden');
+                this.render().setAttribute('type', 'hidden');
             } else {
                 this.isHidden = false;
-                this.element.setAttribute('type', 'text');
+                this.render().setAttribute('type', 'text');
             }
         },
         value(value) {
             if (value)
-                this.element.value = value;
+                this.render().value = value;
             else
-                return this.element.value;
+                return this.render().value;
         },
         blur() {
-            this.element.blur();
+            this.render().blur();
         },
         focus() {
-            this.element.focus();
+            this.render().focus();
         },
         select() {
-            this.element.select();
+            this.render().select();
         },
         onBlur(cb) {
             this.addEventListener('blur', cb);
@@ -411,7 +402,7 @@
         },
         toObject() {
             return {
-                element: this.element,
+                element: this.render(),
                 innerContent: this.innerContent(),
                 index: this.getIndex(),
             }
@@ -544,10 +535,10 @@
         isHead() {
             return this._isHead;
         },
-        render() {
-            if (!this.applied)
+        render(getReal) {
+            if (!this.applied || this.cells.length == 0)
                 this.appendCells();
-            return this.element;
+            return HTMLDraggableItems.prototype.render.call(this, getReal);
         },
         appendCells() {
             this.applied = true;

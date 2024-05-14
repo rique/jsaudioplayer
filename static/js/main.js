@@ -53,7 +53,6 @@
         tracklistGrid.render();
         audioPlayer.setCurrentTrackFromTrackList(false);
         
-        
         NotificationCenter.modifyNotification({
             message: `<p>${mainTracklist.getTracksNumber()} tracks have been loaded!!<p>`
         }, 'tracks.loaded');
