@@ -77,7 +77,7 @@ body {
     border-top: 1px solid var(--grid-border-color);
 }
 
-.row.lonely:nth-child(even) {
+*:not(.queue-list) .row.lonely:nth-child(even) {
     background: var(--row-even-bg-color);
 }
 
@@ -136,7 +136,7 @@ body {
     white-space: nowrap;
 }
 
-.row.lonely.dropped:hover .cell {
+.row.lonely.dropped:hover:not(:has(input)) .cell {
     overflow: visible;
     text-overflow: initial;
     white-space: initial;
