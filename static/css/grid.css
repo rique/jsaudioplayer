@@ -117,7 +117,7 @@ body {
 }
 
 .row.lonely.currently-playing {
-    background: var(--row-currently-playing-bg);
+    background: var(--row-currently-playing-bg)!important;
     color: #fafafa;
 }
 
@@ -183,4 +183,8 @@ body {
 
 .cell:last-child {
     border: 0;
+}
+
+.queue-list .row {
+    background: var(--row-odd-bg-color)!important;
 }

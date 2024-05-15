@@ -10,6 +10,7 @@
     const TrackEditor = JSPlayer.Tracks.TrackEditor;
     const TrackSearch = JSPlayer.Tracks.TrackSearch;
     const TrackListBrowser = JSPlayer.Components.TrackListBrowser;
+    const HTMLItems = JSPlayer.HTMLItems.HTMLItems;
 
     const BaseColumn = function() {
         this.cells = [];
@@ -284,8 +285,11 @@
     GridMaker.prototype = {
         setRows(rows) {
             for (let i = 0; i < rows.length; ++i) {
-                this.makeRow(rows[i]);
+                this.makeRowIdx(rows[i], true, false, i);
             }
+        },
+        addRow(row) {
+            this.rows.push(this.buildRow(row));
         },
         clearRows() {
             this.grid.clear();
@@ -314,6 +318,21 @@
             this._unsetDraggableGrid();
         },
         makeRowIdx(cells, autoWidth, head, idx) {
+            let row = this.buildRow(cells, autoWidth, head);
+
+            if (!this.byCell && !row.isHead())
+                row.setDraggable(this.draggable);
+
+            if (this.sortable)
+                row.setIndex(idx);
+
+            if (row.isHead())
+                this.grid.setHead(row);
+            else
+                this.grid.addRow(row);
+            return row;
+        },
+        buildRow(cells, autoWidth, head) {
             let row;
             if (this.sortable) {
                 row = new SortableRow(head);
@@ -370,16 +389,7 @@
                 row.addCell(cell);
             }
 
-            if (!this.byCell && !row.isHead())
-                row.setDraggable(this.draggable);
-
-            if (this.sortable)
-                row.setIndex(idx);
-
-            if (row.isHead())
-                this.grid.setHead(row);
-            else
-                this.grid.addRow(row);
+            return row;
         },
         render() {
             this.grid.render();
@@ -432,6 +442,7 @@
         this.gridMaker.setDraggable(true, true);
         this.audioPlayer = audioPlayer;
         this.trackSearch = new TrackSearch(this.getGrid());
+        this.trackSearch.onSearchVisibilityChange(this._restoreGrid.bind(this), this);
         this.trackSearch.init();
         
         this._trackListBrowser = new TrackListBrowser(this.audioPlayer, this);
@@ -441,12 +452,14 @@
             this.tracklist = tracklist;
             TrackEditor.tracklist = tracklist;
             this._trackListBrowser.setTracklist(tracklist);
+            this.queuelistGrid = new QueuelistGrid(this.tracklist, this._trackListBrowser, this);
             this.tracklist.onShuffleTracklist(() => {
                 this.gridMaker.resetDragDrop();
                 this.gridMaker.clearRows();
                 this.buildGrid();
                 this.render();
-                this._trackListBrowser.setCurrentlyPlayingTrack(undefined, 0);
+                this.queuelistGrid.render();
+                this._trackListBrowser.setCurrentlyPlayingTrack(undefined, 0);    
             }, this);
         },
         appendTrackToGrid(track, index) {
@@ -454,7 +467,94 @@
             this.render();
         },
         addTrackToGrid({track, index}) {
-            const row = [{
+            const row = this._getCellsFromTrack(track, index);
+            this.gridMaker.makeRowIdx(row, false, false, parseInt(index) + 1);
+        },
+        buildGrid(doRender) {
+            this._buildHeaders();
+            this._buildBody();
+
+            if (doRender) {
+                this.render();
+            }
+        },
+        getGrid() {
+            return this.gridMaker.getGrid();
+        },
+        render() {
+            this.gridMaker.render();
+            this._displayTracklistInfo();
+        },
+        open() {
+            this._trackListBrowser.show();
+            this.gridMaker.open();
+        },
+        close() {
+            this._trackListBrowser.hide();
+            this.gridMaker.close();
+        },
+        getRowByIndex(index) {
+            return this.gridMaker.getRowByIndex(index);
+        },
+        _restoreGrid() {
+            this.getGrid().clearSearch();
+            this.render();
+            this.queuelistGrid.render();
+        },
+        _buildHeaders() {
+            const head = [{
+                content: 'N°',
+                sorterCell: true,
+                width: 5,
+                unit: '%',
+                type: 'int',
+                textAlign: 'center',
+            },{
+                content: 'Title',
+                sorterCell: true,
+                width: 25,
+                unit: '%',
+                type: 'str',
+                textAlign: 'center',
+            },{
+                content: 'Artist',
+                sorterCell: true,
+                width: 25,
+                unit: '%',
+                type: 'str',
+                textAlign: 'center',
+            },{
+                content: 'Album',
+                sorterCell: true,
+                width: 25,
+                unit: '%',
+                type: 'str',
+                textAlign: 'center',
+            }, {
+                content: 'duration',
+                sorterCell: true,
+                width: 8,
+                unit: '%',
+                type: 'str',
+                textAlign: 'center',
+            }, {
+                content: '&nbsp;',
+                width: 4,
+                unit: '%'
+            }, {
+                content: '&nbsp;',
+                width: 4,
+                unit: '%'
+            }, {
+                content: '&nbsp;',
+                width: 4,
+                unit: '%'
+            }];
+
+            this.gridMaker.makeRowIdx(head, false, true, 0);
+        },
+        _getCellsFromTrack(track, index) {
+            return [{
                 content: parseInt(index) + 1,
                 width: 5,
                 unit: '%',
@@ -524,93 +624,16 @@
                     evt.detail.HTMLItem.innerContent('Drop!!');
                 },
                 onDropped: (evt) => {
-                    this.draggedEndIndx = evt.detail.HTMLItem.getParentItem().getIndex();
+                    const htmlItem = evt.detail.HTMLItem;
+                    this.draggedEndIndx = htmlItem.getParentItem().getIndex();
                     this.tracklist.switchTrackIndex(this.draggedStartIndx - 1, this.draggedEndIndx - 1);
-                    evt.detail.HTMLItem.innerContent('drag');
+                    //this.queuelistGrid.setSiblingRow(htmlItem.getParentItem());
+                    this.queuelistGrid.render();
+                    htmlItem.innerContent('drag');
                 },
                 width: 4,
                 unit: '%'
             }];
-
-            this.gridMaker.makeRowIdx(row, false, false, parseInt(index) + 1);
-        },
-        buildGrid(doRender) {
-            this._buildHeaders();
-            this._buildBody();
-
-            if (doRender) {
-                this.render();
-            }
-        },
-        getGrid() {
-            return this.gridMaker.getGrid();
-        },
-        render() {
-            this.gridMaker.render();
-            this._displayTracklistInfo();
-        },
-        open() {
-            this._trackListBrowser.show();
-            this.gridMaker.open();
-        },
-        close() {
-            this._trackListBrowser.hide();
-            this.gridMaker.close();
-        },
-        getRowByIndex(index) {
-            return this.gridMaker.getRowByIndex(index);
-        },
-        _buildHeaders() {
-            const head = [{
-                content: 'N°',
-                sorterCell: true,
-                width: 5,
-                unit: '%',
-                type: 'int',
-                textAlign: 'center',
-            },{
-                content: 'Title',
-                sorterCell: true,
-                width: 25,
-                unit: '%',
-                type: 'str',
-                textAlign: 'center',
-            },{
-                content: 'Artist',
-                sorterCell: true,
-                width: 25,
-                unit: '%',
-                type: 'str',
-                textAlign: 'center',
-            },{
-                content: 'Album',
-                sorterCell: true,
-                width: 25,
-                unit: '%',
-                type: 'str',
-                textAlign: 'center',
-            }, {
-                content: 'duration',
-                sorterCell: true,
-                width: 8,
-                unit: '%',
-                type: 'str',
-                textAlign: 'center',
-            }, {
-                content: '&nbsp;',
-                width: 4,
-                unit: '%'
-            }, {
-                content: '&nbsp;',
-                width: 4,
-                unit: '%'
-            }, {
-                content: '&nbsp;',
-                width: 4,
-                unit: '%'
-            }];
-
-            this.gridMaker.makeRowIdx(head, false, true, 0);
         },
         _buildBody() {
             for (let {index, track} of this.tracklist.iterOverTrack()) {
@@ -625,6 +648,161 @@
         },
     }
     
+    const QueuelistGrid = function(tracklist, trackListBrowser, parentGrid) {
+        this.tracklist = tracklist;
+        this.trackListBrowser = trackListBrowser;
+        this.setUpHTMLItem();
+        this.parentGrid = parentGrid;
+        this.gridMaker = new GridMaker(this.itemHtml.render(), false);
+        this.tracklist.onAddedToQueue(this.updateQueue.bind(this), this);
+        this.tracklist.onDepletingQueue(this.nextTrackInQueue.bind(this), this);
+    };
+    QueuelistGrid.prototype = {
+        setUpHTMLItem() {
+            this.itemHtml = new HTMLItems('div');
+            this.itemHtml.setClassName('queue-list');
+        },
+        buildGrid(doRender) {
+            this._buildBody();
+            if (doRender) {
+                this.render();
+            }
+        },
+        setSiblingRow(row) {
+            if (!this.siblingRow || this.siblingRow != row)
+                this.siblingRow = row;
+        },
+        getGrid() {
+            return this.gridMaker.getGrid();
+        },
+        getRowByIndex(index) {
+            return this.gridMaker.getRowByIndex(index);
+        },
+        updateQueue(track, queueLength) {
+            this.gridMaker.clearRows();
+            if (this.isQueuePlaying) {
+                this._buildBody(this.tracklist.getCurrentTrack(), 0);
+                const row = this.getGrid().getRowByIndex(0);
+                row.classAdd('currently-playing');
+                return this.render();
+            }
+
+            this.buildGrid(true);
+        },
+        nextTrackInQueue(track, queueLength) {
+            if (queueLength >= 0) {
+                this.isQueuePlaying = true;
+                this.trackListBrowser.setGrid(this);
+                this.gridMaker.clearRows();
+                this._buildBody(track, 0);
+                const row = this.getGrid().getRowByIndex(0);
+                row.classAdd('currently-playing');
+                return this.render();
+            }
+
+            this.isQueuePlaying = false;
+            this.trackListBrowser.setGrid(this.parentGrid);
+            this.itemHtml.hide();
+            this.siblingRow = undefined;
+        },
+        render() {
+            /*if (!this.siblingRow) {
+                const currIdx = this.tracklist.getCurrentTrackIndex();
+                this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
+            }*/
+            const currIdx = this.tracklist.getCurrentTrackIndex();
+            this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
+            this.itemHtml.show();
+            this.siblingRow.render().insertAdjacentElement('afterend', this.itemHtml.render());
+            this.gridMaker.render();
+        },
+        addTrackToGrid({track, index}) {
+            const row = this._getCellsFromTrack(track, index);
+            this.gridMaker.makeRowIdx(row, false, false, parseInt(index) + 1);
+        },
+        _getCellsFromTrack(track, index) {
+            return [{
+                content: `Q${parseInt(index) + 1}`,
+                width: 5,
+                unit: '%',
+                type: 'int',
+            },{
+                content: track.getTitle(),
+                editable: true,
+                onEdit: TrackEditor.onclickCell.bind(TrackEditor),
+                onValidate: TrackEditor.onValidate.bind(TrackEditor),
+                width: 25,
+                unit: '%',
+                type: 'str',
+                searchable: true,
+                data: {
+                    trackId: track.trackUUid,
+                    fieldType: 'title',
+                }
+            },{
+                content: track.getArtist(),
+                editable: true,
+                onEdit: TrackEditor.onclickCell.bind(TrackEditor),
+                onValidate: TrackEditor.onValidate.bind(TrackEditor),
+                width: 25,
+                unit: '%',
+                type: 'str',
+                searchable: true,
+                data: {
+                    trackId: track.trackUUid,
+                    fieldType: 'artist',
+                }
+            },{
+                content: track.getAlbum(),
+                editable: true,
+                onEdit: TrackEditor.onclickCell.bind(TrackEditor),
+                onValidate: TrackEditor.onValidate.bind(TrackEditor),
+                width: 25,
+                unit: '%',
+                type: 'str',
+                searchable: true,
+                data: {
+                    trackId: track.trackUUid,
+                    fieldType: 'album',
+                }
+            }, {
+                content: track.getTrackDuration(true),
+                width: 8,
+                unit: '%'
+            }, {
+                content: `<span data-track-id="${track.trackUUid}" class="track-actions"><li class="fa-solid fa-ellipsis"></li></span>`,
+                width: 4,
+                unit: '%',
+                //onClick: this._trackListBrowser.showActionMenu.bind(this._trackListBrowser),
+                data: {
+                    trackId: track.trackUUid
+                }
+            }, {
+                content: '<div class="action-play"><li class="fa-solid fa-play"></li></div>',
+                width: 4,
+                unit: '%',
+                // onClick: this._trackListBrowser.playSongFromTracklist.bind(this._trackListBrowser),
+                textAlign: 'center',
+            }, {
+                content: 'remove',
+                width: 4,
+                unit: '%'
+            }];
+        },
+        _buildBody(curTrack, curIndex) {
+            let addIdx = 0;
+            if (typeof curTrack === 'object' && typeof curIndex === 'number') {
+                this.addTrackToGrid({index: curIndex, track: curTrack});
+                addIdx = 1;
+            }
+            for (let {index, track} of this.tracklist.iterOverTrack(true)) {
+                index += addIdx;
+                this.addTrackToGrid({index, track});
+            }
+        },
+
+    }
+
    JSPlayer.Grids = {TracklistGrid};
 
 })(this, document, this.JSPlayer);

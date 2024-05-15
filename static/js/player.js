@@ -125,12 +125,12 @@
         getTrackList() {
             return this.tracklist;
         },
-        setPlayerSong(track, autoPlay) {
+        setPlayerSong(track, autoPlay, trackIdx) {
             this.currentTrack = track;
             this.currentTrack.isPlaying = autoPlay;
             this.audioElem.src = `/static/tracks/${track.trackUUid}.mp3`;
             this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
-            this.audioPlayerEvents.trigger('onPlayerSongChange', this.currentTrack, this.tracklist.getCurrentTrackIndex());
+            this.audioPlayerEvents.trigger('onPlayerSongChange', this.currentTrack, trackIdx);
             if (this._comingNextFired === true)
                 this._playerNotifications.hideComingNext();
             
@@ -246,15 +246,18 @@
             this.setVolume(volume);
         },
         setCurrentTrackFromTrackList(autoPlay) {
-            let track;
-            if (this.tracklist.hasQueue())
-                track = this.tracklist.nextInQueue();
-            else
+            let track, trackIdx;
+            if (this.tracklist.hasQueue()){
+                ({track, trackIdx} = this.tracklist.nextInQueue());
+            }
+            else {
                 track = this.tracklist.getCurrentTrack();
+                trackIdx = this.tracklist.getCurrentTrackIndex();
+            }
             console.log('playing song', track);
             track.onTagChange(this._manageTag.bind(this), this);
             this.loadID3Tags(track);
-            this.setPlayerSong(track, autoPlay);
+            this.setPlayerSong(track, autoPlay, trackIdx);
         },
         updateTrackTime() {
             const currentTrack = this.tracklist.getCurrentTrack();

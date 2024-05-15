@@ -139,6 +139,12 @@
         remove() {
             this.render().remove();
         },
+        show() {
+            this.css({display: 'block'}, true);
+        },
+        hide() {
+            this.css({display: 'none'}, true);
+        },
         classAdd(className) {
             this.render().classList.add(className);
         },
@@ -169,8 +175,8 @@
             else
                 return this.render().dataset;
         },
-        insertItemAfter(itemInstance) {
-            itemInstance.render().insertAdjacentElement('afterend', this.render());
+        insertItemAfter(htmlItem) {
+            htmlItem.render().insertAdjacentElement('afterend', this.render());
         },
         addEventListener(evtName, cb) {
             this.render().addEventListener(evtName, cb);
@@ -211,13 +217,14 @@
         onIndexUpdate(cb, subscriber) {
             this.eventsList.onEventRegister({cb, subscriber}, 'onIndexUpdate');
         },
-        insertItemAfter(cellInstance) {
-            let thisInstanceIdx = cellInstance.getIndex();
-            if (this.index > thisInstanceIdx)
-                thisInstanceIdx++;
-            this.updateIndex(thisInstanceIdx);
-            cellInstance.render().insertAdjacentElement('afterend', this.render());
-        }
+        insertItemAfter(htmlItem) {
+            let htmlItemIndex = htmlItem.getIndex();
+            if (this.index > htmlItemIndex)
+                htmlItemIndex++;
+            this.updateIndex(htmlItemIndex);
+            htmlItem.render().insertAdjacentElement('afterend', this.render());
+        },
+        
     }
 
     const HTMLDraggableItems = function(elementName) {
@@ -588,6 +595,7 @@
     Object.setPrototypeOf(SortableRow.prototype, Row.prototype);
 
     JSPlayer.HTMLItems = {
+        HTMLItems,
         EditInput,
         Cell,
         Row,

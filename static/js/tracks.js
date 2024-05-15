@@ -156,6 +156,7 @@
         this.tracklistTotalDuration = 0;
         this.trackListEvents = new ListEvents();
         this.isShuffle = false;
+        this.tracksInQueue = false;
         if (this.tracklist.length > 0) {
             this.currentTrack = this.tracklist[this.trackIndex];
             this.trackIndexMax = this.tracksNumber - 1;
@@ -189,6 +190,12 @@
             this.trackIndexMax = this.tracksNumber - 1;
             this.addToTrackListTotalDuration(track.getTrackDuration());
         },
+        getCurrentTrackIndex() {
+            return this.trackIndex;
+        },
+        getQueueIndex() {
+            return 0;
+        },
         switchTrackIndex(oldIndex, newIndex) {
             const tracklist = this.getTrackList();
             
@@ -198,16 +205,21 @@
                 --this.trackIndex;
             else if (oldIndex > newIndex && this.trackIndex < oldIndex && this.trackIndex > newIndex) {
                 ++this.trackIndex;
+            } else if (oldIndex < newIndex && this.trackIndex > oldIndex && this.trackIndex < newIndex) {
+                --this.trackIndex;
             }
 
             tracklist.splice(newIndex, 0, tracklist.splice(oldIndex, 1)[0]);
         },
         addToQueue(track) {
+            if (!this.tracksInQueue)
+                this.tracksInQueue = true;
+            ++this.tracksInQueue;
             this.addedToQueue.push(track);
-            this.trackListEvents.trigger('onAddedToQueue', track);
+            this.trackListEvents.trigger('onAddedToQueue', track, this.addedToQueue.length);
         },
         hasQueue() {
-            return this.addedToQueue.length > 0;
+            return this.tracksInQueue;
         },
         getQueueLength() {
             return this.addedToQueue.length;
@@ -218,11 +230,16 @@
         nextInQueue() {
             if (this.addedToQueue.length == 0) {
                 console.log('No tracks left in queue');
-                return this.getCurrentTrack();
+                this.tracksInQueue = false;
+                this.currentTrack = undefined;
+                this.trackListEvents.trigger('onDepletingQueue', null, -1);
+                ++this.trackIndex;
+                return {track: this.getCurrentTrack(), trackIdx: this.trackIndex};
             }
             this.currentTrack = this.addedToQueue.shift();
-            this.trackListEvents.trigger('onDepletingQueue', this.currentTrack);
-            return this.currentTrack;
+            this.trackListEvents.trigger('onDepletingQueue', this.currentTrack, this.addedToQueue.length);
+            //{track, trackIdx}
+            return {track: this.currentTrack, trackIdx: 0};
         },
         isCurrentTrackInQueue() {
             return this.isTrackInQueue(this.getCurrentTrack());
@@ -244,9 +261,6 @@
             }
                 
             return null;
-        },
-        getCurrentTrackIndex() {
-            return this.trackIndex;
         },
         getTrackByUUID(trackUUid) {
             let tracks = this.tracklist.filter(trk => trk.trackUUid == trackUUid);
@@ -275,7 +289,7 @@
             this.trackListEvents.onEventRegister({cb, subscriber}, 'onRemoveTrackFromTrackList');
         },
         getNextTrackInList() {
-            if (this.hasQueue())
+            if (this.getQueue().length > 0)
                 return this.getQueue()[0];
     
             return this.getNextTrackInTrackList();
@@ -359,10 +373,9 @@
                 return this._formatTime(this.tracklistTotalDuration);
             return this.tracklistTotalDuration;
         },
-        *iterOverTrack() {
-            const tracklist = this.isShuffleOn() ? this.tracklistShuffle : this.tracklist;
-            console.log('iterOverTrack', tracklist);
-            for (let index = 0; index < this.tracksNumber; ++index) {
+        *iterOverTrack(iterQueue) {
+            const tracklist = iterQueue ? this.addedToQueue : this.isShuffleOn() ? this.tracklistShuffle : this.tracklist;
+            for (let index = 0; index < tracklist.length; ++index) {
                 yield {index, track: tracklist[index]};
             }
         },
