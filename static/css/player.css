@@ -503,6 +503,10 @@ li.fa-solid.fa-file {
     width: 87%;
 }
 
+.action-menu-cnt ul li:last-child {
+    border: none;
+}
+
 .action-menu-cnt ul li:hover {
     color: #53f7ff;
     background: #5c5c5c;

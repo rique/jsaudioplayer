@@ -273,9 +273,10 @@
         showActionMenu(evt) {
             const target = evt.target;
             this.hideAllActionMenus();
-            const targetChildren = target.getElementsByClassName('action-menu-cnt');
-            if (targetChildren.length > 0 ) {
-                return targetChildren[0].style.display = 'block';
+            const previousMenu = document.querySelector(`.action-menu-cnt[data-track-id="${target.dataset.trackId}"]`);
+
+            if (previousMenu) {
+                return previousMenu.style.display = 'block';
             }
     
             const trackUUid = target.dataset.trackId;
