@@ -3,14 +3,10 @@
     const PlayerNotifications = JSPlayer.Notifications.PlayerNotifications;
     const whileMousePressed = JSPlayer.Utils.whileMousePressed;
     const whileMousePressedAndMove = JSPlayer.Utils.whileMousePressedAndMove;
+    const TrackListManager = JSPlayer.Tracks.TrackListManager;
 
-    const AudioPlayer = function(tracklist) {
-        if (!tracklist) {
-            console.error('No tracklist provided');
-            throw 'No tracklist provided';
-        }
-    
-        this.tracklist = tracklist;
+    const AudioPlayer = function() {
+        //this.tracklist = tracklist;
         this.audioPlayerEvents = new ListEvents();
     
         this.volumeStep = 0.02;
@@ -70,7 +66,7 @@
                 this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(255, 124, 120, 0.6) ${percentWidth}%, #292929 0%)`;
             });
     
-            this.progressBarDiv.addEventListener('mousemove', (evt) => {//3, 207, 252 - 255, 143, 143
+            this.progressBarDiv.addEventListener('mousemove', (evt) => {
                 percentWidth = (this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv) * 100).toFixed(2);
                 this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(255, 124, 120, 0.6) ${percentWidth}%, #292929 0%)`;
             });
@@ -89,7 +85,8 @@
             whileMousePressedAndMove(this.mainVolumeBarElem, this.changeVolume.bind(this));
             whileMousePressedAndMove(this.volumeBarElem, this.changeVolume.bind(this));
     
-            this.tracklist.onTrackIndexChange(() => {
+            TrackListManager.onTrackManagerIndexChange((oldIdx, newIdx) => {
+                console.log({oldIdx, newIdx});
                 this.setCurrentTrackFromTrackList(true);
             });
     
@@ -100,7 +97,7 @@
             this.disableProgress = mouseUp;
     
             if (!mouseUp)
-                this.setCurrentTime(this.tracklist.getCurrentTrack().trackDuration * percentWidth);
+                this.setCurrentTime(TrackListManager.getCurrentTrack().trackDuration * percentWidth);
             this._updateProgressBar(percentWidth  * 100, this.progressBar.bind(this, this.audioElem));
         },
         changeVolume(evt, mouseUp) {
@@ -120,17 +117,18 @@
                 ++this.displayTrackTimeMode;
         },
         setTrackList(tracklist) {
-            this.tracklist = tracklist;
+            TrackListManager.setTracklist(tracklist);
         },
         getTrackList() {
-            return this.tracklist;
+            return TrackListManager.getTrackList();
         },
-        setPlayerSong(track, autoPlay, trackIdx) {
+        setPlayerSong(track, trackIdx, autoPlay) {
             this.currentTrack = track;
             this.currentTrack.isPlaying = autoPlay;
             this.audioElem.src = `/static/tracks/${track.trackUUid}.mp3`;
             this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
-            this.audioPlayerEvents.trigger('onPlayerSongChange', this.currentTrack, trackIdx);
+            this.audioPlayerEvents.trigger('onPlayerSongChange', track, trackIdx);
+
             if (this._comingNextFired === true)
                 this._playerNotifications.hideComingNext();
             
@@ -169,11 +167,8 @@
         },
         next() {
             this.currentTrack.onTagChangeUnsub(this);
-            const hasQueue = this.tracklist.hasQueue();
-            this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack, hasQueue);
-            if (!hasQueue)
-                this.tracklist.nextTrack();
-            this.setCurrentTrackFromTrackList(true);
+            this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack);
+            this.setCurrentTrackFromTrackList(true, false);
         },
         prev() {
             if (this.getCurrentTime() > 3.6) {
@@ -182,11 +177,8 @@
                 this._comingNextFired = false;
             } else {
                 this.currentTrack.onTagChangeUnsub(this);
-                const hasQueue = this.tracklist.hasQueue();
-                this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack, hasQueue);
-                if (!hasQueue)
-                    this.tracklist.previousTrack();
-                this.setCurrentTrackFromTrackList(true);
+                this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack);
+                this.setCurrentTrackFromTrackList(true, true);
             }
         },
         btnRepeat() {
@@ -197,6 +189,7 @@
             this._setRepeatBtnStyle();
         },
         setCurrentTime(timeInSec) {
+            console.log('timeInSec', {timeInSec});
             if (timeInSec < 0)
                 timeInSec = 0;
             else if (timeInSec > this.currentTrack.getTrackDuration())
@@ -228,11 +221,10 @@
         },
         shuffle(evt) {
             evt.preventDefault();
-            this.tracklist.shuffle(!this.isPaused);
-            this.audioPlayerEvents.trigger('onShuffle', this.tracklist);
-            if (this.isPaused)
-                this.setCurrentTrackFromTrackList(false);
-            this._setShuffleBtnStyle(this.tracklist.isShuffle);
+            TrackListManager.shuffle(!this.isPaused);
+            this.audioPlayerEvents.trigger('onShuffle', TrackListManager.getTrackList());
+            this.setCurrentTrackFromTrackList(!this.isPaused);
+            this._setShuffleBtnStyle(TrackListManager.isShuffle());
         },
         onShuffle(cb, subscriber) {
             this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onShuffle');
@@ -245,22 +237,20 @@
             let volume = this.audioElem.volume - this.volumeStep;
             this.setVolume(volume);
         },
-        setCurrentTrackFromTrackList(autoPlay) {
+        setCurrentTrackFromTrackList(autoPlay, prev) {
             let track, trackIdx;
-            if (this.tracklist.hasQueue()){
-                ({track, trackIdx} = this.tracklist.nextInQueue());
-            }
-            else {
-                track = this.tracklist.getCurrentTrack();
-                trackIdx = this.tracklist.getCurrentTrackIndex();
-            }
-            console.log('playing song', track);
+            if (prev)
+                ({track, trackIdx} = TrackListManager.getPreviousTrack());
+            else
+                ({track, trackIdx} = TrackListManager.getNexTrack());
+
+            console.log('playing song', {track, trackIdx});
             track.onTagChange(this._manageTag.bind(this), this);
             this.loadID3Tags(track);
-            this.setPlayerSong(track, autoPlay, trackIdx);
+            this.setPlayerSong(track, trackIdx, autoPlay);
         },
         updateTrackTime() {
-            const currentTrack = this.tracklist.getCurrentTrack();
+            const currentTrack = TrackListManager.getCurrentTrack();
             let formatedTrackTime;
             if (this.displayTrackTimeMode == 0)
                 formatedTrackTime = currentTrack.getTrackDuration(true);
@@ -284,34 +274,35 @@
             }
         },
         audioEnded() {
-            let autoPlay, hasQueue = this.tracklist.hasQueue();
-            this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack, hasQueue);
+            let autoPlay;
+            this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack);
             this.currentTrack.onTagChangeUnsub(this);
-            if (this.tracklist.isLastTrack() && !hasQueue) {
+            if (TrackListManager.isLastTrack()) {
                 if (!this.repeatMode >= 1) {
                     console.log('End of session');
-                    this.tracklist.nextTrack();
+                    //this.tracklist.nextTrack();
                     autoPlay = false;
                 } else {
                     autoPlay = true;
                     if (this.repeatMode == 1) {
-                        if (!this.tracklist.isShuffleOn())
-                            this.tracklist.resetTrackListIndex();
+                        if (!TrackListManager.isShuffle())
+                            TrackListManager.reset();
                         else {
-                            this.tracklist.shuffleTracklist();
-                            this.audioPlayerEvents.trigger('onShuffle', this.tracklist);
+                            TrackListManager.reShuffle();
+                            this.audioPlayerEvents.trigger('onShuffle', TrackListManager.getTrackList());
                         }
                     }
                 }
-            } else  {
-                if (this.repeatMode != 2 && !hasQueue)
-                    this.tracklist.nextTrack();
+            } else {
+                if (this.repeatMode == 2)
+                    TrackListManager.repeatTrack();
                  autoPlay = true;
             }
     
             this.setCurrentTrackFromTrackList(autoPlay);
         },
         onAudioEnded(cb, subscriber) {
+            console.log('onAudioEnded', {cb, subscriber});
             this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onAudioEnded');
         },
         loadID3Tags(track) {
@@ -327,7 +318,7 @@
                 const duration = target.duration;
                 const currentTime = target.currentTime;
     
-                this.tracklist.getCurrentTrack().setCurrentTime(target.currentTime);
+                TrackListManager.getCurrentTrack().setCurrentTime(target.currentTime);
                 
                 if (this._checkForNextTrack(currentTime, duration) && !this._comingNextFired) {
                     this._fireNotification();
@@ -346,7 +337,7 @@
         _getNextTrackInList() {
             if (this.repeatMode == 2)
                 return this.currentTrack;
-            return this.tracklist.getNextTrackInList();
+            return TrackListManager.getNextTrackInList();
         },
         _setUpPlayerControls() {
             this.playBtn.addEventListener('click', (evt) => {
@@ -375,7 +366,7 @@
             });
         },
         _manageTags(tags) {
-            let currentTrack = this.tracklist.getCurrentTrack();
+            let currentTrack = TrackListManager.getCurrentTrack();
     
             let title = tags.title;
             if (!title || typeof title === 'undefined' || title.length == 0)

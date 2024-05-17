@@ -112,12 +112,13 @@ ul {
     position: absolute;
     background: #181717;
     top: 9px;
-    left: 8px;
+    left: 31px;
     text-align: center;
     font-size: 5px;
     color: #bf1616;
     font-weight: bold;
     height: 16px;
+    filter: drop-shadow(0 0 8px rgba(14, 14, 14, 1));
 }
 
 #progress, #main-volume-bar {

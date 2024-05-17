@@ -4,6 +4,7 @@
     const Track = JSPlayer.Tracks.Track;
     const TrackList = JSPlayer.Tracks.TrackList;
     const ID3Tags = JSPlayer.Tracks.ID3Tags;
+    const TrackListManager = JSPlayer.Tracks.TrackListManager;
     const TracklistGrid = JSPlayer.Grids.TracklistGrid;
     const draw = JSPlayer.Vizualizer.draw;
     const AudioPlayer = JSPlayer.AudioPlayer;
@@ -19,10 +20,13 @@
 
     const imgList = [];
     const mainTracklist = new TrackList();
-    const audioPlayer = new AudioPlayer(mainTracklist);
+    const audioPlayer = new AudioPlayer();
     const api = new JSPlayer.Api();
-    const tracklistGrid = new TracklistGrid('#table-content', audioPlayer);
     
+    TrackListManager.setTracklist(mainTracklist);
+
+    const tracklistGrid = new TracklistGrid('#table-content', audioPlayer);
+
     const leftMenu = new LeftMenu();
     leftMenu.init();
 

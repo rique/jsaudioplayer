@@ -11,6 +11,7 @@
     const TrackSearch = JSPlayer.Tracks.TrackSearch;
     const TrackListBrowser = JSPlayer.Components.TrackListBrowser;
     const HTMLItems = JSPlayer.HTMLItems.HTMLItems;
+    const TrackListManager = JSPlayer.Tracks.TrackListManager;
 
     const BaseColumn = function() {
         this.cells = [];
@@ -95,6 +96,7 @@
             return this.rows;
         },
         getRowByIndex(index) {
+            console.log("getRowByIndex", this.rows);
             return this.rows[index];
         },
         setHead(row) {
@@ -449,11 +451,9 @@
     };
     TracklistGrid.prototype = {
         setTracklist(tracklist) {
-            this.tracklist = tracklist;
-            TrackEditor.tracklist = tracklist;
-            this._trackListBrowser.setTracklist(tracklist);
-            this.queuelistGrid = new QueuelistGrid(this.tracklist, this._trackListBrowser, this);
-            this.tracklist.onShuffleTracklist(() => {
+            TrackEditor.tracklist = TrackListManager.getTrackList();
+            this.queuelistGrid = new QueuelistGrid(this._trackListBrowser, this);
+            TrackListManager.onShuffleTracklist(() => {
                 this.gridMaker.resetDragDrop();
                 this.gridMaker.clearRows();
                 this.buildGrid();
@@ -470,6 +470,9 @@
             const row = this._getCellsFromTrack(track, index);
             this.gridMaker.makeRowIdx(row, false, false, parseInt(index) + 1);
         },
+        removeRowFromGrid(rowIdx) {
+            this.gridMaker.removeRowFromGrid(rowIdx);
+        },
         buildGrid(doRender) {
             this._buildHeaders();
             this._buildBody();
@@ -480,6 +483,9 @@
         },
         getGrid() {
             return this.gridMaker.getGrid();
+        },
+        getParentCnt() {
+            return this.getGrid().getParentCnt();
         },
         render() {
             this.gridMaker.render();
@@ -494,6 +500,7 @@
             this.gridMaker.close();
         },
         getRowByIndex(index) {
+            console.log('getRowByIndex', index);
             return this.gridMaker.getRowByIndex(index);
         },
         _restoreGrid() {
@@ -624,9 +631,10 @@
                     evt.detail.HTMLItem.innerContent('Drop!!');
                 },
                 onDropped: (evt) => {
+                    console.log('onDropped!!', {draggedStartIndx: this.draggedStartIndx, draggedEndIndx: this.draggedEndIndx});
                     const htmlItem = evt.detail.HTMLItem;
                     this.draggedEndIndx = htmlItem.getParentItem().getIndex();
-                    this.tracklist.switchTrackIndex(this.draggedStartIndx - 1, this.draggedEndIndx - 1);
+                    TrackListManager.switchTrackIndex(this.draggedStartIndx - 1, this.draggedEndIndx - 1);
                     //this.queuelistGrid.setSiblingRow(htmlItem.getParentItem());
                     this.queuelistGrid.render();
                     htmlItem.innerContent('drag');
@@ -636,26 +644,25 @@
             }];
         },
         _buildBody() {
-            for (let {index, track} of this.tracklist.iterOverTrack()) {
+            for (let {index, track} of TrackListManager.iterOverTrack()) {
                 this.addTrackToGrid({index, track});
             }
         },
         _displayTracklistInfo() {
             const nbTracksElem = document.querySelector('.tracklist-info-cnt .tracklist-info-nb .nb-tracks');
             const totalDurationElem = document.querySelector('.tracklist-info-cnt .tracklist-info-duration .duration-tracks');
-            nbTracksElem.innerText = this.tracklist.getTracksNumber();
-            totalDurationElem.innerText = this.tracklist.getTrackListTotalDuration(true);
+            nbTracksElem.innerText = TrackListManager.getTracksNumber();
+            totalDurationElem.innerText = TrackListManager.getTrackListTotalDuration(true);
         },
     }
     
-    const QueuelistGrid = function(tracklist, trackListBrowser, parentGrid) {
-        this.tracklist = tracklist;
+    const QueuelistGrid = function(trackListBrowser, parentGrid) {
         this.trackListBrowser = trackListBrowser;
         this.setUpHTMLItem();
         this.parentGrid = parentGrid;
         this.gridMaker = new GridMaker(this.itemHtml.render(), false);
-        this.tracklist.onAddedToQueue(this.updateQueue.bind(this), this);
-        this.tracklist.onDepletingQueue(this.nextTrackInQueue.bind(this), this);
+        TrackListManager.onAddedToQueue(this.updateQueue.bind(this), this);
+        TrackListManager.onDepletingQueue(this.nextTrackInQueue.bind(this), this);
     };
     QueuelistGrid.prototype = {
         setUpHTMLItem() {
@@ -675,13 +682,21 @@
         getGrid() {
             return this.gridMaker.getGrid();
         },
+        getParentCnt(getMine) {
+            if (getMine)
+                return this.getGrid().getParentCnt();
+            return this.parentGrid.getParentCnt();
+        },
         getRowByIndex(index) {
             return this.gridMaker.getRowByIndex(index);
         },
         updateQueue(track, queueLength) {
+            if (!this.hasQueue && queueLength > 0)
+                this.hasQueue = true;
+
             this.gridMaker.clearRows();
             if (this.isQueuePlaying) {
-                this._buildBody(this.tracklist.getCurrentTrack(), 0);
+                this._buildBody(TrackListManager.getCurrentTrack(), 0);
                 const row = this.getGrid().getRowByIndex(0);
                 row.classAdd('currently-playing');
                 return this.render();
@@ -699,26 +714,55 @@
                 row.classAdd('currently-playing');
                 return this.render();
             }
-
+            this.hasQueue = false;
             this.isQueuePlaying = false;
             this.trackListBrowser.setGrid(this.parentGrid);
-            this.itemHtml.hide();
+            this.itemHtml.remove();
             this.siblingRow = undefined;
         },
         render() {
-            /*if (!this.siblingRow) {
-                const currIdx = this.tracklist.getCurrentTrackIndex();
-                this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
+            if (!this.hasQueue) {
+                this.itemHtml.remove();
+                return;
+            }
+
+            /*const currIdx = TrackListManager.getCurrentTrackIndex();
+            if (currIdx < 0) {
+                this.itemHtml.remove();
+                return;
             }*/
-            const currIdx = this.tracklist.getCurrentTrackIndex();
-            this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
+
+            const row = this._setSiblingRow();
+            if (!row) {
+                this.itemHtml.remove();
+                console.error('NO ROW FOUND! REMOVING QUEUE GRID');
+                return;
+            }
+
+            //this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
             this.itemHtml.show();
-            this.siblingRow.render().insertAdjacentElement('afterend', this.itemHtml.render());
+            row.render().insertAdjacentElement('afterend', this.itemHtml.render());
             this.gridMaker.render();
+        },
+        _setSiblingRow() {
+            if (this.siblingRow)
+                return this.siblingRow;
+
+            const currIdx = TrackListManager.getCurrentTrackIndex();
+            if (currIdx < 0) {
+                currIdx = 0;
+            }
+
+            this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
+            
+            return this.siblingRow;
         },
         addTrackToGrid({track, index}) {
             const row = this._getCellsFromTrack(track, index);
             this.gridMaker.makeRowIdx(row, false, false, parseInt(index) + 1);
+        },
+        removeRowFromGrid(rowIdx) {
+            this.gridMaker.removeRowFromGrid(rowIdx);
         },
         _getCellsFromTrack(track, index) {
             return [{
@@ -790,17 +834,17 @@
             }];
         },
         _buildBody(curTrack, curIndex) {
+            console.log({curTrack, curIndex})
             let addIdx = 0;
             if (typeof curTrack === 'object' && typeof curIndex === 'number') {
                 this.addTrackToGrid({index: curIndex, track: curTrack});
                 addIdx = 1;
             }
-            for (let {index, track} of this.tracklist.iterOverTrack(true)) {
+            for (let {index, track} of TrackListManager.iterOverQueue()) {
                 index += addIdx;
                 this.addTrackToGrid({index, track});
             }
         },
-
     }
 
    JSPlayer.Grids = {TracklistGrid};

@@ -198,7 +198,11 @@
         },
         switchTrackIndex(oldIndex, newIndex) {
             const tracklist = this.getTrackList();
-            
+            const trackIndex = this.trackIndex
+            let theTrack1 = tracklist[oldIndex], theTrack2 = tracklist[newIndex];
+            console.log({newIndex, oldIndex, theTrack1, theTrack2});
+            console.log('----------------------------------------------------------------------------');
+            console.log('switchTrackIndex1', {trackIndex, oldIndex, newIndex});
             if (oldIndex == this.trackIndex)
                 this.trackIndex = newIndex;
             else if (newIndex == this.trackIndex)
@@ -208,8 +212,12 @@
             } else if (oldIndex < newIndex && this.trackIndex > oldIndex && this.trackIndex < newIndex) {
                 --this.trackIndex;
             }
-
+            console.log('switchTrackIndex2', {trackIndexResult: this.trackIndex});
+            console.log('----------------------------------------------------------------------------');
             tracklist.splice(newIndex, 0, tracklist.splice(oldIndex, 1)[0]);
+            theTrack1 = tracklist[oldIndex];
+            theTrack2 = tracklist[newIndex];
+            console.log({newIndex, oldIndex, theTrack1, theTrack2});
         },
         addToQueue(track) {
             if (!this.tracksInQueue)
@@ -318,10 +326,11 @@
             this._setCurrentTrack();
         },
         setTrackIndex(indexVal, doSetCurTrack) {
+            const oldIdx = this.trackIndex;
             this.trackIndex = indexVal;
             if (doSetCurTrack === true)
                 this._setCurrentTrack();
-            this.trackListEvents.trigger('onIndexChange');
+            this.trackListEvents.trigger('onIndexChange', oldIdx, indexVal);
         },
         getTrackIndexByTrack(track) {
             return this.getTrackIndexByUUID(track.trackUUid);
@@ -349,7 +358,7 @@
                 this.shuffleTracklist(trackIndex);
                 tracklist = this.tracklistShuffle;
             }
-            this.trackListEvents.trigger('onShuffleTracklist', tracklist);
+            this.trackListEvents.trigger('onShuffleTracklist', tracklist, this.isShuffle);
         },
         shuffleTracklist(trackIndex) {
             this.tracklistShuffle = this._shuffle([...this.tracklist], trackIndex);
@@ -518,6 +527,162 @@
         },
     }
 
-    window.JSPlayer.Tracks = {Track, TrackList, ID3Tags, TrackSearch, TrackEditor};
+    const TrackListManager =  {
+        tracksInQueue: [],
+        trackIdx: -1,
+        queueDepleted: false,
+        trackListEvents: new ListEvents(),
+        setTracklist(tracklist) {
+            this.tracklist = tracklist;
+            this.currentTrack = tracklist.getCurrentTrack();
+            this.trackIdx = -1;
+        },
+        reset() {
+            this.tracklist.resetTrackListIndex();
+            this.trackIdx = -1;
+            this.currentTrack = this.tracklist.getCurrentTrack();
+        },
+        log() {
+            console.log('tracklist', this.tracklist);
+        },
+        getTrackList() {
+            return this.tracklist;
+        },
+        addToQueue(track) {
+            this.tracksInQueue.push(track);
+            this.trackListEvents.trigger('onAddedToQueue', track, this.tracksInQueue.length);
+        },
+        getNexTrack() {
+            let trackIdx;
+            if (this.tracksInQueue.length > 0) {
+                this.currentTrack = this.tracksInQueue.shift();
+                trackIdx = 0;
+                if (this.tracksInQueue.length == 0)
+                    this.queueDepleted = true;
+                this.trackListEvents.trigger('onDepletingQueue', this.currentTrack, this.tracksInQueue.length);
+            } else {
+                if (this.trackIdx >= this.tracklist.trackIndexMax)
+                    this.trackIdx = 0;
+                else {
+                    ++this.trackIdx;
+                }
+                this.tracklist.setTrackIndex(this.trackIdx, true)
+                this.currentTrack = this.tracklist.getCurrentTrack();
+                trackIdx = this.tracklist.getCurrentTrackIndex();
+                if (this.queueDepleted) {
+                    this.trackListEvents.trigger('onDepletingQueue', null, -1);
+                    this.queueDepleted = false;
+                }
+            }
+            console.log({thistrackIdx: this.trackIdx})
+            return {track: this.currentTrack, trackIdx};
+        },
+        getPreviousTrack() {
+            if (this.trackIdx <= 0)
+                this.trackIdx = this.tracklist.trackIndexMax;
+            else
+                --this.trackIdx;
+
+            if (this.queueDepleted) {
+                this.trackListEvents.trigger('onDepletingQueue', null, -1);
+                this.queueDepleted = false;
+            }
+
+            this.tracklist.setTrackIndex(this.trackIdx, true);
+            this.currentTrack = this.tracklist.getCurrentTrack();
+
+            return {track: this.currentTrack, trackIdx: this.trackIdx};
+        },
+        shuffle(conserveCurrentTrack) {
+            this.tracklist.shuffle(conserveCurrentTrack);
+            this.trackIdx = this.tracklist.getCurrentTrackIndex() - 1;
+            console.log('trackindex', this.trackIdx);
+            this.trackListEvents.trigger('onShuffleTracklist', this.tracklist, this.isShuffle());
+        },
+        reShuffle() {
+            this.tracklist.shuffleTracklist();
+            this.trackIdx = this.tracklist.getCurrentTrackIndex() - 1;
+            this.trackListEvents.trigger('onShuffleTracklist', this.tracklist, this.isShuffle());
+        },
+        getNextTrackInList() {
+            if (this.tracksInQueue.length > 0)
+                return this.tracksInQueue[0];
+            return this.tracklist.getNextTrackInList();
+        },
+        isLastTrack() {
+            return this.tracklist.isLastTrack() && this.tracksInQueue.length == 0;
+        },
+        getCurrentTrack() {
+            return this.currentTrack;
+        },
+        getCurrentTrackIndex() {
+            if (this.tracksInQueue.length > 0 && this.queueDepleted)
+                return 0;
+            return this.trackIdx;
+        },
+        addTrackToList(track) {
+            this.tracklist.addTrackToList(track);
+        },
+        repeatTrack() {
+            --this.trackIdx;
+        },
+        switchTrackIndex(oldIdx, newIdx) {
+            this.tracklist.switchTrackIndex(oldIdx, newIdx);
+            this.trackIdx = this.tracklist.getCurrentTrackIndex();
+            console.log('----------------------------------------------------------------------------');
+            console.log({trackIdx: this.trackIdx})
+        },
+        isShuffle() {
+            return this.tracklist.isShuffle;
+        },
+        *iterOverTrack() {
+            for (let {index, track} of this.tracklist.iterOverTrack()) {
+                yield {index, track};
+            }
+        },
+        *iterOverQueue() {
+            for (let index = 0; index < this.tracksInQueue.length; ++index) {
+                yield {index, track: this.tracksInQueue[index]};
+            }
+        },
+        setTrackIndex(newIdx, doSetCurTrack) {
+            const oldIdx = this.trackIdx;
+            this.tracklist.setTrackIndex(newIdx, doSetCurTrack);
+            this.trackIdx = newIdx - 1;
+            this.trackListEvents.trigger('onTrackManagerIndexChange', oldIdx, newIdx);
+        },
+        getTracksNumber() {
+            return this.tracklist.getTracksNumber();
+        },
+        getTrackListTotalDuration(formated) {
+            return this.tracklist.getTrackListTotalDuration(formated);
+        },
+        getTrackByUUID(trackUUid) {
+            return this.tracklist.getTrackByUUID(trackUUid);
+        },
+        removeTrackFromTracklistByUUID(trackUUid) {
+            return this.tracklist.removeTrackFromTracklistByUUID(trackUUid);
+        },
+        onAddedToQueue(cb, subscriber) {
+            this.trackListEvents.onEventRegister({cb, subscriber}, 'onAddedToQueue');
+        },
+        onDepletingQueue(cb, subscriber) {
+            this.trackListEvents.onEventRegister({cb, subscriber}, 'onDepletingQueue');
+        },
+        onTrackIndexChange(cb, subscriber) {
+            this.tracklist.onTrackIndexChange(cb, subscriber);
+        },
+        onTrackManagerIndexChange(cb, subscriber) {
+            this.trackListEvents.onEventRegister({cb, subscriber}, 'onTrackManagerIndexChange');
+        },
+        onShuffleTracklist(cb, subscriber) {
+            this.trackListEvents.onEventRegister({cb, subscriber}, 'onShuffleTracklist');
+        },
+        onRemoveTrackFromTrackList(cb, subscriber) {
+            this.tracklist.onRemoveTrackFromTrackList(cb, subscriber);
+        }
+    };
+
+    window.JSPlayer.Tracks = {Track, TrackList, ID3Tags, TrackSearch, TrackEditor, TrackListManager};
 
 })(this, document, window.JSPlayer);

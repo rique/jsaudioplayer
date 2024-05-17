@@ -108,12 +108,12 @@
                 return;
             this.player.prev();
         },
-        fastFoward({ctrlKey, repeat}={}) {
-            if (ctrlKey && repeat)
+        fastFoward({ctrlKey, repeat, shiftKey}={}) {
+            if (ctrlKey && repeat || shiftKey && repeat)
                 this.player.setCurrentTime(this.player.getCurrentTime() + 1);
         },
-        rewind({ctrlKey, repeat}={}) {
-            if (ctrlKey && repeat)
+        rewind({ctrlKey, repeat, shiftKey}={}) {
+            if (ctrlKey && repeat || shiftKey && repeat)
                 this.player.setCurrentTime(this.player.getCurrentTime() - 1);
         },
         registerKeyUpAction(key, cb, caller) {
@@ -172,13 +172,13 @@
         _executeActions(evt, actions, exclusiveCallers) {
             if (actions && actions.length > 0) {
                 for (let i = 0; i < actions.length; ++i) {
-                    let obj = actions[i];
-                    if (typeof obj.cb !== 'function')
+                    let {caller, cb} = actions[i];
+                    if (typeof cb !== 'function')
                         continue;
                     if (exclusiveCallers && exclusiveCallers.length > 0) {
-                        exclusiveCallers.forEach(caller => obj.caller == caller && obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target}));
+                        exclusiveCallers.forEach(clr => caller == clr && cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target}));
                     } else {
-                        obj.cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target})
+                        cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target})
                     }
                 }
             }

@@ -7,6 +7,7 @@
     const clearElementInnerHTML = JSPlayer.Utils.clearElementInnerHTML;
     const Api = window.JSPlayer.Api;
     const TracklistBrowserNotifications = JSPlayer.Notifications.TracklistBrowserNotifications;
+    const TrackListManager = JSPlayer.Tracks.TrackListManager;
 
     const LeftMenu = function() {};
     LeftMenu.prototype = {
@@ -174,13 +175,12 @@
             let target = evt.target;
             let fileName = target.textContent.trim();
             console.log('fileName', fileName);
-            let tracklist = this.player.tracklist;
             this.api.addTrack(fileName, this.baseDir + fileName, (res) => {
                 let track = new Track(res['track']),
                     id3Tags = new ID3Tags(res['ID3']);
                 track.setID3Tags(id3Tags);
                 track.setTrackDuration(id3Tags.getDuration());
-                tracklist.addTrackToList(track);
+                TrackListManager.addTrackToList(track);
                 this._fileBrowserNotifications.setAddedTrack(track, 6000);
                 this.folderBrowserEvent.trigger('onSongAdded', track, this.player.getTrackList().getTracksNumber() - 1);
             });
@@ -230,15 +230,15 @@
         },
     };
 
-    const TrackListBrowser = function(audioPlayer, grid, tracklist) {
+    const TrackListBrowser = function(audioPlayer, grid) {
         this._tracklistBrowserNotifications = TracklistBrowserNotifications;
         this.audioPlayer = audioPlayer;
         this.audioPlayer.onPlayerSongChange(this.setCurrentlyPlayingTrack.bind(this), this);
         this.grid = grid;
-        this.tracklist = tracklist;
         this.overlayDiv = document.querySelector('.cnt-overlay');
         this.isVisible = false;
-
+        TrackListManager.onAddedToQueue(this._notifyAddToQueue.bind(this));
+        TrackListManager.onRemoveTrackFromTrackList(this._notifyARemovedTrack.bind(this));
         this.overlayDiv.addEventListener('click', (evt) => {
             if (evt.target != evt.currentTarget)
                 return;
@@ -266,9 +266,9 @@
             this.isVisible = false;
         },
         playSongFromTracklist(evt) {
-            this.tracklist.getCurrentTrack().onTagChangeUnsub(this.audioPlayer);
+            TrackListManager.getCurrentTrack().onTagChangeUnsub(this.audioPlayer);
             const cell = evt.detail.HTMLItem;
-            this.tracklist.setTrackIndex(cell.getParentItem().getIndex() - 1, true);
+            TrackListManager.setTrackIndex(cell.getParentItem().getIndex() - 1, true);
         },
         showActionMenu(evt) {
             const target = evt.target;
@@ -322,16 +322,16 @@
             document.querySelectorAll('.action-menu-cnt').forEach(el => el.style.display = 'none');
         },
         addToQueueAction(divElem, trackUUid) {
-            this.tracklist.addToQueue(this.tracklist.getTrackByUUID(trackUUid));
+            TrackListManager.addToQueue(TrackListManager.getTrackByUUID(trackUUid));
             divElem.style.display = 'none';
         },
         deleteTrackAction(liDelete, divElem, trackUUid) {
             const api = new window.JSPlayer.Api();
             api.deleteTrack(trackUUid, (res) => {
                 if (res.success) {
-                    const {trackIndx, track} = this.tracklist.removeTrackFromTracklistByUUID(trackUUid);
-                    this.gridMaker.removeRowFromGrid(trackIndx);
-                    this._displayTracklistInfo();
+                    const {trackIndx, track} = TrackListManager.removeTrackFromTracklistByUUID(trackUUid);
+                    this.grid.removeRowFromGrid(trackIndx);
+                    this.grid._displayTracklistInfo();
                 } else
                     alert('Error deleting file!');
             });
@@ -350,10 +350,11 @@
         },
         scrollToCurrentTrack() {
             const currentlyPlaying = document.querySelector('div.row.currently-playing');
+            console.log({currentlyPlaying});
             if (currentlyPlaying) {
                 const scrollTo = currentlyPlaying.offsetTop - currentlyPlaying.offsetHeight;
                 setTimeout(() => {
-                    this.grid.getGrid().getParentCnt().scrollTo({
+                    this.grid.getParentCnt().scrollTo({
                         behavior: 'smooth',
                         left: 0,
                         top: scrollTo,

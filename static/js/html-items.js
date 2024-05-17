@@ -168,9 +168,11 @@
             Object.keys(style).forEach(k => this.render().style[k] = style[k]);
         },
         data(name, value) {
-            if (name && value) {      
+            const isName = typeof name !== 'undefined';
+            const isValue = typeof value !== 'undefined'
+            if (isName && isValue) {      
                 this.render().dataset[name] = value;
-            } else if (name)
+            } else if (isName)
                 return this.render().dataset[name];
             else
                 return this.render().dataset;
