@@ -1,22 +1,15 @@
 (function(window, document, JSPlayer, undefined) {
 
     const NotificationCenter = JSPlayer.NotificationCenter;
-    const Track = JSPlayer.Tracks.Track;
-    const TrackList = JSPlayer.Tracks.TrackList;
-    const ID3Tags = JSPlayer.Tracks.ID3Tags;
-    const TrackListManager = JSPlayer.Tracks.TrackListManager;
+
+    const {Track, TrackList, ID3Tags, TrackListManager} = JSPlayer.Tracks;
+
     const TracklistGrid = JSPlayer.Grids.TracklistGrid;
     const draw = JSPlayer.Vizualizer.draw;
     const AudioPlayer = JSPlayer.AudioPlayer;
     const keyCotrols = JSPlayer.EventsManager.KeyCotrols;
     const Fader = JSPlayer.Effects.Fader;
-    const LeftMenu = JSPlayer.Components.LeftMenu;
-
-
-    const FileBrowser = JSPlayer.Components.FileBrowser;
-    const FileBrowserRenderer = JSPlayer.Components.FileBrowserRenderer;
-    const Layout = JSPlayer.Components.Layout;
-    const layoutHTML = JSPlayer.Components.layoutHTML;
+    const {LeftMenu, FileBrowser, Layout, layoutHTML, FileBrowserRenderer} = JSPlayer.Components;
 
     const imgList = [];
     const mainTracklist = new TrackList();

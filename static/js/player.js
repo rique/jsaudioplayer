@@ -4,11 +4,12 @@
     const whileMousePressed = JSPlayer.Utils.whileMousePressed;
     const whileMousePressedAndMove = JSPlayer.Utils.whileMousePressedAndMove;
     const TrackListManager = JSPlayer.Tracks.TrackListManager;
+    const ProgerssBar = JSPlayer.HTMLItemsComponents.ProgerssBar;
 
     const AudioPlayer = function() {
-        //this.tracklist = tracklist;
         this.audioPlayerEvents = new ListEvents();
-    
+        this.progressBarComponent = new ProgerssBar(document.getElementById('player'));
+        this.progressBarComponent.onSeek(this.seek.bind(this), this);
         this.volumeStep = 0.02;
         this.seekStep = 5;
         this.isPaused = true;
@@ -46,9 +47,6 @@
     
         this.volumeVal = document.querySelector('span.vol-val');
     
-        this.progressBarDiv = document.getElementById('progress');
-        this.subProgressBarDiv = document.getElementById('prog-bar');
-    
         this.audioElem = new Audio();
         this.jsmediatags = window.jsmediatags;
         this._playerNotifications = PlayerNotifications;
@@ -61,27 +59,10 @@
     
             this.shuffleBtn.addEventListener('click', this.shuffle.bind(this));
     
-            this.progressBarDiv.addEventListener('mouseenter', (evt) => {
-                percentWidth = (this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv) * 100).toFixed(2);
-                this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(255, 124, 120, 0.6) ${percentWidth}%, #292929 0%)`;
-            });
-    
-            this.progressBarDiv.addEventListener('mousemove', (evt) => {
-                percentWidth = (this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv) * 100).toFixed(2);
-                this.progressBarDiv.style.background = `linear-gradient(90deg, rgba(255, 124, 120, 0.6) ${percentWidth}%, #292929 0%)`;
-            });
-    
-            this.progressBarDiv.addEventListener('mouseleave', () => {
-                this.progressBarDiv.style.background = "#181717";
-            });
-    
             this.timeTrackElem.addEventListener('click', this.changeTrackTimeDisplayMode.bind(this));
     
             whileMousePressed(this.volUpBtn, this.increasVolume.bind(this), 84);
             whileMousePressed(this.volDownBtn, this.decreasVolume.bind(this), 84);
-    
-            whileMousePressedAndMove(this.progressBarDiv, this.seek.bind(this));
-            whileMousePressedAndMove(this.subProgressBarDiv, this.seek.bind(this));
             whileMousePressedAndMove(this.mainVolumeBarElem, this.changeVolume.bind(this));
             whileMousePressedAndMove(this.volumeBarElem, this.changeVolume.bind(this));
     
@@ -92,13 +73,8 @@
     
             this._setRepeatBtnStyle();
         },
-        seek(evt, mouseUp) {
-            percentWidth = this._getPercentageWidthFromMousePosition(evt.clientX, this.progressBarDiv);
-            this.disableProgress = mouseUp;
-    
-            if (!mouseUp)
-                this.setCurrentTime(TrackListManager.getCurrentTrack().trackDuration * percentWidth);
-            this._updateProgressBar(percentWidth  * 100, this.progressBar.bind(this, this.audioElem));
+        seek(percentWidth) {
+            this.setCurrentTime(TrackListManager.getCurrentTrack().trackDuration * percentWidth);
         },
         changeVolume(evt, mouseUp) {
             if (!mouseUp)
@@ -115,6 +91,7 @@
                 this.displayTrackTimeMode = 0;
             else
                 ++this.displayTrackTimeMode;
+            this.updateTrackTime();
         },
         setTrackList(tracklist) {
             TrackListManager.setTracklist(tracklist);
@@ -189,7 +166,6 @@
             this._setRepeatBtnStyle();
         },
         setCurrentTime(timeInSec) {
-            console.log('timeInSec', {timeInSec});
             if (timeInSec < 0)
                 timeInSec = 0;
             else if (timeInSec > this.currentTrack.getTrackDuration())
@@ -262,16 +238,7 @@
             this.timeTrackElem.innerText = ` - [${formatedTrackTime}]`;
         },
         audioLoaded(evt) {
-            this.progressBar(evt.target);
-        },
-        progressBar(audioELem) {
-            let currentTime = audioELem.currentTime,
-                totalTime = audioELem.duration;
-            this.updateTrackTime();
-            if (totalTime >= currentTime && !this.disableProgress) {
-                let percentProg = (currentTime / totalTime) * 100;
-                this._updateProgressBar(percentProg.toFixed(2), this.progressBar.bind(this, audioELem));
-            }
+            this.progressBarComponent.progress(evt.target.currentTime, evt.target.duration);
         },
         audioEnded() {
             let autoPlay;
@@ -280,7 +247,6 @@
             if (TrackListManager.isLastTrack()) {
                 if (!this.repeatMode >= 1) {
                     console.log('End of session');
-                    //this.tracklist.nextTrack();
                     autoPlay = false;
                 } else {
                     autoPlay = true;
@@ -320,10 +286,12 @@
     
                 TrackListManager.getCurrentTrack().setCurrentTime(target.currentTime);
                 
+                this.updateTrackTime();
                 if (this._checkForNextTrack(currentTime, duration) && !this._comingNextFired) {
                     this._fireNotification();
                     this._comingNextFired = true;
                 }
+                this.progressBarComponent.progress(currentTime, duration);
             };
         },
         _checkForNextTrack(currentTime, duration) {
@@ -436,15 +404,6 @@
     
             requestAnimationFrame(() => {
                 this.volumeBarElem.style.width = `${toHundredVolume}%`;
-            });
-        },
-        _updateProgressBar(progress, cb) {
-            requestAnimationFrame(() => {
-                if (progress > 100)
-                    progress = 100;
-                this.subProgressBarDiv.style.width = `${progress}%`;
-                if (typeof cb === 'function')
-                    cb();
             });
         },
         _getPercentageWidthFromMousePosition(clientX, element, margin) {

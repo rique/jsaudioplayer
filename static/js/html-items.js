@@ -26,6 +26,7 @@
     const HTMLItems = function(elementName) {
         this.element = document.createElement(elementName);
         this.events = {};
+        this.eventsHandler = {};
     };
     HTMLItems.prototype = {
         render(getReal) {
@@ -40,15 +41,24 @@
         getParent() {
             return this.element.parentElement;
         },
+        offsetParent() {
+            return this.render().offsetParent;
+        },
         setParentItem(htmlItem) {
             this.parentItem = htmlItem;
         },
         getParentItem() {
             return this.parentItem;
         },
+        id(id) {
+            if (!id) {
+                return this.render().id;
+            }
+            this.render().id = id;
+        },
         width(width, unit) {
             if (typeof width === 'number')
-                this.render().style.width = `${width}${unit}`;
+                this.css({width:`${width}${unit}`});
             else
                 return this.render().style.width;
         },
@@ -181,13 +191,30 @@
             htmlItem.render().insertAdjacentElement('afterend', this.render());
         },
         addEventListener(evtName, cb) {
-            this.render().addEventListener(evtName, cb);
+            if (!this.eventsHandler.hasOwnProperty(evtName)) {
+                this.eventsHandler[evtName] = [];
+            }
+            //const idx = this.eventsHandler[evtName].findIndex(evts => evts.evtName == evtName && evts.node == this);
+            this.eventsHandler[evtName].push({
+                node: this, evtName, cb
+            });
+
+            this.render().addEventListener(evtName, cb, false);
+        },
+        removeEventListener(evtName, cb) {
+            this.render().removeEventListener(evtName, cb);
+        },
+        clearAllEvents() {
+            Object.keys(this.eventsHandler)
+                .forEach(key => this.eventsHandler[key]
+                    .filter(evts => evts.node == this)
+                    .forEach(evts => this.removeEventListener({evts})));
         },
         createCustomEvent(evtName, options) {
             if (this.events.hasOwnProperty(evtName))
                 return console.error(`Event ${evtName} already set`);
 
-            options = options || {detail: {HTMLItem: this}};
+            options = options || {detail: {HTMLItem: this}, bubbles:false};
             
             this.events[evtName] = new CustomEvent(evtName, options);
         },

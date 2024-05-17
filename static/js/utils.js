@@ -213,54 +213,54 @@
         return loremText;
     }
 
-        const getFormatedDate = () => {
-            const DateTime = luxon.DateTime;
-            const d = DateTime.now().setZone('Europe/Paris');
-            return d.setLocale('es').toLocaleString(DateTime.TIME_WITH_SECONDS);
+    const getFormatedDate = () => {
+        const DateTime = luxon.DateTime;
+        const d = DateTime.now().setZone('Europe/Paris');
+        return d.setLocale('es').toLocaleString(DateTime.TIME_WITH_SECONDS);
+    }
+    
+    
+    const uuidv4 = () => {
+        return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+        (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+        );
+    };
+
+    const readCookie = function (name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
         }
-        
-        
-        const uuidv4 = () => {
-            return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
-            (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
-            );
-        };
+        return null;
+    };
+    
+    const blob2Uint8Array = (blob) => {
+        return new Response(blob).arrayBuffer().then(buffer=> {
+            return [...new Uint8Array(buffer)];
+        });
+    };
+    
+    
+    const clearElementInnerHTML = (element) => {
+        while(element.firstChild)
+            element.removeChild(element.firstChild);
+    };
 
-        const readCookie = function (name) {
-            var nameEQ = name + "=";
-            var ca = document.cookie.split(';');
-            for (let i = 0; i < ca.length; i++) {
-                let c = ca[i];
-                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+    const getLastParent = (elem, depth) => {
+        let counter = 0;
+        while(elem.parentElement && elem.parentElement != document.body) {
+            elem = elem.parentElement;
+
+            if (typeof depth === 'number' && depth > counter) {
+                break;
             }
-            return null;
-        };
-        
-        const blob2Uint8Array = (blob) => {
-            return new Response(blob).arrayBuffer().then(buffer=> {
-                return [...new Uint8Array(buffer)];
-            });
-        };
-        
-        
-        const clearElementInnerHTML = (element) => {
-            while(element.firstChild)
-                element.removeChild(element.firstChild);
-        };
+            ++counter;
+        }
 
-        const getLastParent = (elem, depth) => {
-            let counter = 0;
-            while(elem.parentElement && elem.parentElement != document.body) {
-                elem = elem.parentElement;
-
-                if (typeof depth === 'number' && depth > counter) {
-                    break;
-                }
-                ++counter;
-            }
-
-            return elem;
+        return elem;
     }
     
     const whileMousePressedAndMove = (element, cb, doMouseout) => {    
@@ -331,6 +331,16 @@
         return Math.floor(randomNumber * (max - min + 1)) + min;
     }
 
+    const getPercentageWidthFromMousePosition = (clientX, htmlItem, margin) => {
+        if (typeof margin === 'undefined')
+            margin = 0;
+        
+        let widthPixel = (clientX - margin) - (htmlItem.offsetLeft() + htmlItem.offsetParent().offsetLeft),
+            totalWidth = htmlItem.offsetWidth();
+        
+        return widthPixel / totalWidth;
+    }
+
     window.JSPlayer.Utils = {
         readCookie, 
         blob2Uint8Array, 
@@ -341,7 +351,8 @@
         getLastParent,
         whileMousePressedAndMove,
         whileMousePressed,
-        getRandomInt
+        getRandomInt,
+        getPercentageWidthFromMousePosition
     };
 
 })(this, document);

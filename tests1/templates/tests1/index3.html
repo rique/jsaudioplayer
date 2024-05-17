@@ -4,6 +4,7 @@
 <link href="/static/node_modules/@fortawesome/fontawesome-free/css/all.css" rel="stylesheet">
 <link href="/static/css/player.css" rel="stylesheet">
 <link href="/static/css/grid.css" rel="stylesheet">
+<link href="/static/css/progressbar.css" rel="stylesheet">
 {% endblock %}
 {% block content %}
 <div id="content">
@@ -57,9 +58,6 @@
       </div>
     </div>
     
-    <div id="progress">
-      <div id="prog-bar"></div>
-    </div>
     <!--<canvas id="vu-meters"></canvas>-->
     <div id="main-left-menu">
       <div id="open-menu" style="vertical-align: top;" class="inline-block">
@@ -84,6 +82,9 @@
         </div>
       </div>
     </div>
+    <!--<div id="progress">
+      <div id="prog-bar"></div>
+    </div>-->
   </div>
 </div>
 <div style="display: none;" id="volume-display">
@@ -123,6 +124,7 @@
 <script type="text/javascript" src="/static/js/tracks.js"></script>
 <script type="text/javascript" src="/static/js/dragdrop.js"></script>
 <script type="text/javascript" src="/static/js/html-items.js"></script>
+<script type="text/javascript" src="/static/js/html-items-components.js"></script>
 <script type="text/javascript" src="/static/js/effects.js"></script>
 <script type="text/javascript" src="/static/js/visualizer.js"></script>
 <script type="text/javascript" src="/static/js/notifications-center.js"></script>

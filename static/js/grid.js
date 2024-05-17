@@ -467,8 +467,8 @@
             this.render();
         },
         addTrackToGrid({track, index}) {
-            const row = this._getCellsFromTrack(track, index);
-            this.gridMaker.makeRowIdx(row, false, false, parseInt(index) + 1);
+            const rowConfig = this._getRowConfigFromTrack(track, index);
+            this.gridMaker.makeRowIdx(rowConfig, false, false, parseInt(index) + 1);
         },
         removeRowFromGrid(rowIdx) {
             this.gridMaker.removeRowFromGrid(rowIdx);
@@ -500,12 +500,10 @@
             this.gridMaker.close();
         },
         getRowByIndex(index) {
-            console.log('getRowByIndex', index);
             return this.gridMaker.getRowByIndex(index);
         },
         _restoreGrid() {
             this.getGrid().clearSearch();
-            this.render();
             this.queuelistGrid.render();
         },
         _buildHeaders() {
@@ -560,7 +558,7 @@
 
             this.gridMaker.makeRowIdx(head, false, true, 0);
         },
-        _getCellsFromTrack(track, index) {
+        _getRowConfigFromTrack(track, index) {
             return [{
                 content: parseInt(index) + 1,
                 width: 5,
@@ -631,9 +629,10 @@
                     evt.detail.HTMLItem.innerContent('Drop!!');
                 },
                 onDropped: (evt) => {
-                    console.log('onDropped!!', {draggedStartIndx: this.draggedStartIndx, draggedEndIndx: this.draggedEndIndx});
+                    evt.stopImmediatePropagation();
                     const htmlItem = evt.detail.HTMLItem;
                     this.draggedEndIndx = htmlItem.getParentItem().getIndex();
+                    console.log('onDropped!!', {htmlItem, draggedStartIndx: this.draggedStartIndx, draggedEndIndx: this.draggedEndIndx});
                     TrackListManager.switchTrackIndex(this.draggedStartIndx - 1, this.draggedEndIndx - 1);
                     //this.queuelistGrid.setSiblingRow(htmlItem.getParentItem());
                     this.queuelistGrid.render();
