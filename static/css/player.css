@@ -524,6 +524,7 @@ li.fa-solid.fa-file {
     position: absolute;
     right: -358px;/*right: -14.2%;*/
     top: 0;
+    z-index: 50;
 }
 
 #open-menu {

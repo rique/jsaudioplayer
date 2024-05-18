@@ -4,12 +4,11 @@
     const whileMousePressed = JSPlayer.Utils.whileMousePressed;
     const whileMousePressedAndMove = JSPlayer.Utils.whileMousePressedAndMove;
     const TrackListManager = JSPlayer.Tracks.TrackListManager;
-    const ProgerssBar = JSPlayer.HTMLItemsComponents.ProgerssBar;
+    const {ProgerssBar, AudioPlayerProgressBar} = JSPlayer.HTMLItemsComponents;
 
     const AudioPlayer = function() {
         this.audioPlayerEvents = new ListEvents();
-        this.progressBarComponent = new ProgerssBar(document.getElementById('player'));
-        this.progressBarComponent.onSeek(this.seek.bind(this), this);
+        this.audioPlayerProgressBar = new AudioPlayerProgressBar(this);
         this.volumeStep = 0.02;
         this.seekStep = 5;
         this.isPaused = true;
@@ -72,9 +71,6 @@
             });
     
             this._setRepeatBtnStyle();
-        },
-        seek(percentWidth) {
-            this.setCurrentTime(TrackListManager.getCurrentTrack().trackDuration * percentWidth);
         },
         changeVolume(evt, mouseUp) {
             if (!mouseUp)
@@ -176,6 +172,9 @@
         getCurrentTime() {
             return this.audioElem.currentTime;
         },
+        getDuration() {
+            return this.audioElem.duration;
+        },
         setVolume(volume) {
             if (volume > 1)
                 volume = 1;
@@ -237,8 +236,8 @@
             
             this.timeTrackElem.innerText = ` - [${formatedTrackTime}]`;
         },
-        audioLoaded(evt) {
-            this.progressBarComponent.progress(evt.target.currentTime, evt.target.duration);
+        audioLoaded() {
+            this.audioPlayerProgressBar.progress();
         },
         audioEnded() {
             let autoPlay;
@@ -268,7 +267,6 @@
             this.setCurrentTrackFromTrackList(autoPlay);
         },
         onAudioEnded(cb, subscriber) {
-            console.log('onAudioEnded', {cb, subscriber});
             this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onAudioEnded');
         },
         loadID3Tags(track) {
@@ -291,7 +289,6 @@
                     this._fireNotification();
                     this._comingNextFired = true;
                 }
-                this.progressBarComponent.progress(currentTime, duration);
             };
         },
         _checkForNextTrack(currentTime, duration) {

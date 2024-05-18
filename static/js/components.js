@@ -1,13 +1,10 @@
 (function(window, document, JSPlayer, undefined) {
 
     const ListEvents = JSPlayer.EventsManager.ListEvents;
-    const Track = JSPlayer.Tracks.Track;
-    const ID3Tags = JSPlayer.Tracks.ID3Tags;
-    const FileBrowserNotifications = JSPlayer.Notifications.FileBrowserNotifications;
+    const {Track, ID3Tags, TrackListManager} = JSPlayer.Tracks;
+    const {FileBrowserNotifications, TracklistBrowserNotifications} = JSPlayer.Notifications;
     const clearElementInnerHTML = JSPlayer.Utils.clearElementInnerHTML;
     const Api = window.JSPlayer.Api;
-    const TracklistBrowserNotifications = JSPlayer.Notifications.TracklistBrowserNotifications;
-    const TrackListManager = JSPlayer.Tracks.TrackListManager;
 
     const LeftMenu = function() {};
     LeftMenu.prototype = {

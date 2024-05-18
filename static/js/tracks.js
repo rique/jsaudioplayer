@@ -574,7 +574,6 @@
                     this.queueDepleted = false;
                 }
             }
-            console.log({thistrackIdx: this.trackIdx})
             return {track: this.currentTrack, trackIdx};
         },
         getPreviousTrack() {

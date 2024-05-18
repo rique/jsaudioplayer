@@ -96,7 +96,6 @@
             return this.rows;
         },
         getRowByIndex(index) {
-            console.log("getRowByIndex", this.rows);
             return this.rows[index];
         },
         setHead(row) {
@@ -465,6 +464,7 @@
         appendTrackToGrid(track, index) {
             this.addTrackToGrid({track, index});
             this.render();
+            this.queuelistGrid.render();
         },
         addTrackToGrid({track, index}) {
             const rowConfig = this._getRowConfigFromTrack(track, index);
