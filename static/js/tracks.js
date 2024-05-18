@@ -476,7 +476,7 @@
             this.searchElemCnt = document.querySelector('.tracklist-head .tracklist-search .input-cnt');
             this.searchInputElem = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
             this.magGlassElem.addEventListener('click', this._toggleInputSearchVisibility.bind(this));
-            this.searchInputElem.addEventListener('blur', this._closeSearch.bind(this));
+            //this.searchInputElem.addEventListener('blur', this._closeSearch.bind(this));
             this.searchElemCnt.addEventListener('keyup', this.search.bind(this));
         },
         setTrackList(trackList) {
@@ -541,9 +541,6 @@
             this.tracklist.resetTrackListIndex();
             this.trackIdx = -1;
             this.currentTrack = this.tracklist.getCurrentTrack();
-        },
-        log() {
-            console.log('tracklist', this.tracklist);
         },
         getTrackList() {
             return this.tracklist;
@@ -614,8 +611,9 @@
         getCurrentTrack() {
             return this.currentTrack;
         },
-        getCurrentTrackIndex() {
-            if (this.tracksInQueue.length > 0 && this.queueDepleted)
+        getCurrentTrackIndex(forceDefaultTracklist) {
+            console.log({len: this.tracksInQueue.length, queueDepleted: this.queueDepleted, trackIdx: this.trackIdx})
+            if (!forceDefaultTracklist && (this.tracksInQueue.length > 0 || this.queueDepleted))
                 return 0;
             return this.trackIdx;
         },

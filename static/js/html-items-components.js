@@ -46,6 +46,15 @@
             whileMousePressedAndMove(this.mainDiv.render(), this.seek.bind(this));
             whileMousePressedAndMove(this.subDiv.render(), this.seek.bind(this));
         },
+        seek(evt, mouseDown) {
+            percentWidth = getPercentageWidthFromMousePosition(evt.clientX, this.mainDiv);
+            this.disableProgress = mouseDown;
+            this._updateProgressBar(percentWidth  * 100);
+            this.listEvents.trigger('onSeek', percentWidth, mouseDown);
+        },
+        onSeek(cb, subscriber) {
+            this.listEvents.onEventRegister({cb, subscriber}, 'onSeek');
+        },
         progress(current, total, cb) {
             if (current > total || this.disableProgress)
                 return false;
@@ -62,15 +71,6 @@
                     cb();
             });
         },
-        seek(evt, mouseDown) {
-            percentWidth = getPercentageWidthFromMousePosition(evt.clientX, this.mainDiv);
-            this.disableProgress = mouseDown;
-            this._updateProgressBar(percentWidth  * 100);
-            this.listEvents.trigger('onSeek', percentWidth, mouseDown);
-        },
-        onSeek(cb, subscriber) {
-            this.listEvents.onEventRegister({cb, subscriber}, 'onSeek');
-        }
     };
 
     const AudioPlayerProgressBar = function(audioPlayer) {

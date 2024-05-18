@@ -338,6 +338,7 @@
             console.log('not implemented :|', trackUUid);
         },
         setCurrentlyPlayingTrack(track, index) {
+            console.log({track, index});
             const row = this.grid.getRowByIndex(index);
             this.clearAllCurrentlyPlaying();
             row.classAdd("currently-playing");

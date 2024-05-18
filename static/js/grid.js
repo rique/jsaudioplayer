@@ -1,16 +1,12 @@
 (function(window, document, JSPlayer, undefined) {
 
-    const clearElementInnerHTML = JSPlayer.Utils.clearElementInnerHTML;
-    const Cell = JSPlayer.HTMLItems.Cell;
-    const SortableCell = JSPlayer.HTMLItems.SortableCell;
-    const Row = JSPlayer.HTMLItems.Row;
-    const SortableRow = JSPlayer.HTMLItems.SortableRow;
+    const {clearElementInnerHTML} = JSPlayer.Utils;
+    const {Cell, SortableCell, Row, SortableRow, HTMLItems} = JSPlayer.HTMLItems;
     const ListEvents = JSPlayer.EventsManager.ListEvents;
     const DragitManager = JSPlayer.DragitManager;
     const TrackEditor = JSPlayer.Tracks.TrackEditor;
     const TrackSearch = JSPlayer.Tracks.TrackSearch;
     const TrackListBrowser = JSPlayer.Components.TrackListBrowser;
-    const HTMLItems = JSPlayer.HTMLItems.HTMLItems;
     const TrackListManager = JSPlayer.Tracks.TrackListManager;
 
     const BaseColumn = function() {
@@ -141,7 +137,8 @@
         clearSearch() {
             this.filteredRows = [];
             this.eventsList.trigger('onSearchResult');
-            this.render();
+            //this.render();
+            return this;
         },
         onSearchResult(cb, subscriber) {
             this.eventsList.onEventRegister({cb, subscriber}, 'onSearchResult');
@@ -155,7 +152,7 @@
             
             if (this.filteredRows && this.filteredRows.length > 0)
                 rows = this.filteredRows;
-
+            console.log('render', {rows, len: rows.length})
             rows.forEach(row => this.parentCnt.append(row.render()));
         },
         _doSearch(row, term) {
@@ -397,6 +394,13 @@
             if (this.isDraggable())
                 this._setDraggableGrid();
         },
+        reload() {
+            if (this.isDraggable()) {
+                this._unsetDraggableGrid();
+                //this._setDraggableGrid();
+            }
+            this.render();
+        },
         open() {
             this.grid.open();
         },
@@ -457,8 +461,8 @@
                 this.gridMaker.clearRows();
                 this.buildGrid();
                 this.render();
-                this.queuelistGrid.render();
-                this._trackListBrowser.setCurrentlyPlayingTrack(undefined, 0);    
+                this._trackListBrowser.setCurrentlyPlayingTrack(undefined, 0);
+                this.queuelistGrid.render(); 
             }, this);
         },
         appendTrackToGrid(track, index) {
@@ -491,6 +495,10 @@
             this.gridMaker.render();
             this._displayTracklistInfo();
         },
+        reload() {
+            this.gridMaker.reload();
+            this._displayTracklistInfo();
+        },
         open() {
             this._trackListBrowser.show();
             this.gridMaker.open();
@@ -502,9 +510,12 @@
         getRowByIndex(index) {
             return this.gridMaker.getRowByIndex(index);
         },
-        _restoreGrid() {
-            this.getGrid().clearSearch();
-            this.queuelistGrid.render();
+        _restoreGrid(isVisible) {
+            if (!isVisible) {
+                this.reload();
+                this.queuelistGrid.render();
+                this._trackListBrowser.setCurrentlyPlayingTrack(TrackListManager.getCurrentTrack(), TrackListManager.getCurrentTrackIndex());
+            }
         },
         _buildHeaders() {
             const head = [{
@@ -690,8 +701,10 @@
             return this.gridMaker.getRowByIndex(index);
         },
         updateQueue(track, queueLength) {
-            if (!this.hasQueue && queueLength > 0)
+            if (!this.hasQueue && queueLength > 0) {
                 this.hasQueue = true;
+            }
+                
 
             this.gridMaker.clearRows();
             if (this.isQueuePlaying) {
@@ -725,12 +738,6 @@
                 return;
             }
 
-            /*const currIdx = TrackListManager.getCurrentTrackIndex();
-            if (currIdx < 0) {
-                this.itemHtml.remove();
-                return;
-            }*/
-
             const row = this._setSiblingRow();
             if (!row) {
                 this.itemHtml.remove();
@@ -738,22 +745,23 @@
                 return;
             }
 
-            //this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
             this.itemHtml.show();
             row.render().insertAdjacentElement('afterend', this.itemHtml.render());
             this.gridMaker.render();
         },
         _setSiblingRow() {
+            console.log({siblingRow: this.siblingRow});
             if (this.siblingRow)
                 return this.siblingRow;
 
-            const currIdx = TrackListManager.getCurrentTrackIndex();
+            const currIdx = TrackListManager.getCurrentTrackIndex(!this.isQueuePlaying);
+            //console.log({currIdx});
             if (currIdx < 0) {
                 currIdx = 0;
             }
-
+            console.log({currIdx});
             this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
-            
+            console.log({siblingRow: this.siblingRow});
             return this.siblingRow;
         },
         addTrackToGrid({track, index}) {

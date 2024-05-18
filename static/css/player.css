@@ -111,14 +111,14 @@ ul {
     display: none;
     position: absolute;
     background: #181717;
-    top: 9px;
-    left: 31px;
+    top: 31px;
+    left: 7px;
     text-align: center;
     font-size: 5px;
     color: #bf1616;
     font-weight: bold;
     height: 16px;
-    filter: drop-shadow(0 0 8px rgba(14, 14, 14, 1));
+    filter: drop-shadow(0 0 2px rgba(6, 14, 14, 0.2));
 }
 
 #vu-meters {
