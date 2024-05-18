@@ -31,20 +31,20 @@
         this.mainDiv = new HTMLItems('div');
         this.subDiv = new HTMLItems('div');
         
-        this.mainDiv.append(this.subDiv);
-        parentCnt.append(this.mainDiv.render());
-        
-        whileMousePressedAndMove(this.mainDiv.render(), this.seek.bind(this));
-        whileMousePressedAndMove(this.subDiv.render(), this.seek.bind(this));
-
-        this.setUp();
+        this.setUp(parentCnt);
     };
     ProgerssBar.prototype = {
-        setUp() {
+        setUp(parentCnt) {
             this.mainDiv.id('progress');
             this.subDiv.id('prog-bar');
+            this.mainDiv.append(this.subDiv);
+            
+            parentCnt.append(this.mainDiv.render());
             const hoverEffect = new HoverEffect(this.mainDiv);
             hoverEffect.setUp();
+
+            whileMousePressedAndMove(this.mainDiv.render(), this.seek.bind(this));
+            whileMousePressedAndMove(this.subDiv.render(), this.seek.bind(this));
         },
         progress(current, total, cb) {
             if (current > total || this.disableProgress)
