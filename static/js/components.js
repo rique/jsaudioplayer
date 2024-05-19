@@ -259,7 +259,8 @@
             this.isVisible = false;
         },
         playSongFromTracklist(evt) {
-            TrackListManager.getCurrentTrack().onTagChangeUnsub(this.audioPlayer);
+            const {track} = TrackListManager.getCurrentTrack();
+            track.onTagChangeUnsub(this.audioPlayer);
             const cell = evt.detail.HTMLItem;
             TrackListManager.setTrackIndex(cell.getParentItem().getIndex() - 1, true);
         },
@@ -335,6 +336,7 @@
         },
         setCurrentlyPlayingTrack(track, index) {
             const row = this.grid.getRowByIndex(index);
+            console.log('setCurrentlyPlayingTrack', {track, index, row});
             this.clearAllCurrentlyPlaying();
             row.classAdd("currently-playing");
             row.scrollTo(this.grid.getGrid().getParentCnt());

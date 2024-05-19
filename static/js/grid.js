@@ -737,6 +737,7 @@
             }
 
             const row = this._setSiblingRow();
+            console.log('render', {row});
             if (!row) {
                 this.itemHtml.remove();
                 console.error('NO ROW FOUND! REMOVING QUEUE GRID');
@@ -748,16 +749,18 @@
             this.gridMaker.render();
         },
         _setSiblingRow() {
+            console.log({siblingRow: this.siblingRow})
             if (this.siblingRow)
                 return this.siblingRow;
 
             const currIdx = TrackListManager.getCurrentTrackIndex(!this.isQueuePlaying);
-
+            console.log({currIdx})
             if (currIdx < 0) {
                 currIdx = 0;
             }
 
             this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
+            console.log({siblingRow: this.siblingRow})
             return this.siblingRow;
         },
         addTrackToGrid({track, index}) {

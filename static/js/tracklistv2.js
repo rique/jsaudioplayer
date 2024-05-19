@@ -2,7 +2,6 @@
 
     const {ListEvents} = JSPlayer.EventsManager;
     const {shuffle} = JSPlayer.Utils;
-    //const api = new JSPlayer.Api();
 
     const IndexList = function() {
         this.index = -1;
@@ -102,11 +101,15 @@
         addToQueue(item) {
             this.indexList.addItem(item);
         },
+        getCurrentItem() {
+            return this.currentItem;
+        },
         removeFromQueue(index) {
             return this.indexList.removeItemByIndex(index);
         },
         nexInQueue() {
-            return this.indexList.removeItemByIndex(0);
+            this.currentItem = this.indexList.removeItemByIndex(0);
+            return this.currentItem;
         },
         getByIndex(index) {
             return this.indexList.getItemByIndex(index);
@@ -193,10 +196,12 @@
         switchTrackIndex(oldIndex, newIndex) {
             const tracklist = this.getItems();
             const trackIndex = this.index;
-            let theTrack1 = tracklist[oldIndex], theTrack2 = tracklist[newIndex];
-            console.log({newIndex, oldIndex, theTrack1, theTrack2});
+            const trackItem = tracklist.splice(oldIndex, 1)[0];
+            const trackReplace = tracklist[newIndex];
+
+            console.log({newIndex, oldIndex, trackItem, trackReplace});
             console.log('----------------------------------------------------------------------------');
-            console.log('switchTrackIndex1', {trackIndex, oldIndex, newIndex});
+            console.log('switchTrackIndex1', {trackIndex, oldIndex, newIndex, trackItem, trackReplace});
             if (oldIndex == this.index)
                 this.index = newIndex;
             else if (newIndex == this.index)
@@ -208,11 +213,10 @@
             }
             console.log('switchTrackIndex2', {trackIndexResult: this.index});
             console.log('----------------------------------------------------------------------------');
-
-            this.swapItem(theTrack1, theTrack2);
-            theTrack1 = tracklist[oldIndex];
-            theTrack2 = tracklist[newIndex];
-            console.log({newIndex, oldIndex, theTrack1, theTrack2});
+            tracklist.splice(newIndex, 0, trackItem);
+            //this.swapItem(theTrack1, theTrack2);
+            this._reorganizeIndexes();
+            console.log({newIndex, oldIndex, trackItem, trackReplace});
         },
         setTrackListTotalDuration(duration) {
             this.tracklistTotalDuration = duration;
@@ -236,6 +240,11 @@
                 mins = parseInt((secTime % 3600) / 60).toString();
             }
             return `${houres.padStart(2, '0')}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')}`
+        },
+        _reorganizeIndexes() {
+            for (let i = 0; i < this.items.length; ++i) {
+                this.items[i].index = i;
+            }
         }
     };
 
@@ -333,24 +342,36 @@
                 track.setIndex(index);
                 return {track, index};
             });
+            console.log({shuffledItems});
             this._isShuffle = true;
             this.shuffledTracklist.setItems(shuffledItems);
         },
         getNextTrackInList() {
             let track = this.queueList.getByIndex(0);
-            if (!track)
-                track = this.tracklist.readNextTrack();
+            if (!track) {
+                if (this.isShuffle())
+                    track = this.shuffledTracklist.readNextTrack();
+                else
+                    track = this.tracklist.readNextTrack();
+            }
             return track;
         },
         isLastTrack() {
             return this.tracklist.isLastTrack() && !this.queueList.hasQueue();
         },
         getCurrentTrack() {
+            const queueItem = this.queueList.getCurrentItem();
+            if ((this.queueList.hasQueue() || this.queueDepleted) && queueItem)
+                return queueItem;
+            if (this.isShuffle())
+                return this.shuffledTracklist.current();
             return this.tracklist.current();
         },
         getCurrentTrackIndex(forceDefaultTracklist) {
             if (!forceDefaultTracklist && (this.queueList.hasQueue() || this.queueDepleted))
                 return 0;
+            if (this.isShuffle())
+                return this.shuffledTracklist.getIndex();
             return this.tracklist.getIndex();
         },
         addTrackToList(track) {
@@ -364,9 +385,14 @@
             this.doRepeatTrack = true;
         },
         switchTrackIndex(oldIdx, newIdx) {
-            this.tracklist.switchTrackIndex(oldIdx, newIdx);
             console.log('----------------------------------------------------------------------------');
-            console.log({trackIdx: this.tracklist.getIndex()});
+            if (this.isShuffle()) {
+                this.shuffledTracklist.switchTrackIndex(oldIdx, newIdx);
+                console.log({trackIdxShuffle: this.shuffledTracklist.getIndex()});
+            } else {
+                this.tracklist.switchTrackIndex(oldIdx, newIdx);
+                console.log({trackIdx: this.tracklist.getIndex()});
+            }
         },
         isShuffle() {
             return this._isShuffle;
@@ -389,8 +415,14 @@
             }
         },
         setTrackIndex(newIdx, doSetCurTrack) {
-            const oldIdx = this.tracklist.getIndex();
-            this.tracklist.setTrackIndex(newIdx);
+            let oldIdx;
+            if (this.isShuffle()) {
+                oldIdx = this.shuffledTracklist.getIndex();
+                this.shuffledTracklist.setTrackIndex(newIdx - 1);
+            } else {
+                oldIdx = this.tracklist.getIndex();
+                this.tracklist.setTrackIndex(newIdx - 1);
+            }
             this.trackListEvents.trigger('onTrackManagerIndexChange', oldIdx, newIdx);
         },
         getTracksNumber() {

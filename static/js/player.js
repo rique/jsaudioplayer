@@ -306,7 +306,8 @@
         _getNextTrackInList() {
             if (this.repeatMode == 2)
                 return this.currentTrack;
-            return TrackListManager.getNextTrackInList();
+            const {track} = TrackListManager.getNextTrackInList();
+            return track;
         },
         _setUpPlayerControls() {
             this.playBtn.addEventListener('click', (evt) => {
