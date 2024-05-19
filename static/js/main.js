@@ -2,7 +2,7 @@
 
     const NotificationCenter = JSPlayer.NotificationCenter;
 
-    const {Track, TrackList, ID3Tags} = JSPlayer.Tracks;
+    const {Track, ID3Tags} = JSPlayer.Tracks;
     const {TrackListManager} = JSPlayer.TrackListV2;
     const TracklistGrid = JSPlayer.Grids.TracklistGrid;
     const draw = JSPlayer.Vizualizer.draw;
@@ -12,12 +12,9 @@
     const {LeftMenu, FileBrowser, Layout, layoutHTML, FileBrowserRenderer} = JSPlayer.Components;
 
     const imgList = [];
-    const mainTracklist = new TrackList();
     const audioPlayer = new AudioPlayer();
     const api = new JSPlayer.Api();
     
-    //TrackListManager.setTracklist(mainTracklist);
-
     const tracklistGrid = new TracklistGrid('#table-content', audioPlayer);
 
     const leftMenu = new LeftMenu();
@@ -33,7 +30,7 @@
         draw(audioPlayer, imgList);
     });
 
-    api.loadTrackList(function(res) {
+    api.loadTrackList((res) => {
         audioPlayer.init();
         
         for (let i in res['tracklist']) {
