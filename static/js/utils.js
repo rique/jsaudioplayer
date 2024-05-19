@@ -245,7 +245,6 @@
     
     
     const clearElementInnerHTML = (element) => {
-        console.log('clearElement', {element});
         while(element.firstChild)
             element.removeChild(element.firstChild);
     };
@@ -342,6 +341,20 @@
         return widthPixel / totalWidth;
     }
 
+    const shuffle = (list, index) => {
+        let item;
+        if (!isNaN(index))
+            item = list.splice(index, 1)[0];
+        for (let i = list.length - 1; i > 0; i--) {
+            let j = Math.floor(getRandomInt(0, i + 1));
+            //let j = Math.floor(Math.random() * (i + 1));
+            [list[i], list[j]] = [list[j], list[i]];
+        }
+        if (item)
+            list.splice(0, 0, item);
+        return list;
+    }
+    
     window.JSPlayer.Utils = {
         readCookie, 
         blob2Uint8Array, 
@@ -353,7 +366,8 @@
         whileMousePressedAndMove,
         whileMousePressed,
         getRandomInt,
-        getPercentageWidthFromMousePosition
+        getPercentageWidthFromMousePosition,
+        shuffle
     };
 
 })(this, document);

@@ -1,8 +1,8 @@
 (function(window, document, JSPlayer, undefined) {
-    const ListEvents = JSPlayer.EventsManager.ListEvents;
+    const {ListEvents, keyCotrols} = JSPlayer.EventsManager;
     const getRandomInt = JSPlayer.Utils.getRandomInt;
-    const keyCotrols = JSPlayer.EventsManager.KeyCotrols;
     const api = new JSPlayer.Api();
+    const {TrackListManager} = JSPlayer.TrackListV2;
 
     const ID3Tags = function(tags) {
         this.tags = tags;
@@ -65,10 +65,17 @@
         this.currentTime = 0;
         this.isPlaying = false;
         this._eventTrack = new ListEvents();
+        this.index = 0;
     };
     Track.prototype = {
         setTrackDuration(duration) {
             this.trackDuration = duration;
+        },
+        setIndex(index) {
+            this.index = index;
+        },
+        getIndex() {
+            return this.index;
         },
         getTrackDuration(formated) {
             if (formated)
@@ -396,14 +403,12 @@
                 ++this.trackIndex;
             else
                 this.trackIndex = 0;
-            console.log('INDEX ADVANCE', this.trackIndex, this.trackIndexMax);
         },
         _regressTrackIndex() {
             if (this.trackIndex > 0)
                 --this.trackIndex;
             else
                 this.trackIndex = this.trackIndexMax;
-            console.log('INDEX REGRESS', this.trackIndex, this.trackIndexMax);
         },
         _shuffle(tracklist, trackIndex) {
             let track;
@@ -447,7 +452,7 @@
             api.editTrack(fieldType, value, trackUUid, (res) => {
                 if (res.success) {
                     cell.innerContent(value);
-                    const track = this.tracklist.getTrackByUUID(trackUUid);
+                    const {track, index} = TrackListManager.getTrackByUUID(trackUUid);
                     track.setTag(fieldType, value);
                 } else {
                     cell.innerContent(oldValue);
@@ -527,7 +532,7 @@
         },
     }
 
-    const TrackListManager =  {
+    /*const TrackListManager =  {
         tracksInQueue: [],
         trackIdx: -1,
         queueDepleted: false,
@@ -678,8 +683,8 @@
         onRemoveTrackFromTrackList(cb, subscriber) {
             this.tracklist.onRemoveTrackFromTrackList(cb, subscriber);
         }
-    };
+    };*/
 
-    window.JSPlayer.Tracks = {Track, TrackList, ID3Tags, TrackSearch, TrackEditor, TrackListManager};
+    window.JSPlayer.Tracks = {Track, TrackList, ID3Tags, TrackSearch, TrackEditor};
 
 })(this, document, window.JSPlayer);

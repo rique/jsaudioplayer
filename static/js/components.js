@@ -1,7 +1,8 @@
 (function(window, document, JSPlayer, undefined) {
 
     const ListEvents = JSPlayer.EventsManager.ListEvents;
-    const {Track, ID3Tags, TrackListManager} = JSPlayer.Tracks;
+    const {Track, ID3Tags} = JSPlayer.Tracks;
+    const {TrackListManager} = JSPlayer.TrackListV2;
     const {FileBrowserNotifications, TracklistBrowserNotifications} = JSPlayer.Notifications;
     const clearElementInnerHTML = JSPlayer.Utils.clearElementInnerHTML;
     const Api = window.JSPlayer.Api;
@@ -234,7 +235,7 @@
         this.grid = grid;
         this.overlayDiv = document.querySelector('.cnt-overlay');
         this.isVisible = false;
-        TrackListManager.onAddedToQueue(this._notifyAddToQueue.bind(this));
+        TrackListManager.onAddedToQueue(this._notifyAddToQueue.bind(this), this, 'lel');
         TrackListManager.onRemoveTrackFromTrackList(this._notifyARemovedTrack.bind(this));
         this.overlayDiv.addEventListener('click', (evt) => {
             if (evt.target != evt.currentTarget)
@@ -245,11 +246,6 @@
         });
     };
     TrackListBrowser.prototype = {
-        setTracklist(tracklist) {
-            this.tracklist = tracklist;
-            this.tracklist.onAddedToQueue(this._notifyAddToQueue.bind(this));
-            this.tracklist.onRemoveTrackFromTrackList(this._notifyARemovedTrack.bind(this));
-        },
         setGrid(grid) {
             this.grid = grid;
         },
@@ -327,8 +323,8 @@
             const api = new window.JSPlayer.Api();
             api.deleteTrack(trackUUid, (res) => {
                 if (res.success) {
-                    const {trackIndx, track} = TrackListManager.removeTrackFromTracklistByUUID(trackUUid);
-                    this.grid.removeRowFromGrid(trackIndx);
+                    const {index, track} = TrackListManager.removeTrackFromTracklistByUUID(trackUUid);
+                    this.grid.removeRowFromGrid(index);
                     this.grid._displayTracklistInfo();
                 } else
                     alert('Error deleting file!');
@@ -338,7 +334,6 @@
             console.log('not implemented :|', trackUUid);
         },
         setCurrentlyPlayingTrack(track, index) {
-            console.log({track, index});
             const row = this.grid.getRowByIndex(index);
             this.clearAllCurrentlyPlaying();
             row.classAdd("currently-playing");
@@ -361,10 +356,10 @@
                 }, 0);
             }
         },
-        _notifyAddToQueue(track) {
+        _notifyAddToQueue({track}) {
             this._tracklistBrowserNotifications.setAddedTrackToQueue(track);
         },
-        _notifyARemovedTrack(track) {
+        _notifyARemovedTrack({track}) {
             this._tracklistBrowserNotifications.setARemovedTrack(track);
         },
     }

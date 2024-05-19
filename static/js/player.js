@@ -3,8 +3,8 @@
     const PlayerNotifications = JSPlayer.Notifications.PlayerNotifications;
     const whileMousePressed = JSPlayer.Utils.whileMousePressed;
     const whileMousePressedAndMove = JSPlayer.Utils.whileMousePressedAndMove;
-    const TrackListManager = JSPlayer.Tracks.TrackListManager;
-    const {ProgerssBar, AudioPlayerProgressBar} = JSPlayer.HTMLItemsComponents;
+    const {TrackListManager} = JSPlayer.TrackListV2;
+    const {AudioPlayerProgressBar} = JSPlayer.HTMLItemsComponents;
 
     const AudioPlayer = function() {
         this.audioPlayerEvents = new ListEvents();
@@ -66,8 +66,8 @@
             whileMousePressedAndMove(this.volumeBarElem, this.changeVolume.bind(this));
     
             TrackListManager.onTrackManagerIndexChange((oldIdx, newIdx) => {
-                console.log({oldIdx, newIdx});
-                this.setCurrentTrackFromTrackList(true);
+                this.setCurrentTrackFromTrackList(false);
+                this.play();
             });
     
             this._setRepeatBtnStyle();
@@ -119,19 +119,24 @@
                 this.play();
             else
                 this.pause();
-    
+            
             return this.isPaused;
+        },
+        onPlayPause(cb, subscriber) {
+            this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onPlayPause');
         },
         play() {
             this.isPaused = false;
             this.currentTrack.isPlaying = true;
             this.playPauseBtn.classList.replace('fa-play', 'fa-pause');
+            this.audioPlayerEvents.trigger('onPlayPause', this.isPaused);
             this.audioElem.play();
         },
         pause() {
             this.isPaused = true;
             this.currentTrack.isPlaying = false;
             this.playPauseBtn.classList.replace('fa-pause', 'fa-play');
+            this.audioPlayerEvents.trigger('onPlayPause', this.isPaused);
             this.audioElem.pause();
         },
         stop() {
@@ -166,7 +171,6 @@
                 timeInSec = 0;
             else if (timeInSec > this.currentTrack.getTrackDuration())
                 timeInSec = this.currentTrack.getTrackDuration();
-    
             this.audioElem.currentTime = timeInSec;
         },
         getCurrentTime() {
@@ -213,26 +217,26 @@
             this.setVolume(volume);
         },
         setCurrentTrackFromTrackList(autoPlay, prev) {
-            let track, trackIdx;
+            let track, index;
             if (prev)
-                ({track, trackIdx} = TrackListManager.getPreviousTrack());
+                ({track, index} = TrackListManager.getPreviousTrack());
             else
-                ({track, trackIdx} = TrackListManager.getNexTrack());
+                ({track, index} = TrackListManager.getNexTrack());
 
-            console.log('playing song', {track, trackIdx});
+            console.log('playing song', {track, index});
             track.onTagChange(this._manageTag.bind(this), this);
             this.loadID3Tags(track);
-            this.setPlayerSong(track, trackIdx, autoPlay);
+            this.setPlayerSong(track, index, autoPlay);
         },
         updateTrackTime() {
-            const currentTrack = TrackListManager.getCurrentTrack();
+            const {track} = TrackListManager.getCurrentTrack();
             let formatedTrackTime;
             if (this.displayTrackTimeMode == 0)
-                formatedTrackTime = currentTrack.getTrackDuration(true);
+                formatedTrackTime = track.getTrackDuration(true);
             else if (this.displayTrackTimeMode == 1)
-                formatedTrackTime = currentTrack.getTimeRemaining(true);
+                formatedTrackTime = track.getTimeRemaining(true);
             else
-                formatedTrackTime = currentTrack.getCurrentTime(true);
+                formatedTrackTime = track.getCurrentTime(true);
             
             this.timeTrackElem.innerText = ` - [${formatedTrackTime}]`;
         },
@@ -281,8 +285,8 @@
                 const target = evt.target;
                 const duration = target.duration;
                 const currentTime = target.currentTime;
-    
-                TrackListManager.getCurrentTrack().setCurrentTime(target.currentTime);
+                const {track} = TrackListManager.getCurrentTrack();
+                track.setCurrentTime(target.currentTime);
                 
                 this.updateTrackTime();
                 if (this._checkForNextTrack(currentTime, duration) && !this._comingNextFired) {
@@ -331,11 +335,11 @@
             });
         },
         _manageTags(tags) {
-            let currentTrack = TrackListManager.getCurrentTrack();
+            let {track, index} = TrackListManager.getCurrentTrack();
     
             let title = tags.title;
             if (!title || typeof title === 'undefined' || title.length == 0)
-                title = currentTrack.trackName;
+                title = track.trackName;
             
             let album = ''
             if (tags.album)
@@ -346,7 +350,7 @@
             if (!artist || typeof artist === 'undefined' || artist.length == 0)
                 artist = 'N/A';
     
-            let trackTime = currentTrack.getTrackDuration(true); 
+            let trackTime = track.getTrackDuration(true); 
     
             this.timeTrackElem.innerText = ` - [${trackTime}]`;
             this.nameAlbumElem.innerText = album;

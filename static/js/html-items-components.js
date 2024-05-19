@@ -3,7 +3,7 @@
     const {HTMLItems} = JSPlayer.HTMLItems;
     const {getPercentageWidthFromMousePosition, whileMousePressedAndMove} = JSPlayer.Utils;
     const {ListEvents} = JSPlayer.EventsManager;
-    const {TrackListManager} = JSPlayer.Tracks;
+    const {TrackListManager} = JSPlayer.TrackListV2;
 
     const HoverEffect = function(htmlItem) {
         this.htmlItem = htmlItem;
@@ -75,18 +75,33 @@
 
     const AudioPlayerProgressBar = function(audioPlayer) {
         this.audioPlayer = audioPlayer;
+        this.audioPlayer.onPlayPause(this.togglePauseProgress.bind(this), this);
         this.progressBar = new ProgerssBar(document.getElementById('player'));
         this.progressBar.onSeek(this.seek.bind(this), this);
+        this.isPaused = true;
     };
     AudioPlayerProgressBar.prototype = {
+        togglePauseProgress(isPaused) {
+            this.setPauseState(isPaused);
+            if (!isPaused) {
+                this.progress();
+            }
+        },
         progress() {
+            if (this.isPaused)
+                return;
+            
             let currentTime = this.audioPlayer.getCurrentTime(),
                 totalTime = this.audioPlayer.getDuration();
             this.progressBar.progress(currentTime, totalTime, this.progress.bind(this));
         },
         seek(percentWidth) {
-            this.audioPlayer.setCurrentTime(TrackListManager.getCurrentTrack().trackDuration * percentWidth);
+            const {track} = TrackListManager.getCurrentTrack();
+            this.audioPlayer.setCurrentTime(track.trackDuration * percentWidth);
             this.progress();
+        },
+        setPauseState(isPaused) {
+            this.isPaused = isPaused;
         }
     }
 

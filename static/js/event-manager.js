@@ -170,7 +170,6 @@
             this._executeActions(evt, actions, exclusiveCallers);
         },
         _executeActions(evt, actions, exclusiveCallers) {
-            console.log('_executeActions');
             if (actions && actions.length > 0) {
                 for (let i = 0; i < actions.length; ++i) {
                     let {caller, cb} = actions[i];
@@ -229,5 +228,5 @@
         },
     };
 
-    window.JSPlayer.EventsManager = {ListEvents, KeyCotrols: new KeyCotrols()};
+    window.JSPlayer.EventsManager = {ListEvents, keyCotrols: new KeyCotrols()};
 })(this, document);

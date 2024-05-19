@@ -2,12 +2,12 @@
 
     const NotificationCenter = JSPlayer.NotificationCenter;
 
-    const {Track, TrackList, ID3Tags, TrackListManager} = JSPlayer.Tracks;
-
+    const {Track, TrackList, ID3Tags} = JSPlayer.Tracks;
+    const {TrackListManager} = JSPlayer.TrackListV2;
     const TracklistGrid = JSPlayer.Grids.TracklistGrid;
     const draw = JSPlayer.Vizualizer.draw;
     const AudioPlayer = JSPlayer.AudioPlayer;
-    const keyCotrols = JSPlayer.EventsManager.KeyCotrols;
+    const keyCotrols = JSPlayer.EventsManager.keyCotrols;
     const Fader = JSPlayer.Effects.Fader;
     const {LeftMenu, FileBrowser, Layout, layoutHTML, FileBrowserRenderer} = JSPlayer.Components;
 
@@ -16,7 +16,7 @@
     const audioPlayer = new AudioPlayer();
     const api = new JSPlayer.Api();
     
-    TrackListManager.setTracklist(mainTracklist);
+    //TrackListManager.setTracklist(mainTracklist);
 
     const tracklistGrid = new TracklistGrid('#table-content', audioPlayer);
 
@@ -42,16 +42,17 @@
                 id3Tags = new ID3Tags(trackInfo['ID3']);
             track.setID3Tags(id3Tags);
             track.setTrackDuration(id3Tags.getDuration());
-            mainTracklist.addTrackToList(track);
+            track.setIndex(i);
+            TrackListManager.addTrackToList(track);
         }
         
-        tracklistGrid.setTracklist(mainTracklist);
+        tracklistGrid.setUp();
         tracklistGrid.buildGrid();
         tracklistGrid.render();
         audioPlayer.setCurrentTrackFromTrackList(false);
         
         NotificationCenter.modifyNotification({
-            message: `<p>${mainTracklist.getTracksNumber()} tracks have been loaded!!<p>`
+            message: `<p>${TrackListManager.getTracksNumber()} tracks have been loaded!!<p>`
         }, 'tracks.loaded');
         NotificationCenter.displayNotification('tracks.loaded', 6000);
     

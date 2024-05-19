@@ -7,7 +7,7 @@
     const TrackEditor = JSPlayer.Tracks.TrackEditor;
     const TrackSearch = JSPlayer.Tracks.TrackSearch;
     const TrackListBrowser = JSPlayer.Components.TrackListBrowser;
-    const TrackListManager = JSPlayer.Tracks.TrackListManager;
+    const {TrackListManager} = JSPlayer.TrackListV2;
 
     const BaseColumn = function() {
         this.cells = [];
@@ -137,7 +137,6 @@
         clearSearch() {
             this.filteredRows = [];
             this.eventsList.trigger('onSearchResult');
-            //this.render();
             return this;
         },
         onSearchResult(cb, subscriber) {
@@ -152,7 +151,7 @@
             
             if (this.filteredRows && this.filteredRows.length > 0)
                 rows = this.filteredRows;
-            console.log('render', {rows, len: rows.length})
+            
             rows.forEach(row => this.parentCnt.append(row.render()));
         },
         _doSearch(row, term) {
@@ -453,19 +452,18 @@
         this._trackListBrowser = new TrackListBrowser(this.audioPlayer, this);
     };
     TracklistGrid.prototype = {
-        setTracklist(tracklist) {
-            TrackEditor.tracklist = TrackListManager.getTrackList();
+        setUp() {
             this.queuelistGrid = new QueuelistGrid(this._trackListBrowser, this);
             TrackListManager.onShuffleTracklist(() => {
                 this.gridMaker.resetDragDrop();
                 this.gridMaker.clearRows();
                 this.buildGrid();
                 this.render();
-                this._trackListBrowser.setCurrentlyPlayingTrack(undefined, 0);
+                this._trackListBrowser.setCurrentlyPlayingTrack({track: null}, 0);
                 this.queuelistGrid.render(); 
             }, this);
         },
-        appendTrackToGrid(track, index) {
+        appendTrackToGrid({track, index}) {
             this.addTrackToGrid({track, index});
             this.render();
             this.queuelistGrid.render();
@@ -514,7 +512,8 @@
             if (!isVisible) {
                 this.reload();
                 this.queuelistGrid.render();
-                this._trackListBrowser.setCurrentlyPlayingTrack(TrackListManager.getCurrentTrack(), TrackListManager.getCurrentTrackIndex());
+                const {track, index} = TrackListManager.getCurrentTrack();
+                this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
             }
         },
         _buildHeaders() {
@@ -645,7 +644,6 @@
                     this.draggedEndIndx = htmlItem.getParentItem().getIndex();
                     console.log('onDropped!!', {htmlItem, draggedStartIndx: this.draggedStartIndx, draggedEndIndx: this.draggedEndIndx});
                     TrackListManager.switchTrackIndex(this.draggedStartIndx - 1, this.draggedEndIndx - 1);
-                    //this.queuelistGrid.setSiblingRow(htmlItem.getParentItem());
                     this.queuelistGrid.render();
                     htmlItem.innerContent('drag');
                 },
@@ -671,7 +669,7 @@
         this.setUpHTMLItem();
         this.parentGrid = parentGrid;
         this.gridMaker = new GridMaker(this.itemHtml.render(), false);
-        TrackListManager.onAddedToQueue(this.updateQueue.bind(this), this);
+        TrackListManager.onAddedToQueue(this.updateQueue.bind(this), this, 'lol');
         TrackListManager.onDepletingQueue(this.nextTrackInQueue.bind(this), this);
     };
     QueuelistGrid.prototype = {
@@ -700,15 +698,15 @@
         getRowByIndex(index) {
             return this.gridMaker.getRowByIndex(index);
         },
-        updateQueue(track, queueLength) {
+        updateQueue({track}, queueLength) {
             if (!this.hasQueue && queueLength > 0) {
                 this.hasQueue = true;
             }
-                
 
             this.gridMaker.clearRows();
             if (this.isQueuePlaying) {
-                this._buildBody(TrackListManager.getCurrentTrack(), 0);
+                const {track} = TrackListManager.getCurrentTrack();
+                this._buildBody(track, 0);
                 const row = this.getGrid().getRowByIndex(0);
                 row.classAdd('currently-playing');
                 return this.render();
@@ -716,7 +714,7 @@
 
             this.buildGrid(true);
         },
-        nextTrackInQueue(track, queueLength) {
+        nextTrackInQueue({track}, queueLength) {
             if (queueLength >= 0) {
                 this.isQueuePlaying = true;
                 this.trackListBrowser.setGrid(this);
@@ -750,18 +748,16 @@
             this.gridMaker.render();
         },
         _setSiblingRow() {
-            console.log({siblingRow: this.siblingRow});
             if (this.siblingRow)
                 return this.siblingRow;
 
             const currIdx = TrackListManager.getCurrentTrackIndex(!this.isQueuePlaying);
-            //console.log({currIdx});
+
             if (currIdx < 0) {
                 currIdx = 0;
             }
-            console.log({currIdx});
+
             this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
-            console.log({siblingRow: this.siblingRow});
             return this.siblingRow;
         },
         addTrackToGrid({track, index}) {
@@ -841,7 +837,6 @@
             }];
         },
         _buildBody(curTrack, curIndex) {
-            console.log({curTrack, curIndex})
             let addIdx = 0;
             if (typeof curTrack === 'object' && typeof curIndex === 'number') {
                 this.addTrackToGrid({index: curIndex, track: curTrack});

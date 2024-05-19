@@ -24,7 +24,7 @@
     --row-even-hover-bg-color: #5fa7d9;
     --row-odd-hover-bg-color: #e5e5e5;
     --row-currently-playing-bg: #ed5858;
-    --row-queue-bg-color: #4d6979;
+    --row-queue-bg-color: #486f85 /*#4d6979*/;
 }
 
 * {
