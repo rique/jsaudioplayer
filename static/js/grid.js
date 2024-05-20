@@ -100,6 +100,9 @@
         addRow(row) {
             this.rows.push(row);
         },
+        length() {
+            return this.rows.length;
+        },
         getParentCnt() {
             return this.parentCnt;
         },
@@ -109,6 +112,7 @@
         removeRow(index) {
             const row = this.rows.splice(index, 1)[0];
             row.remove(); 
+            console.trace();
         },
         open() {
             this.parentCnt.style.display = 'block';
@@ -450,6 +454,7 @@
         this.trackSearch.init();
         
         this._trackListBrowser = new TrackListBrowser(this.audioPlayer, this);
+        TrackListManager.onRemoveTrackFromTrackList(this.removeTrackFromGrid.bind(this))
     };
     TracklistGrid.prototype = {
         setUp() {
@@ -463,16 +468,23 @@
                 this.queuelistGrid.render(); 
             }, this);
         },
-        appendTrackToGrid({track, index}) {
+        appendTrackToGrid({track}) {
+            const index = this.getGrid().length();
+            track.setIndex(index);
             this.addTrackToGrid({track, index});
-            this.render();
+            this.reload();
             this.queuelistGrid.render();
         },
         addTrackToGrid({track, index}) {
             const rowConfig = this._getRowConfigFromTrack(track, index);
             this.gridMaker.makeRowIdx(rowConfig, false, false, parseInt(index) + 1);
         },
-        removeRowFromGrid(rowIdx) {
+        removeTrackFromGrid({index}) {
+            this.removeFromGrid(index);
+            this.reload();
+            this.queuelistGrid.render();
+        },
+        removeFromGrid(rowIdx) {
             this.gridMaker.removeRowFromGrid(rowIdx);
         },
         buildGrid(doRender) {
@@ -737,7 +749,6 @@
             }
 
             const row = this._setSiblingRow();
-            console.log('render', {row});
             if (!row) {
                 this.itemHtml.remove();
                 console.error('NO ROW FOUND! REMOVING QUEUE GRID');
@@ -749,18 +760,15 @@
             this.gridMaker.render();
         },
         _setSiblingRow() {
-            console.log({siblingRow: this.siblingRow})
             if (this.siblingRow)
                 return this.siblingRow;
 
             const currIdx = TrackListManager.getCurrentTrackIndex(!this.isQueuePlaying);
-            console.log({currIdx})
             if (currIdx < 0) {
                 currIdx = 0;
             }
 
             this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
-            console.log({siblingRow: this.siblingRow})
             return this.siblingRow;
         },
         addTrackToGrid({track, index}) {

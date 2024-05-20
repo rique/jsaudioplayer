@@ -147,6 +147,7 @@
                 return {track, index};
             }
             
+            return {track: undefined, index: undefined};
         },
         enableLoop() {
             this.loop = true;
@@ -285,7 +286,7 @@
                 this.doRepeatTrack = false;
             } else {
                 track = this.queueList.nexInQueue();
-                if (!track) {
+                if (!track.track) {
                     if (this.isShuffle()) {
                         track = this.shuffledTracklist.next();
                     } else {
@@ -340,7 +341,7 @@
                 track.setIndex(index);
                 return {track, index};
             });
-            console.log({shuffledItems});
+
             this._isShuffle = true;
             this.shuffledTracklist.setItems(shuffledItems);
         },
@@ -429,15 +430,16 @@
         getTrackListTotalDuration(formated) {
             return this.tracklist.getTrackListTotalDuration(formated);
         },
-        getTrackByUUID(trackUUid) {
-            return this.tracklist.getTrackByUUID(trackUUid);
-        },
         removeTrackFromTracklistByUUID(trackUUid) {
             const {index, track} = this.getTrackByUUID(trackUUid);
+
             if (index) {
-                this.tracklist.removeItemByIndex(index);
+                const removed = this.tracklist.removeItemByIndex(index);
                 this.trackListEvents.trigger('onRemoveTrackFromTrackList', {index, track}, trackUUid, index);
+                return true;
             }
+
+            return false;
         },
         getTrackByUUID(trackUUid) {
             let trackToSearch,

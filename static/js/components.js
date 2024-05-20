@@ -180,7 +180,7 @@
                 track.setTrackDuration(id3Tags.getDuration());
                 TrackListManager.addTrackToList(track);
                 this._fileBrowserNotifications.setAddedTrack(track, 6000);
-                this.folderBrowserEvent.trigger('onSongAdded', track, this.player.getTrackList().getTracksNumber() - 1);
+                this.folderBrowserEvent.trigger('onSongAdded', {track});
             });
         },
         fileBrowserCB(res) {
@@ -235,8 +235,8 @@
         this.grid = grid;
         this.overlayDiv = document.querySelector('.cnt-overlay');
         this.isVisible = false;
-        TrackListManager.onAddedToQueue(this._notifyAddToQueue.bind(this), this, 'lel');
-        TrackListManager.onRemoveTrackFromTrackList(this._notifyARemovedTrack.bind(this));
+        TrackListManager.onAddedToQueue(this._notifyAddToQueue.bind(this), this);
+        TrackListManager.onRemoveTrackFromTrackList(this._notifyARemovedTrack.bind(this), this);
         this.overlayDiv.addEventListener('click', (evt) => {
             if (evt.target != evt.currentTarget)
                 return;
@@ -325,8 +325,6 @@
             api.deleteTrack(trackUUid, (res) => {
                 if (res.success) {
                     const {index, track} = TrackListManager.removeTrackFromTracklistByUUID(trackUUid);
-                    this.grid.removeRowFromGrid(index);
-                    this.grid._displayTracklistInfo();
                 } else
                     alert('Error deleting file!');
             });
@@ -336,7 +334,6 @@
         },
         setCurrentlyPlayingTrack(track, index) {
             const row = this.grid.getRowByIndex(index);
-            console.log('setCurrentlyPlayingTrack', {track, index, row});
             this.clearAllCurrentlyPlaying();
             row.classAdd("currently-playing");
             row.scrollTo(this.grid.getGrid().getParentCnt());
