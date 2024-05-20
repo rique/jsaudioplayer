@@ -73,6 +73,8 @@
         volumeCntDisplay.innerText = Math.round(volume * 100);
     });
 
+    audioPlayer.onRepeatSwitch(TrackListManager.switchRepeatMode.bind(TrackListManager), TrackListManager);
+
     keyCotrols.setPlayer(audioPlayer);
 
     keyCotrols.registerKeyDownAction('m', () => {

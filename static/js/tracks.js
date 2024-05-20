@@ -170,13 +170,12 @@
             api.editTrack(fieldType, value, trackUUid, (res) => {
                 if (res.success) {
                     cell.innerContent(value);
-                    const {track, index} = TrackListManager.getTrackByUUID(trackUUid);
+                    const {track} = TrackListManager.getTrackByUUID(trackUUid);
                     track.setTag(fieldType, value);
                 } else {
                     cell.innerContent(oldValue);
                 }
             });
-            
         },
         _setExclusivity() {
             keyCotrols.setExlcusivityCallerKeyUpV2(this);

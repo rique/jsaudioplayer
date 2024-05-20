@@ -13,7 +13,7 @@
         this.seekStep = 5;
         this.isPaused = true;
         //0 -> no repeat; 1 -> repeat all; 2 -> repeat one; 
-        this.repeatMode = 1;
+        this.repeatMode = 0;
         this.repeatElem = document.querySelector('#repeat-button a');
         this.repeatElemGlyph = document.querySelector('#repeat-button a .fa-repeat');
         this.repeatOneElem = document.querySelector('#repeat-button a .repeat-one');
@@ -164,6 +164,10 @@
             else
                 ++this.repeatMode;
             this._setRepeatBtnStyle();
+            this.audioPlayerEvents.trigger('onRepeatSwitch', this.repeatMode);
+        },
+        onRepeatSwitch(cb, subscriber) {
+            this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onRepeatSwitch');
         },
         setCurrentTime(timeInSec) {
             if (timeInSec < 0)
@@ -223,6 +227,11 @@
                 ({track, index} = TrackListManager.getNexTrack());
 
             console.log('playing song', {track, index});
+            if (!track) {
+                console.error('Track could not be fetched from tracklist');
+                return;
+            }
+                
             track.onTagChange(this._manageTag.bind(this), this);
             this.loadID3Tags(track);
             this.setPlayerSong(track, index, autoPlay);
@@ -246,6 +255,7 @@
             let autoPlay;
             this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack);
             this.currentTrack.onTagChangeUnsub(this);
+            console.log('audioEnded', {repeatMode: this.repeatMode, isLastTrack: TrackListManager.isLastTrack()});
             if (TrackListManager.isLastTrack()) {
                 if (!this.repeatMode >= 1) {
                     console.log('End of session');
@@ -262,11 +272,9 @@
                     }
                 }
             } else {
-                if (this.repeatMode == 2)
-                    TrackListManager.repeatTrack();
                  autoPlay = true;
             }
-    
+            console.log({autoPlay});
             this.setCurrentTrackFromTrackList(autoPlay);
         },
         onAudioEnded(cb, subscriber) {

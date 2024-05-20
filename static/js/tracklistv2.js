@@ -5,49 +5,44 @@
 
     const IndexList = function() {
         this.index = -1;
-        this.length = 0;
+        this._length = 0;
         this.items = [];
     };
     IndexList.prototype = {
-        setItems(items) {
-            this.length = items.length;
-            this.index = -1;
-            this.items = items;
-        },
         getItems() {
             return this.items;
         },
+        setItems(items) {
+            this.items = items;
+            this._length = items.length;
+        },
         addItem(item) {
-            this.items.push({item, index: this.length});
-            ++this.length;
+            this.items.push({item, index: this._length});
+            ++this._length;
         },
         removeItemByIndex(index) {
-            if (index >= this.length || index < 0)
-                return;
+            if (index >= this._length || index < 0) return;
+            
             const item = this.items.splice(index, 1)[0];
             
-            if (index <= this.index && this.index > 0) {
+            if (index <= this.index && this.index > 0)
                 --this.index;
-            }
-            
-            --this.length;
+
+            --this._length;
 
             return item;
         },
-        updateItem(item, index) {
-            this.items[index] = item;
-        },
-        swapItem(itemA, itemB) {
-            this.items[itemA.index] = itemB;
-            this.items[itemB.index] = itemA;
+        moveItem(index, item) {
+            this.items.splice(index, 0, item);
+            this._reorganizeIndexes();
         },
         getIndex() {
             return this.index;
         },
         maxIndex() {
-            if (this.length == 0)
+            if (this._length == 0)
                 return 0;
-            return this.length - 1;
+            return this._length - 1;
         },
         current() {
             return this.items[this.index];
@@ -72,24 +67,26 @@
             this.index = 0;
         },
         getItemByIndex(index) {
-            const maxInex = this.maxIndex();
+            const maxIndex = this.maxIndex();
             if (index < 0) {
                 index = 0;
-            } else if (index > maxInex) {
-                index = maxInex;
+            } else if (index > maxIndex) {
+                index = maxIndex;
             }
             
             this.index = index;
 
             return this.current();
         },
-        getLength() {
-            return this.length;
+        length() {
+            return this._length;
         },
         *forEach() {
-            for (let i = 0; i < this.length; ++i) {
-                let item = this.items[i];
-                yield item;
+            yield* this.items;
+        },
+        _reorganizeIndexes() {
+            for (let i = 0; i < this.items.length; ++i) {
+                this.items[i].index = i;
             }
         }
     };
@@ -115,10 +112,10 @@
             return this.indexList.getItemByIndex(index);
         },
         hasQueue() {
-            return this.indexList.getLength() > 0;
+            return this.indexList.length() > 0;
         },
         length() {
-            return this.indexList.getLength();
+            return this.indexList.length();
         },
         *forEach() {
             for ({track, index} of this.indexList.forEach()) {
@@ -134,8 +131,8 @@
     };
     TrackList.prototype = {
         addItem(track) {
-            this.items.push({track, index: this.length});
-            ++this.length;
+            this.items.push({track, index: this._length});
+            ++this._length;
             this.addToTrackListTotalDuration(track.getTrackDuration());
         },
         removeItemByIndex(index) {
@@ -156,22 +153,19 @@
             this.loop = false;
         },
         next() {
-            if (this.index < this.maxIndex()) {
-                ++this.index;
-                return this.items[this.index];
-            } else if (this.loop) {
+            let track = IndexList.prototype.next.call(this);
+
+            if (!track && this.loop) {
                 this.index = 0;
-                return this.items[this.index];
+                track = this.items[this.index];
             }
 
-            return false;
+            return track;
         },
         previous() {
-            let track;
-            if (this.index > 0) {
-                --this.index;
-                track = this.items[this.index];
-            } else if (this.loop) {
+            let track = IndexList.prototype.previous.call(this);
+            
+            if (!track && this.loop) {
                 this.index = this.maxIndex();
                 track = this.items[this.index];
             }
@@ -189,20 +183,15 @@
             return track;
         },
         isLastTrack() {
-            return this.index >= this.length;
+            return this.index >= this.maxIndex();
         },
         setTrackIndex(newIdx) {
             this.index = newIdx;
         },
         switchTrackIndex(oldIndex, newIndex) {
             const tracklist = this.getItems();
-            const trackIndex = this.index;
             const trackItem = tracklist.splice(oldIndex, 1)[0];
-            const trackReplace = tracklist[newIndex];
 
-            console.log({newIndex, oldIndex, trackItem, trackReplace});
-            console.log('----------------------------------------------------------------------------');
-            console.log('switchTrackIndex1', {trackIndex, oldIndex, newIndex, trackItem, trackReplace});
             if (oldIndex == this.index)
                 this.index = newIndex;
             else if (newIndex == this.index)
@@ -212,12 +201,8 @@
             } else if (oldIndex < newIndex && this.index > oldIndex && this.index < newIndex) {
                 --this.index;
             }
-            console.log('switchTrackIndex2', {trackIndexResult: this.index});
-            console.log('----------------------------------------------------------------------------');
-            tracklist.splice(newIndex, 0, trackItem);
-            //this.swapItem(theTrack1, theTrack2);
-            this._reorganizeIndexes();
-            console.log({newIndex, oldIndex, trackItem, trackReplace});
+
+            this.moveItem(newIndex, trackItem);
         },
         setTrackListTotalDuration(duration) {
             this.tracklistTotalDuration = duration;
@@ -241,31 +226,30 @@
                 mins = parseInt((secTime % 3600) / 60).toString();
             }
             return `${houres.padStart(2, '0')}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')}`
-        },
-        _reorganizeIndexes() {
-            for (let i = 0; i < this.items.length; ++i) {
-                this.items[i].index = i;
-            }
         }
     };
 
     const TrackListManager =  {
         queueList: new QeueList(),
-        tracklist: null,
-        shuffledTracklist: null,
-        queueDepleted: false,
         trackListEvents: new ListEvents(),
         setTracklist(tracklist) {
             this.tracklist = tracklist;
         },
-        reset() {
-            if (this.isShuffle())
-                this.shuffledTracklist.reset();
-            else
-                this.tracklist.reset();
-        },
         getTrackList() {
+            if (this.isShuffle())
+                return this.shuffledTracklist;
             return this.tracklist;
+        },
+        reset() {
+            this.getTrackList().reset();
+        },
+        addTrackToList(track) {
+            if (!this.tracklist)
+                this.tracklist = new TrackList();
+            this.tracklist.enableLoop();
+            this.tracklist.addItem(track);
+            if (this.isShuffle())
+                this.shuffledTracklist.addItem(track);
         },
         addToQueue({track, index}) {
             this.queueList.addToQueue(track);
@@ -273,25 +257,17 @@
         },
         getNexTrack() {
             let track;
-            
+            const tracklist = this.getTrackList();
             if (this.doRepeatTrack) {
                 track = this.queueList.getByIndex(0);
                 if (!track) {
-                    if (this.isShuffle()) {
-                        track = this.shuffledTracklist.current();
-                    } else {
-                        track = this.tracklist.current();
-                    }
+                    track = tracklist.current();
                 }
-                this.doRepeatTrack = false;
             } else {
                 track = this.queueList.nexInQueue();
                 if (!track.track) {
-                    if (this.isShuffle()) {
-                        track = this.shuffledTracklist.next();
-                    } else {
-                        track = this.tracklist.next();
-                    }
+                    this.lastTrack = tracklist.isLastTrack();
+                    track = tracklist.next();
                     if (this.queueDepleted) {
                         this.trackListEvents.trigger('onDepletingQueue', {track: null}, -1);
                         this.queueDepleted = false;
@@ -306,19 +282,20 @@
             return track;
         },
         getPreviousTrack() {
-            const track = this.tracklist.previous();
-            const trackIdx = this.tracklist.getIndex();
+            const tracklist = this.getTrackList();
+            const track = tracklist.previous();
+            this.lastTrack = tracklist.isLastTrack();
 
             if (this.queueDepleted) {
                 this.trackListEvents.trigger('onDepletingQueue', null, -1);
                 this.queueDepleted = false;
             }
 
-            return {track, trackIdx};
+            return track;
         },
         reShuffle() {
             this.shuffleTracklist();
-            this.trackListEvents.trigger('onShuffleTracklist', this.tracklist, this.isShuffle());
+            this.trackListEvents.trigger('onShuffleTracklist', this.getTrackList(), this.isShuffle());
         },
         shuffle(conserveCurrentTrack) {
             let tracklist;
@@ -337,74 +314,52 @@
         },
         shuffleTracklist(trackIndex) {
             this.shuffledTracklist = new TrackList();
+            this.shuffledTracklist.enableLoop();
             const shuffledItems = shuffle([...this.tracklist.getItems()], trackIndex).map(({track}, index) => {
                 track.setIndex(index);
                 return {track, index};
             });
-
+            console.log('shuffleTracklist', {shuffledItems});
             this._isShuffle = true;
             this.shuffledTracklist.setItems(shuffledItems);
         },
         getNextTrackInList() {
             let track = this.queueList.getByIndex(0);
             if (!track) {
-                if (this.isShuffle())
-                    track = this.shuffledTracklist.readNextTrack();
-                else
-                    track = this.tracklist.readNextTrack();
+                track = this.getTrackList().readNextTrack();
             }
             return track;
         },
         isLastTrack() {
-            return this.tracklist.isLastTrack() && !this.queueList.hasQueue();
+            return this.lastTrack && !this.queueList.hasQueue();
         },
         getCurrentTrack() {
             const queueItem = this.queueList.getCurrentItem();
-            if ((this.queueList.hasQueue() || this.queueDepleted) && queueItem)
+            if ((this.queueList.hasQueue() || this.queueDepleted) && queueItem.track)
                 return queueItem;
-            if (this.isShuffle())
-                return this.shuffledTracklist.current();
-            return this.tracklist.current();
+            
+            return this.getTrackList().current();
         },
         getCurrentTrackIndex(forceDefaultTracklist) {
             if (!forceDefaultTracklist && (this.queueList.hasQueue() || this.queueDepleted))
                 return 0;
-            if (this.isShuffle())
-                return this.shuffledTracklist.getIndex();
-            return this.tracklist.getIndex();
+            return this.getTrackList().getIndex();
         },
-        addTrackToList(track) {
-            if (this.tracklist == null)
-                this.tracklist = new TrackList();
-            this.tracklist.addItem(track);
-            if (this.isShuffle())
-                this.shuffledTracklist.addItem(track);
+        switchRepeatMode(repeatMode) {
+            this.setRepeatTrack(repeatMode == 2);
         },
-        repeatTrack() {
-            this.doRepeatTrack = true;
+        setRepeatTrack(repeate) {
+            this.doRepeatTrack = repeate;
         },
         switchTrackIndex(oldIdx, newIdx) {
-            console.log('----------------------------------------------------------------------------');
-            if (this.isShuffle()) {
-                this.shuffledTracklist.switchTrackIndex(oldIdx, newIdx);
-                console.log({trackIdxShuffle: this.shuffledTracklist.getIndex()});
-            } else {
-                this.tracklist.switchTrackIndex(oldIdx, newIdx);
-                console.log({trackIdx: this.tracklist.getIndex()});
-            }
+            this.getTrackList().switchTrackIndex(oldIdx, newIdx);
+            console.log({trackIdx: this.getTrackList().getIndex()});
         },
         isShuffle() {
             return this._isShuffle;
         },
         *iterOverTrack() {
-            let tracklist;
-            if (this.isShuffle()) {
-                tracklist = this.shuffledTracklist;
-            } else {
-                tracklist = this.tracklist;
-            }
-
-            for (let track of tracklist.forEach()) {
+            for (let track of this.getTrackList().forEach()) {
                 yield track;
             }
         },
@@ -414,18 +369,13 @@
             }
         },
         setTrackIndex(newIdx, doSetCurTrack) {
-            let oldIdx;
-            if (this.isShuffle()) {
-                oldIdx = this.shuffledTracklist.getIndex();
-                this.shuffledTracklist.setTrackIndex(newIdx - 1);
-            } else {
-                oldIdx = this.tracklist.getIndex();
-                this.tracklist.setTrackIndex(newIdx - 1);
-            }
+            const tracklist = this.getTrackList();
+            let oldIdx = tracklist.getIndex();
+            tracklist.setTrackIndex(newIdx - 1);
             this.trackListEvents.trigger('onTrackManagerIndexChange', oldIdx, newIdx);
         },
         getTracksNumber() {
-            return this.tracklist.getLength();
+            return this.tracklist.length();
         },
         getTrackListTotalDuration(formated) {
             return this.tracklist.getTrackListTotalDuration(formated);
@@ -459,9 +409,6 @@
         },
         onDepletingQueue(cb, subscriber) {
             this.trackListEvents.onEventRegister({cb, subscriber}, 'onDepletingQueue');
-        },
-        onTrackIndexChange(cb, subscriber) {
-            this.tracklist.onTrackIndexChange(cb, subscriber);
         },
         onTrackManagerIndexChange(cb, subscriber) {
             this.trackListEvents.onEventRegister({cb, subscriber}, 'onTrackManagerIndexChange');

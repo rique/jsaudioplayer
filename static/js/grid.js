@@ -205,7 +205,7 @@
             for (let i = 0; i < sortedCells.length; ++i) {
                 this.rows.push(sortedCells[i].getParentItem());
             }
-            this.eventsList.trigger('onSortedGrid', indexedColumn.isSorted(), indexedColumn.isReversed());
+            this.eventsList.trigger('onSortedGrid', indexedColumn.isSorted(), indexedColumn.isRever<sed());
             this.render();
         },
         sortGridByCell(cell) {
@@ -400,7 +400,6 @@
         reload() {
             if (this.isDraggable()) {
                 this._unsetDraggableGrid();
-                //this._setDraggableGrid();
             }
             this.render();
         },
@@ -462,8 +461,7 @@
             TrackListManager.onShuffleTracklist(() => {
                 this.gridMaker.resetDragDrop();
                 this.gridMaker.clearRows();
-                this.buildGrid();
-                this.render();
+                this.buildGrid(true);
                 this._trackListBrowser.setCurrentlyPlayingTrack({track: null}, 0);
                 this.queuelistGrid.render(); 
             }, this);
@@ -508,6 +506,8 @@
         reload() {
             this.gridMaker.reload();
             this._displayTracklistInfo();
+            const {track, index} = TrackListManager.getCurrentTrack();
+            this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
         },
         open() {
             this._trackListBrowser.show();
@@ -524,11 +524,10 @@
             if (!isVisible) {
                 this.reload();
                 this.queuelistGrid.render();
-                const {track, index} = TrackListManager.getCurrentTrack();
-                this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
             }
         },
         _buildHeaders() {
+            console.log('_buildHeaders');
             const head = [{
                 content: 'N°',
                 sorterCell: true,
@@ -654,7 +653,6 @@
                     evt.stopImmediatePropagation();
                     const htmlItem = evt.detail.HTMLItem;
                     this.draggedEndIndx = htmlItem.getParentItem().getIndex();
-                    console.log('onDropped!!', {htmlItem, draggedStartIndx: this.draggedStartIndx, draggedEndIndx: this.draggedEndIndx});
                     TrackListManager.switchTrackIndex(this.draggedStartIndx - 1, this.draggedEndIndx - 1);
                     this.queuelistGrid.render();
                     htmlItem.innerContent('drag');
@@ -681,7 +679,7 @@
         this.setUpHTMLItem();
         this.parentGrid = parentGrid;
         this.gridMaker = new GridMaker(this.itemHtml.render(), false);
-        TrackListManager.onAddedToQueue(this.updateQueue.bind(this), this, 'lol');
+        TrackListManager.onAddedToQueue(this.updateQueue.bind(this), this);
         TrackListManager.onDepletingQueue(this.nextTrackInQueue.bind(this), this);
     };
     QueuelistGrid.prototype = {
