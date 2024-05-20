@@ -256,14 +256,12 @@
         trackListEvents: new ListEvents(),
         setTracklist(tracklist) {
             this.tracklist = tracklist;
-            const {track, index} = tracklist.current();
-            this.trackIdx = index;
-            this.currentTrack = track;
         },
         reset() {
-            this.tracklist.reset();
-            this.trackIdx = -1;
-            this.currentTrack = this.tracklist.current();
+            if (this.isShuffle())
+                this.shuffledTracklist.reset();
+            else
+                this.tracklist.reset();
         },
         getTrackList() {
             return this.tracklist;

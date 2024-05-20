@@ -252,19 +252,19 @@ def scanForMyTracks(request):
     
     res_str = res.stdout.decode().strip()
 
-    traks_list = []
+    trakslist = []
 
     if len(res_str) > 0:
         for track in res_str.split('\n'):
             #  track 8073963/mnt/sabrent/Music/4lieneticYoursftMadiLarson.mp3 ['8073963', 'mnt', 'sabrent', 'Music', '4lieneticYoursftMadiLarson.mp3']
             t = track.split('/')
-            traks_list += [(int(t[0]), '/'.join(t[1:]))]
+            trakslist += [(int(t[0]), '/'.join(t[1:]))]
     
-    print(traks_list)
+    print(trakslist)
 
     return JsonResponse(data={
         'success': True,
-        'traks_list': traks_list
+        'trakslist': trakslist
     })
 
 
@@ -299,7 +299,7 @@ def createPLaylist(request):
 
 
 @csrf_exempt
-def updatePLaylist(request):
+def addTrackToPLaylist(request):
     if request.method != 'POST':
         return JsonResponse(data={'success': False, 'code': 'wrong_method'}, status=405, reason="Method Not Allowed")
 
@@ -308,6 +308,21 @@ def updatePLaylist(request):
 
     tracklist = params['tracklist']
     playlist_uuid = params['playlist_uuid']
+
+    try:
+        playlist = Playlist.objects.get(playlist_uuid=playlist_uuid)
+    except Playlist.DoesNotExist:
+        return JsonResponse(data={'success': False, 'code': 'dose_not_exist'}, status=404, reason=f"Object or ressource with uuid {track_uuid} not found")
+
+    if len(tracklist) > 0:
+        for tr in tracklist:
+            try:
+                track = Tracks.objects.get(track_uuid=tr['track_uuid'])
+            except Tracks.DoesNotExist:
+                continue
+            playlist.tracks.add(track)
+
+    playlist.save()
 
     return JsonResponse(data={
         'success': True,

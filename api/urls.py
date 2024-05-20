@@ -11,5 +11,6 @@ urlpatterns = [
     path("delete-track", views.deleteTrack, name="deleteTrack"),
     path("create-playlist", views.createPLaylist, name="createPLaylist"),
     path("edit-track", views.editTrack, name="editTrack"),
+    path("add-track-to-playlist", views.addTrackToPLaylist, name="addTrackToPLaylist"),
 ]
 

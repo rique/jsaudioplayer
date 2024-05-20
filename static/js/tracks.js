@@ -154,7 +154,6 @@
     };
     
     const TrackEditor = {
-        tracklist: '',
         onclickCell() {
             this._setExclusivity();
         },
@@ -201,9 +200,6 @@
             this.searchInputElem = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
             this.magGlassElem.addEventListener('click', this._toggleInputSearchVisibility.bind(this));
             this.searchElemCnt.addEventListener('keyup', this.search.bind(this));
-        },
-        setTrackList(trackList) {
-            this.tracklist = trackList;
         },
         search(evt) {
             this.result = this.searchableGrid.search(evt.target.value);

@@ -53,7 +53,6 @@
     AudioPlayer.prototype = {
         init() {
             this._setUpPlayer();
-    
             this._setUpPlayerControls();
     
             this.shuffleBtn.addEventListener('click', this.shuffle.bind(this));
@@ -65,7 +64,7 @@
             whileMousePressedAndMove(this.mainVolumeBarElem, this.changeVolume.bind(this));
             whileMousePressedAndMove(this.volumeBarElem, this.changeVolume.bind(this));
     
-            TrackListManager.onTrackManagerIndexChange((oldIdx, newIdx) => {
+            TrackListManager.onTrackManagerIndexChange(() => {
                 this.setCurrentTrackFromTrackList(false);
                 this.play();
             });
