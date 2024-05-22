@@ -260,8 +260,6 @@ def scanForMyTracks(request):
             t = track.split('/')
             trakslist += [(int(t[0]), '/'.join(t[1:]))]
     
-    print(trakslist)
-
     return JsonResponse(data={
         'success': True,
         'trakslist': trakslist

@@ -45,6 +45,8 @@
             return this._length - 1;
         },
         current() {
+            if (this.index < 0)
+                return this.items[0];
             return this.items[this.index];
         },
         next() {
@@ -145,6 +147,24 @@
             }
             
             return {track: undefined, index: undefined};
+        },
+        setCurrent({track, index}) {
+            if (typeof index === 'undefined') {
+                if (!track) {
+                    console.error(`Invalid parameters`);
+                    return;
+                }
+                console.log({track});
+                ({index} = this.items.find(itm => itm.track.trackUUid == track.trackUUid));
+
+                if (!index) {
+                    console.error(`Track ${track} not found!`);
+                    return;
+                }
+                console.log({index});
+                this.index = index;
+            }
+
         },
         enableLoop() {
             this.loop = true;
@@ -298,19 +318,24 @@
             this.trackListEvents.trigger('onShuffleTracklist', this.getTrackList(), this.isShuffle());
         },
         shuffle(conserveCurrentTrack) {
-            let tracklist;
+            let currentTrack;
             if (this.isShuffle()) {
+                this.tracklist.setCurrent({track: this.shuffledTracklist.current().track});
                 this.shuffledTracklist = null;
                 this._isShuffle = false;
-                tracklist = this.tracklist.getItems();
+                currentTrack = this.tracklist.current();
             } else {
-                let trackIndex;
-                if (conserveCurrentTrack === true)
+                let trackIndex,
+                    curIndex = -1;
+                if (conserveCurrentTrack === true) {
                     trackIndex = this.tracklist.getIndex();
+                    curIndex = 0;
+                }
                 this.shuffleTracklist(trackIndex);
-                tracklist = this.shuffledTracklist.getItems();
+                this.shuffledTracklist.setTrackIndex(curIndex);
+                currentTrack = this.shuffledTracklist.current();
             }
-            this.trackListEvents.trigger('onShuffleTracklist', tracklist, this.isShuffle());
+            this.trackListEvents.trigger('onShuffleTracklist', currentTrack, currentTrack.index, this.isShuffle());
         },
         shuffleTracklist(trackIndex) {
             this.shuffledTracklist = new TrackList();

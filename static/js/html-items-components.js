@@ -35,6 +35,7 @@
     };
     ProgerssBar.prototype = {
         setUp(parentCnt) {
+            console.log('setUp')
             this.mainDiv.id('progress');
             this.subDiv.id('prog-bar');
             this.mainDiv.append(this.subDiv);
@@ -62,6 +63,9 @@
             this._updateProgressBar(percentProg, cb);
             return true;
         },
+        reset() {
+            this._updateProgressBar(0);
+        },
         _updateProgressBar(progress, cb) {
             requestAnimationFrame(() => {
                 if (progress > 100)
@@ -73,14 +77,15 @@
         },
     };
 
-    const AudioPlayerProgressBar = function(audioPlayer) {
-        this.audioPlayer = audioPlayer;
-        this.audioPlayer.onPlayPause(this.togglePauseProgress.bind(this), this);
-        this.progressBar = new ProgerssBar(document.getElementById('player'));
-        this.progressBar.onSeek(this.seek.bind(this), this);
+    const AudioPlayerProgressBar = function() {
         this.isPaused = true;
     };
     AudioPlayerProgressBar.prototype = {
+        setAudioPlayer(audioPlayer) {
+            console.log("setAudioPlayer")
+            this.audioPlayer = audioPlayer;
+            this._setUp();
+        },
         togglePauseProgress(isPaused) {
             this.setPauseState(isPaused);
             if (!isPaused) {
@@ -95,13 +100,28 @@
                 totalTime = this.audioPlayer.getDuration();
             this.progressBar.progress(currentTime, totalTime, this.progress.bind(this));
         },
+        updateProgress() {
+            let currentTime = this.audioPlayer.getCurrentTime(),
+                totalTime = this.audioPlayer.getDuration();
+            this.progressBar.progress(currentTime, totalTime);
+        },
         seek(percentWidth) {
             const {track} = TrackListManager.getCurrentTrack();
             this.audioPlayer.setCurrentTime(track.trackDuration * percentWidth);
             this.progress();
         },
+        resetProgresBar() {
+            this.progressBar.reset();
+        },
         setPauseState(isPaused) {
             this.isPaused = isPaused;
+        },
+        _setUp() {
+            console.log('_setUp')
+            this.audioPlayer.onPlayPause(this.togglePauseProgress.bind(this), this);
+            this.audioPlayer.onStop(this.resetProgresBar.bind(this), this);
+            this.progressBar = new ProgerssBar(document.getElementById('player'));
+            this.progressBar.onSeek(this.seek.bind(this), this);
         }
     }
 

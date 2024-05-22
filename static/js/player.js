@@ -4,11 +4,10 @@
     const whileMousePressed = JSPlayer.Utils.whileMousePressed;
     const whileMousePressedAndMove = JSPlayer.Utils.whileMousePressedAndMove;
     const {TrackListManager} = JSPlayer.TrackListV2;
-    const {AudioPlayerProgressBar} = JSPlayer.HTMLItemsComponents;
 
-    const AudioPlayer = function() {
+    const AudioPlayer = function(audioPlayerProgressBar) {
         this.audioPlayerEvents = new ListEvents();
-        this.audioPlayerProgressBar = new AudioPlayerProgressBar(this);
+        this.audioPlayerProgressBar = audioPlayerProgressBar;
         this.volumeStep = 0.02;
         this.seekStep = 5;
         this.isPaused = true;
@@ -141,6 +140,10 @@
         stop() {
             this.pause();
             this.setCurrentTime(0);
+            this.audioPlayerEvents.trigger('onStop');
+        },
+        onStop(cb, subscriber) {
+            this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onStop');
         },
         next() {
             this.currentTrack.onTagChangeUnsub(this);
@@ -205,7 +208,8 @@
             evt.preventDefault();
             TrackListManager.shuffle(!this.isPaused);
             this.audioPlayerEvents.trigger('onShuffle', TrackListManager.getTrackList());
-            this.setCurrentTrackFromTrackList(!this.isPaused);
+            if (this.isPaused)
+                this.setCurrentTrackFromTrackList(true);
             this._setShuffleBtnStyle(TrackListManager.isShuffle());
         },
         onShuffle(cb, subscriber) {

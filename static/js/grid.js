@@ -458,11 +458,11 @@
     TracklistGrid.prototype = {
         setUp() {
             this.queuelistGrid = new QueuelistGrid(this._trackListBrowser, this);
-            TrackListManager.onShuffleTracklist(() => {
+            TrackListManager.onShuffleTracklist((track, index) => {
                 this.gridMaker.resetDragDrop();
                 this.gridMaker.clearRows();
                 this.buildGrid(true);
-                this._trackListBrowser.setCurrentlyPlayingTrack({track: null}, 0);
+                this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
                 this.queuelistGrid.render(); 
             }, this);
         },

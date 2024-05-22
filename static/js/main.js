@@ -7,14 +7,22 @@
     const TracklistGrid = JSPlayer.Grids.TracklistGrid;
     const draw = JSPlayer.Vizualizer.draw;
     const AudioPlayer = JSPlayer.AudioPlayer;
-    const keyCotrols = JSPlayer.EventsManager.keyCotrols;
+    const {keyCotrols, AudioPlayerKeyControls} = JSPlayer.EventsManager;
     const Fader = JSPlayer.Effects.Fader;
     const {LeftMenu, FileBrowser, Layout, layoutHTML, FileBrowserRenderer} = JSPlayer.Components;
+    const {AudioPlayerProgressBar} = JSPlayer.HTMLItemsComponents;
 
     const imgList = [];
-    const audioPlayer = new AudioPlayer();
+    const audioPlayerProgressBar = new AudioPlayerProgressBar();
+    const audioPlayer = new AudioPlayer(audioPlayerProgressBar);
+    audioPlayerProgressBar.setAudioPlayer(audioPlayer);
+
     const api = new JSPlayer.Api();
-    
+    const audioPlayerKeyControls = new AudioPlayerKeyControls(keyCotrols);
+    audioPlayerKeyControls.setAudioPlayer(audioPlayer);
+    audioPlayerKeyControls.onFastForward(audioPlayerProgressBar.updateProgress.bind(audioPlayerProgressBar), audioPlayerProgressBar);
+    audioPlayerKeyControls.onRewind(audioPlayerProgressBar.updateProgress.bind(audioPlayerProgressBar), audioPlayerProgressBar);
+
     const tracklistGrid = new TracklistGrid('#table-content', audioPlayer);
 
     const leftMenu = new LeftMenu();
@@ -74,8 +82,6 @@
     });
 
     audioPlayer.onRepeatSwitch(TrackListManager.switchRepeatMode.bind(TrackListManager), TrackListManager);
-
-    keyCotrols.setPlayer(audioPlayer);
 
     keyCotrols.registerKeyDownAction('m', () => {
         audioPlayer.mute();

@@ -3,22 +3,6 @@
     window.JSPlayer = window.JSPlayer || {};
 
     const KeyCotrols = function() {
-        
-        this.keyValues = {
-            SPACE: ' ',
-            PLUS: '+',
-            MINUS: '-',
-            T: 't',
-            CAP_P: 'P',
-            ArrowRight: 'ArrowRight',
-            ArrowLeft: 'ArrowLeft',
-        };
-
-        this.playPauseKey = this.keyValues.SPACE;
-        this.minusVolKey = this.keyValues.MINUS;
-        this.plusVolKey = this.keyValues.PLUS;
-        this.nextTrackKey = this.keyValues.ArrowRight;
-        this.prevTrackKey = this.keyValues.ArrowLeft;
         this.enabled = true;
         this._keyDownActions = {};
         this._keyUpActions = {};
@@ -26,7 +10,7 @@
         this._exclusivityCallerKeyDown = [];
         this._exclusivityCallerKeyUpV2 = [];
         this._exclusivityCallerKeyDownV2 = [];
-        this._setUpBuiltinActions();
+        
         this._bindEvents();
     };
     KeyCotrols.prototype = {
@@ -38,14 +22,6 @@
         },
         isEnabled() {
             return this.enabled;
-        },
-        setPlayer(player) {
-            if (typeof player === 'undefined') {
-                const e = new Error('A player is required!');
-                console.error(e);
-                throw e;
-            }
-            this.player = player;
         },
         setExlcusivityCallerKeyUp(key, caller) {
             const previousCaller = this._exclusivityCallerKeyUp.filter(obj => obj.key == key);
@@ -89,36 +65,10 @@
                 return;
             this._exclusivityCallerKeyDownV2.splice(previousCallerIdx, 1);
         },
-        playPause() {
-            this.player.playPause();
-        },
-        volumeUp() {
-            this.player.increasVolume();
-        },
-        volumeDown() {
-            this.player.decreasVolume();
-        },
-        nextTrack({ctrlKey, repeat}={}) {
-            if (ctrlKey || repeat)
-                return;
-            this.player.next();
-        },
-        prevTrack({ctrlKey, repeat}={}) {
-            if (ctrlKey || repeat)
-                return;
-            this.player.prev();
-        },
-        fastFoward({ctrlKey, repeat, shiftKey}={}) {
-            if (ctrlKey && repeat || shiftKey && repeat)
-                this.player.setCurrentTime(this.player.getCurrentTime() + 1);
-        },
-        rewind({ctrlKey, repeat, shiftKey}={}) {
-            if (ctrlKey && repeat || shiftKey && repeat)
-                this.player.setCurrentTime(this.player.getCurrentTime() - 1);
-        },
         registerKeyUpAction(key, cb, caller) {
             if (!this._keyUpActions.hasOwnProperty(key))
                 this._keyUpActions[key] = [];
+
             this._keyUpActions[key].push({cb, caller});
         },
         registerKeyDownAction(key, cb, caller) {
@@ -135,15 +85,6 @@
                 return this._executeKeyUpActions(evt);
             else if (keyType == 'down')
                 return this._executeKeyDownActions(evt);
-        },
-        _setUpBuiltinActions() {
-            this.registerKeyUpAction(this.playPauseKey, this.playPause.bind(this), this);
-            this.registerKeyDownAction(this.plusVolKey, this.volumeUp.bind(this), this);
-            this.registerKeyDownAction(this.minusVolKey, this.volumeDown.bind(this), this);
-            this.registerKeyUpAction(this.nextTrackKey, this.nextTrack.bind(this), this);
-            this.registerKeyUpAction(this.prevTrackKey, this.prevTrack.bind(this), this);
-            this.registerKeyDownAction(this.nextTrackKey, this.fastFoward.bind(this), this);
-            this.registerKeyDownAction(this.prevTrackKey, this.rewind.bind(this), this);
         },
         _executeKeyDownActions(evt) {
             if (!this.isEnabled()) return;
@@ -182,6 +123,79 @@
                     }
                 }
             }
+        }
+    };
+
+    const AudioPlayerKeyControls = function(keyCotrols) {
+        this.keyValues = {
+            SPACE: ' ',
+            PLUS: '+',
+            MINUS: '-',
+            T: 't',
+            CAP_P: 'P',
+            ArrowRight: 'ArrowRight',
+            ArrowLeft: 'ArrowLeft',
+        };
+
+        this.keyCotrols = keyCotrols;
+        this.listEvents = new ListEvents();
+        this._setUpKeyBindings();
+    };
+    AudioPlayerKeyControls.prototype = {
+        setAudioPlayer(audioPlayer) {
+            console.log('AudioPlayerKeyControls.setAudioPlayer')
+            if (typeof audioPlayer === 'undefined') {
+                const e = new Error('A player is required!');
+                console.error(e);
+                throw e;
+            }
+            this.audioPlayer = audioPlayer;
+        },
+        playPause() {
+            this.audioPlayer.playPause();
+        },
+        volumeUp() {
+            this.audioPlayer.increasVolume();
+        },
+        volumeDown() {
+            this.audioPlayer.decreasVolume();
+        },
+        nextTrack({ctrlKey, repeat}={}) {
+            if (ctrlKey || repeat)
+                return;
+            this.audioPlayer.next();
+        },
+        prevTrack({ctrlKey, repeat}={}) {
+            if (ctrlKey || repeat)
+                return;
+            this.audioPlayer.prev();
+        },
+        fastFoward({ctrlKey, repeat, shiftKey}={}) {
+            if (ctrlKey && repeat || shiftKey && repeat) {
+                this.audioPlayer.setCurrentTime(this.audioPlayer.getCurrentTime() + 1);
+                this.listEvents.trigger('onFastForward');
+            }
+        },
+        onFastForward(cb, subscriber) {
+            this.listEvents.onEventRegister({cb, subscriber}, 'onFastForward');
+        },
+        rewind({ctrlKey, repeat, shiftKey}={}) {
+            if (ctrlKey && repeat || shiftKey && repeat) {
+                this.audioPlayer.setCurrentTime(this.audioPlayer.getCurrentTime() - 1);
+                this.listEvents.trigger('onRewind');
+            }
+        },
+        onRewind(cb, subscriber) {
+            this.listEvents.onEventRegister({cb, subscriber}, 'onRewind');
+        },
+        _setUpKeyBindings() {
+            this.keyCotrols.registerKeyUpAction(this.keyValues.SPACE, this.playPause.bind(this), this);
+            this.keyCotrols.registerKeyDownAction(this.keyValues.PLUS, this.volumeUp.bind(this), this);
+            this.keyCotrols.registerKeyDownAction(this.keyValues.MINUS, this.volumeDown.bind(this), this);
+            this.keyCotrols.registerKeyUpAction(this.keyValues.ArrowRight, this.nextTrack.bind(this), this);
+            this.keyCotrols.registerKeyUpAction(this.keyValues.ArrowLeft, this.prevTrack.bind(this), this);
+            this.keyCotrols.registerKeyDownAction(this.keyValues.ArrowRight, this.fastFoward.bind(this), this);
+            this.keyCotrols.registerKeyDownAction(this.keyValues.ArrowLeft, this.rewind.bind(this), this);
         }
     };
 
@@ -228,5 +242,5 @@
         },
     };
 
-    window.JSPlayer.EventsManager = {ListEvents, keyCotrols: new KeyCotrols()};
+    window.JSPlayer.EventsManager = {ListEvents, keyCotrols: new KeyCotrols(), AudioPlayerKeyControls};
 })(this, document);
