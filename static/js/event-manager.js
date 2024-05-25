@@ -126,7 +126,7 @@
         }
     };
 
-    const AudioPlayerKeyControls = function(keyCotrols) {
+    const AudioPlayerKeyControls = function(keyEventsCotrols) {
         this.keyValues = {
             SPACE: ' ',
             PLUS: '+',
@@ -137,42 +137,41 @@
             ArrowLeft: 'ArrowLeft',
         };
 
-        this.keyCotrols = keyCotrols;
+        this.keyEventsCotrols = keyEventsCotrols;
         this.listEvents = new ListEvents();
         this._setUpKeyBindings();
     };
     AudioPlayerKeyControls.prototype = {
-        setAudioPlayer(audioPlayer) {
-            console.log('AudioPlayerKeyControls.setAudioPlayer')
-            if (typeof audioPlayer === 'undefined') {
+        setPlayerControls(playerControls) {
+            if (typeof playerControls === 'undefined') {
                 const e = new Error('A player is required!');
                 console.error(e);
                 throw e;
             }
-            this.audioPlayer = audioPlayer;
+            this.playerControls = playerControls;
         },
         playPause() {
-            this.audioPlayer.playPause();
+            this.playerControls.playPause();
         },
         volumeUp() {
-            this.audioPlayer.increasVolume();
+            this.playerControls.increasVolume();
         },
         volumeDown() {
-            this.audioPlayer.decreasVolume();
+            this.playerControls.decreasVolume();
         },
         nextTrack({ctrlKey, repeat}={}) {
             if (ctrlKey || repeat)
                 return;
-            this.audioPlayer.next();
+            this.playerControls.next();
         },
         prevTrack({ctrlKey, repeat}={}) {
             if (ctrlKey || repeat)
                 return;
-            this.audioPlayer.prev();
+            this.playerControls.prev();
         },
         fastFoward({ctrlKey, repeat, shiftKey}={}) {
             if (ctrlKey && repeat || shiftKey && repeat) {
-                this.audioPlayer.setCurrentTime(this.audioPlayer.getCurrentTime() + 1);
+                this.playerControls.fastForward();
                 this.listEvents.trigger('onFastForward');
             }
         },
@@ -181,7 +180,7 @@
         },
         rewind({ctrlKey, repeat, shiftKey}={}) {
             if (ctrlKey && repeat || shiftKey && repeat) {
-                this.audioPlayer.setCurrentTime(this.audioPlayer.getCurrentTime() - 1);
+                this.playerControls.rewind();
                 this.listEvents.trigger('onRewind');
             }
         },
@@ -189,13 +188,13 @@
             this.listEvents.onEventRegister({cb, subscriber}, 'onRewind');
         },
         _setUpKeyBindings() {
-            this.keyCotrols.registerKeyUpAction(this.keyValues.SPACE, this.playPause.bind(this), this);
-            this.keyCotrols.registerKeyDownAction(this.keyValues.PLUS, this.volumeUp.bind(this), this);
-            this.keyCotrols.registerKeyDownAction(this.keyValues.MINUS, this.volumeDown.bind(this), this);
-            this.keyCotrols.registerKeyUpAction(this.keyValues.ArrowRight, this.nextTrack.bind(this), this);
-            this.keyCotrols.registerKeyUpAction(this.keyValues.ArrowLeft, this.prevTrack.bind(this), this);
-            this.keyCotrols.registerKeyDownAction(this.keyValues.ArrowRight, this.fastFoward.bind(this), this);
-            this.keyCotrols.registerKeyDownAction(this.keyValues.ArrowLeft, this.rewind.bind(this), this);
+            this.keyEventsCotrols.registerKeyUpAction(this.keyValues.SPACE, this.playPause.bind(this), this);
+            this.keyEventsCotrols.registerKeyDownAction(this.keyValues.PLUS, this.volumeUp.bind(this), this);
+            this.keyEventsCotrols.registerKeyDownAction(this.keyValues.MINUS, this.volumeDown.bind(this), this);
+            this.keyEventsCotrols.registerKeyUpAction(this.keyValues.ArrowRight, this.nextTrack.bind(this), this);
+            this.keyEventsCotrols.registerKeyUpAction(this.keyValues.ArrowLeft, this.prevTrack.bind(this), this);
+            this.keyEventsCotrols.registerKeyDownAction(this.keyValues.ArrowRight, this.fastFoward.bind(this), this);
+            this.keyEventsCotrols.registerKeyDownAction(this.keyValues.ArrowLeft, this.rewind.bind(this), this);
         }
     };
 

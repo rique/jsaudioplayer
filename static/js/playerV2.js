@@ -13,13 +13,7 @@
         this.isPaused = true;
         //0 -> no repeat; 1 -> repeat all; 2 -> repeat one; 
         this.repeatMode = 0;
-        this.repeatCnt = document.querySelector('#repeat-button');
-        this.repeatElem = document.querySelector('#repeat-button a');
-        this.repeatElemGlyph = document.querySelector('#repeat-button a .fa-repeat');
-        this.repeatOneElem = document.querySelector('#repeat-button a .repeat-one');
-        
-        this.playPauseBtn = document.querySelector('#play-button .player-action .fa-solid');
-    
+            
         this.albumImg = document.getElementById('album-art');
         this.titleTrack = document.getElementById('track-title');
         this.artistName = document.getElementById('artist-name');
@@ -34,11 +28,6 @@
         this.mainVolumeBarElem = document.getElementById('main-volume-bar');
         this.volumeBarElem = document.getElementById('volume-bar');
     
-        this.playBtn = document.getElementById('play-button');
-        this.stopBtn = document.getElementById('stop-button');
-        this.prevBtn = document.getElementById('prev-button');
-        this.nextBtn = document.getElementById('next-button');
-        this.shuffleBtn = document.getElementById('shuffle-button');
         this.volUpBtn = document.querySelector('span.vol-up');
         this.volDownBtn = document.querySelector('span.vol-down');
     
@@ -49,9 +38,6 @@
     AudioPlayer.prototype = {
         init() {
             this._setUpPlayer();
-            this._setUpPlayerControls();
-    
-            this.shuffleBtn.addEventListener('click', this.shuffle.bind(this));
     
             this.timeTrackElem.addEventListener('click', this.changeTrackTimeDisplayMode.bind(this));
     
@@ -64,8 +50,6 @@
                 this.setCurrentTrackFromTrackList(false);
                 this.play();
             });
-    
-            this._setRepeatBtnStyle();
         },
         changeVolume(evt, mouseUp) {
             if (!mouseUp)
@@ -123,14 +107,12 @@
         play() {
             this.isPaused = false;
             this.currentTrack.isPlaying = true;
-            this.playPauseBtn.classList.replace('fa-play', 'fa-pause');
             this.audioPlayerEvents.trigger('onPlayPause', this.isPaused);
             this.audioElem.play();
         },
         pause() {
             this.isPaused = true;
             this.currentTrack.isPlaying = false;
-            this.playPauseBtn.classList.replace('fa-pause', 'fa-play');
             this.audioPlayerEvents.trigger('onPlayPause', this.isPaused);
             this.audioElem.pause();
         },
@@ -152,19 +134,20 @@
                 this.setCurrentTime(0);
                 this._playerNotifications.hideComingNext();
                 this._comingNextFired = false;
+                this.audioPlayerEvents.trigger('onStop');
             } else {
                 this.currentTrack.onTagChangeUnsub(this);
                 this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack);
                 this.setCurrentTrackFromTrackList(true, true);
             }
         },
-        btnRepeat() {
+        repeat() {
             if (this.repeatMode >= 2)
                 this.repeatMode = 0;
             else
                 ++this.repeatMode;
-            this._setRepeatBtnStyle();
             this.audioPlayerEvents.trigger('onRepeatSwitch', this.repeatMode);
+            return this.repeatMode;
         },
         onRepeatSwitch(cb, subscriber) {
             this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onRepeatSwitch');
@@ -201,16 +184,17 @@
         isMuted() {
             return this.audioElem.muted;
         },
-        shuffle(evt) {
-            evt.preventDefault();
+        shuffle() {
             TrackListManager.shuffle(!this.isPaused);
             this.audioPlayerEvents.trigger('onShuffle', TrackListManager.getTrackList());
             if (this.isPaused)
                 this.setCurrentTrackFromTrackList(true);
-            this._setShuffleBtnStyle(TrackListManager.isShuffle());
         },
         onShuffle(cb, subscriber) {
             this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onShuffle');
+        },
+        isPlayerPaused() {
+            return this.isPaused;
         },
         increasVolume() {
             let volume = this.audioElem.volume + this.volumeStep;
@@ -317,34 +301,8 @@
             const {track} = TrackListManager.getNextTrackInList();
             return track;
         },
-        _setUpPlayerControls() {
-            this.playBtn.addEventListener('click', (evt) => {
-                evt.preventDefault();
-                this.playPause();
-            });
-    
-            this.stopBtn.addEventListener('click', (evt) => {
-                evt.preventDefault();
-                this.stop();
-            });
-    
-            this.prevBtn.addEventListener('click', (evt) => {
-                evt.preventDefault();
-                this.prev();
-            });
-    
-            this.nextBtn.addEventListener('click', (evt) => {
-                evt.preventDefault();
-                this.next();
-            });
-    
-            this.repeatElem.addEventListener('click', (evt) => {
-                evt.preventDefault();
-                this.btnRepeat();
-            });
-        },
         _manageTags(tags) {
-            let {track, index} = TrackListManager.getCurrentTrack();
+            let {track} = TrackListManager.getCurrentTrack();
     
             let title = tags.title;
             if (!title || typeof title === 'undefined' || title.length == 0)
@@ -390,23 +348,6 @@
                     this.nameTrackElem.innerText = value;
                     break;
             }
-        },
-        _setRepeatBtnStyle() {
-            if (this.repeatMode == 0) {
-                this.repeatOneElem.classList.remove('repeat-active');
-                this.repeatCnt.classList.remove('repeat-active');
-            } else if (this.repeatMode == 1) {
-                this.repeatOneElem.classList.remove('repeat-active');
-                this.repeatCnt.classList.add('repeat-active');
-            } else if (this.repeatMode == 2) {
-                this.repeatOneElem.classList.add('repeat-active');
-                this.repeatCnt.classList.add('repeat-active');
-            }
-        },
-        _setShuffleBtnStyle(isShuffle) {
-            if (!isShuffle)
-                return this.shuffleBtn.classList.remove('repeat-active');
-            return this.shuffleBtn.classList.add('repeat-active');
         },
         _updateVolumeBar(volume) {
             toHundredVolume = volume * 100;

@@ -97,7 +97,7 @@ ul {
     color: #d23939;
 }
 
-.action-cnt a .fa-repeat.repeat-active,
+.action-cnt.repeat-active a .fa-repeat,
 #shuffle-button.repeat-active .fa-shuffle {
     color: #bf1616;
 }

@@ -35,7 +35,6 @@
     };
     ProgerssBar.prototype = {
         setUp(parentCnt) {
-            console.log('setUp')
             this.mainDiv.id('progress');
             this.subDiv.id('prog-bar');
             this.mainDiv.append(this.subDiv);
@@ -82,7 +81,6 @@
     };
     AudioPlayerProgressBar.prototype = {
         setAudioPlayer(audioPlayer) {
-            console.log("setAudioPlayer")
             this.audioPlayer = audioPlayer;
             this._setUp();
         },
@@ -117,7 +115,6 @@
             this.isPaused = isPaused;
         },
         _setUp() {
-            console.log('_setUp')
             this.audioPlayer.onPlayPause(this.togglePauseProgress.bind(this), this);
             this.audioPlayer.onStop(this.resetProgresBar.bind(this), this);
             this.progressBar = new ProgerssBar(document.getElementById('player'));

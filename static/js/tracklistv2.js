@@ -66,7 +66,7 @@
             return false;
         },
         reset() {
-            this.index = 0;
+            this.index = -1;
         },
         getItemByIndex(index) {
             const maxIndex = this.maxIndex();
@@ -211,18 +211,25 @@
         switchTrackIndex(oldIndex, newIndex) {
             const tracklist = this.getItems();
             const trackItem = tracklist.splice(oldIndex, 1)[0];
+            const index1 = this.index;
 
-            if (oldIndex == this.index)
+            if (oldIndex == this.index) {
                 this.index = newIndex;
-            else if (newIndex == this.index)
-                --this.index;
+            }
+            else if (newIndex == this.index) {
+                if (oldIndex < newIndex) 
+                    --this.index;
+                else 
+                    ++this.index;
+            }
             else if (oldIndex > newIndex && this.index < oldIndex && this.index > newIndex) {
                 ++this.index;
             } else if (oldIndex < newIndex && this.index > oldIndex && this.index < newIndex) {
                 --this.index;
             }
-
+            console.log({oldIndex, newIndex, index1, index2: this.index, trackItem});
             this.moveItem(newIndex, trackItem);
+            console.log({oldIndex: tracklist[oldIndex], newIndex: tracklist[newIndex]})
         },
         setTrackListTotalDuration(duration) {
             this.tracklistTotalDuration = duration;
@@ -315,7 +322,8 @@
         },
         reShuffle() {
             this.shuffleTracklist();
-            this.trackListEvents.trigger('onShuffleTracklist', this.getTrackList(), this.isShuffle());
+            const currentTrack = this.getTrackList().current();
+            this.trackListEvents.trigger('onShuffleTracklist', currentTrack, currentTrack.index, this.isShuffle());
         },
         shuffle(conserveCurrentTrack) {
             let currentTrack;

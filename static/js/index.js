@@ -11,18 +11,20 @@
     const Fader = JSPlayer.Effects.Fader;
     const {LeftMenu, FileBrowser, Layout, layoutHTML, FileBrowserRenderer} = JSPlayer.Components;
     const {AudioPlayerProgressBar} = JSPlayer.HTMLItemsComponents;
-    // const {PlayerControls} = JSPlayer.PlayerControls
+    const {PlayerControls, PlayerButtons} = JSPlayer.PlayerControls
 
-    //const playerControls = new PlayerControls(document.getElementById('player-controls'));
+    
 
     const imgList = [];
     const audioPlayerProgressBar = new AudioPlayerProgressBar();
     const audioPlayer = new AudioPlayer(audioPlayerProgressBar);
     audioPlayerProgressBar.setAudioPlayer(audioPlayer);
 
+    const playerControls = new PlayerControls( audioPlayer);
+    const playerButtons = new PlayerButtons(document.getElementById('player-controls'), playerControls);
     const api = new JSPlayer.Api();
     const audioPlayerKeyControls = new AudioPlayerKeyControls(keyCotrols);
-    audioPlayerKeyControls.setAudioPlayer(audioPlayer);
+    audioPlayerKeyControls.setPlayerControls(playerControls);
     audioPlayerKeyControls.onFastForward(audioPlayerProgressBar.updateProgress.bind(audioPlayerProgressBar), audioPlayerProgressBar);
     audioPlayerKeyControls.onRewind(audioPlayerProgressBar.updateProgress.bind(audioPlayerProgressBar), audioPlayerProgressBar);
 

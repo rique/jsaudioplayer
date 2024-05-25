@@ -515,7 +515,6 @@
         },
         close() {
             this._trackListBrowser.hide();
-            this.gridMaker.close();
         },
         getRowByIndex(index) {
             return this.gridMaker.getRowByIndex(index);

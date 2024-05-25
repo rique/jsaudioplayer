@@ -10,3 +10,6 @@ def index(request):
 def libraryV2(request):
     return HttpResponse(loader.get_template("tests1/index3.html").render({}, request))
 
+def playerBtn(request):
+    return HttpResponse(loader.get_template("tests1/index4.html").render({}, request))
+
