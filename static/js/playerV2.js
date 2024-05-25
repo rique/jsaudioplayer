@@ -266,7 +266,7 @@
             this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onAudioEnded');
         },
         loadID3Tags(track) {
-            this._manageTags(track.getID3Tags());
+            this._manageTags(track);
         },
         _setUpPlayer() {
             this.audioElem.autoplay = false;
@@ -301,18 +301,19 @@
             const {track} = TrackListManager.getNextTrackInList();
             return track;
         },
-        _manageTags(tags) {
-            let {track} = TrackListManager.getCurrentTrack();
-    
-            let title = tags.title;
-            if (!title || typeof title === 'undefined' || title.length == 0)
-                title = track.trackName;
+       /**
+        * 
+        * @param {Track} track 
+        * @returns {undefined}
+        */
+        _manageTags(track) {
+            let title = track.getTitle();
             
             let album = ''
-            if (tags.album)
-                album = ` ~ ${tags.album}`;
+            if (track.getAlbum())
+                album = ` ~ ${track.getAlbum()}`;
             
-            let artist = tags.artist;
+            let artist = track.getArtist();
             
             if (!artist || typeof artist === 'undefined' || artist.length == 0)
                 artist = 'N/A';
@@ -324,17 +325,20 @@
             this.nameTrackElem.innerText = title;
             this.artistName.innerText = artist;
     
-            if (!tags.hasOwnProperty('picture'))
-                return this.albumImg.src = "/static/albumart.jpg";
+            track.getAlbumArt(track.trackUUid).then((albumart) => {
+                if (!albumart)
+                    return this.albumImg.src = "/static/albumart.jpg";
+
+                const { data, format } = albumart;
+
+                let dataLen = data.length;
     
-            const { data, format } = tags.picture;
-            let dataLen = data.length;
-    
-            if (dataLen == 0)
-                return this.albumImg.src = "/static/albumart.jpg";
-            
-            let imgData = data;
-            this.albumImg.src = `data:${format};base64,${imgData}`;
+                if (dataLen == 0)
+                    return this.albumImg.src = "/static/albumart.jpg";
+                
+                let imgData = data;
+                this.albumImg.src = `data:${format};base64,${imgData}`;
+            });
         },
         _manageTag(tag, value) {
             switch(tag) {

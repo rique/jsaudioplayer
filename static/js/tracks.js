@@ -2,11 +2,11 @@
     const {ListEvents, keyCotrols} = JSPlayer.EventsManager;
     const api = new JSPlayer.Api();
     const {TrackListManager} = JSPlayer.TrackListV2;
+    const {AlbumArtLoader} = window.JSPlayer.Loaders
 
     const ID3Tags = function(tags) {
         this.tags = tags;
-        this.picture = [];
-    
+        this.albumArtLoader = new AlbumArtLoader();
         this._manageTags(tags);
     };
     ID3Tags.prototype = {
@@ -19,7 +19,11 @@
         getAlbum() {
             return this.album;
         },
-        getAlbumArt() {
+        async getAlbumArt(id) {
+            if (!this.picture) {
+                const picture = await this.albumArtLoader.getByIdAsync(id);
+                this.picture = picture.object;
+            }
             return this.picture;
         },
         setArtist(artist) {
@@ -45,15 +49,6 @@
             this.album = tags.album;
             this.artist = tags.artist;
             this.duration = tags.duration;
-    
-            if (tags.hasOwnProperty('picture')) {
-                const { data, format } = tags.picture;
-                let dataLen = data.length;
-    
-                if (dataLen == 0)
-                    return this.picture = false;
-                this.picture = [data, format];
-            }
         }
     };
     
@@ -119,8 +114,8 @@
         getAlbum() {
             return this._id3TagsInstance.getAlbum();
         },
-        getAlbumArt() {
-            return this._id3TagsInstance.getAlbumArt();
+        async getAlbumArt() {
+            return await this._id3TagsInstance.getAlbumArt(this.trackUUid);
         },
         getID3Tags() {
             return this._id3TagsInstance.getTags();

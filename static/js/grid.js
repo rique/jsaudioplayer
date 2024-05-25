@@ -526,7 +526,6 @@
             }
         },
         _buildHeaders() {
-            console.log('_buildHeaders');
             const head = [{
                 content: 'N°',
                 sorterCell: true,
@@ -661,7 +660,7 @@
             }];
         },
         _buildBody() {
-            for (let {index, track} of TrackListManager.iterOverTrack()) {
+            for (let {index, track} of TrackListManager.forEachTrack()) {
                 this.addTrackToGrid({index, track});
             }
         },
@@ -776,6 +775,7 @@
             this.gridMaker.removeRowFromGrid(rowIdx);
         },
         _getCellsFromTrack(track, index) {
+            console.log({index});
             return [{
                 content: `Q${parseInt(index) + 1}`,
                 width: 5,
@@ -850,8 +850,9 @@
                 this.addTrackToGrid({index: curIndex, track: curTrack});
                 addIdx = 1;
             }
-            for (let {index, track} of TrackListManager.iterOverQueue()) {
+            for (let {index, track} of TrackListManager.forEachTrackInQueue()) {
                 index += addIdx;
+                console.log('1', {index});
                 this.addTrackToGrid({index, track});
             }
         },

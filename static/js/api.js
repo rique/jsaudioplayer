@@ -80,6 +80,31 @@
                 callback(JSON.parse(xhr.response));
             }
         },
+        loadTrackAlbumart(track_uuid, callback) {
+            let xhr = this.getXhrPost(`${this.url}/load-track-albumart`);
+            let data = JSON.stringify({
+                track_uuid: track_uuid
+            });
+    
+            xhr.setRequestHeader('Content-type', 'application/json; charset=UTF-8');
+            xhr.setRequestHeader("X-CSRFToken", this.csrftoken);
+            xhr.send(data);
+    
+            xhr.onload = () => {
+                console.log('xhr', xhr.status);
+                callback(JSON.parse(xhr.response));
+            }
+        },
+        async loadTrackAlbumartAsync(track_uuid) {
+            const response = await fetch(`${this.url}/load-track-albumart`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    track_uuid: track_uuid
+                })
+            });
+            const parsed = await response.json();
+            return parsed;
+        },
         loadTrackList(callback) {
             let xhr = this.getXhrPost(`${this.url}/load-track-list`);
             let data = JSON.stringify({});

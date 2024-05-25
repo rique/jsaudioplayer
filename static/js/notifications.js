@@ -18,14 +18,16 @@
     };
     TracklistBrowserNotifications.prototype = {
         setAddedTrackToQueue(track, timeout) {
-            NotificationCenter.modifyNotification({message: new TrackBoxTemplate(track)}, this.addedToQueueKey);
+            const tpl = new TrackBoxTemplate(track);
+            NotificationCenter.modifyNotification({message: tpl.render()}, this.addedToQueueKey);
             NotificationCenter.displayNotification(this.addedToQueueKey, timeout);
         },
         hideAddedTrackToQueue() {
             NotificationCenter.hideNotification(this.addedToQueueKey);
         },
         setARemovedTrack(track, timeout) {
-            NotificationCenter.modifyNotification({message: new TrackBoxTemplate(track)}, this.removedTrackKey);
+            const tpl = new TrackBoxTemplate(track);
+            NotificationCenter.modifyNotification({message: tpl.render()}, this.removedTrackKey);
             NotificationCenter.displayNotification(this.removedTrackKey, timeout);
         },
         hideARemovedTrack() {
@@ -42,7 +44,8 @@
     };
     PlayerNotifications.prototype = {
         setComingNext(track, timeout) {
-            NotificationCenter.modifyNotification({message: new TrackBoxTemplate(track)}, this.comingNextKey);
+            const tpl = new TrackBoxTemplate(track);
+            NotificationCenter.modifyNotification({message: tpl.render()}, this.comingNextKey);
             NotificationCenter.displayNotification(this.comingNextKey, timeout);
         },
         hideComingNext() {
@@ -53,19 +56,20 @@
     const FileBrowserNotifications = function() {
         this.trackAddedKey = 'filebrowser.added';
         NotificationCenter.registerNotification({
-          title: 'New track successfully added!',
-          level: 'info',
+            title: 'New track successfully added!',
+            level: 'info',
         }, this.trackAddedKey);
-      };
-      FileBrowserNotifications.prototype = {
-          setAddedTrack(track, timeout) {
-              NotificationCenter.modifyNotification({message: new TrackBoxTemplate(track)}, this.trackAddedKey);
-              NotificationCenter.displayNotification(this.trackAddedKey, timeout);
-          },
-          hideAddedTrack() {
-              NotificationCenter.hideNotification(this.trackAddedKey);
-          },
-      };
+    };
+    FileBrowserNotifications.prototype = {
+        setAddedTrack(track, timeout) {
+            const tpl = new TrackBoxTemplate(track);
+            NotificationCenter.modifyNotification({message:  tpl.render()}, this.trackAddedKey);
+            NotificationCenter.displayNotification(this.trackAddedKey, timeout);
+        },
+        hideAddedTrack() {
+            NotificationCenter.hideNotification(this.trackAddedKey);
+        },
+    };
 
     JSPlayer.Notifications = {
         TracklistBrowserNotifications: new TracklistBrowserNotifications(),

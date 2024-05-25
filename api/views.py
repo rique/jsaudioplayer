@@ -179,6 +179,44 @@ def fileBrowser(request):
 
 
 @csrf_exempt
+def loadTrackAlbumart(request):
+    if request.method != 'POST':
+        return JsonResponse(data={'success': False, 'code': 'wrong_method'}, status=405, reason="Method Not Allowed")
+    
+    body_unicode = request.body.decode('utf-8')
+    params = json.loads(body_unicode)
+    track_uuid = params['track_uuid']
+    try:
+        track = Tracks.objects.get(track_uuid=track_uuid)
+    except Tracks.DoesNotExist:
+        return JsonResponse(data={'success': False, 'code': 'dose_not_exist'}, status=404, reason=f"Object or ressource with uuid {track_uuid} not found")
+    
+    audio = ID3(f'./static/tracks/{track_uuid}.mp3')
+    mp3_file = MP3(f'./static/tracks/{track_uuid}.mp3')
+    keys = audio.keys()
+
+    apict = ''
+    pic_format = ''
+
+    if 'APIC:' in keys:
+        apict = b64encode(audio.get('APIC:').data).decode('ASCII')
+        pic_format = audio.get('APIC:').mime
+    else:
+        for k in keys:
+            if k.startswith('APIC:'):
+                APIC = audio.get(k)
+                if APIC.mime:
+                    apict = b64encode(APIC.data).decode('ASCII')
+                    pic_format = APIC.mime
+                    break
+    
+    return JsonResponse(data={'success': True, 'track': track.__dict__, 'ID3': {
+        'picture': {'data': apict, 'format': pic_format},
+        'duration': mp3_file.info.length
+    } })
+
+
+@csrf_exempt
 def loadTrackList(request):
     if request.method != 'POST':
         return JsonResponse(data={'success': False, 'code': 'wrong_method'}, status=405, reason="Method Not Allowed")
@@ -200,10 +238,10 @@ def loadTrackList(request):
             artist = audio.get('TPE1').text[0]
         album = ''
         if 'TALB' in keys:
-            album = audio.get('TALB').text[0];
+            album = audio.get('TALB').text[0]
         apict = ''
         pic_format = ''
-        if 'APIC:' in keys:
+        """if 'APIC:' in keys:
             apict = b64encode(audio.get('APIC:').data).decode('ASCII')
             pic_format = audio.get('APIC:').mime
         else:
@@ -213,7 +251,7 @@ def loadTrackList(request):
                     if APIC.mime:
                         apict = b64encode(APIC.data).decode('ASCII')
                         pic_format = APIC.mime
-                        break
+                        break"""
         duration += mp3_file.info.length
         tracklist.append({'track': trk.__dict__, 'ID3': {
             'title': title,

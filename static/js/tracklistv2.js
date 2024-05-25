@@ -120,8 +120,10 @@
             return this.indexList.length();
         },
         *forEach() {
-            for ({track, index} of this.indexList.forEach()) {
-                yield {track, index: 0};
+            let i = 0;
+            for ({track} of this.indexList.forEach()) {
+                yield {track, index: i};
+                ++i;
             }
         }
     }
@@ -314,7 +316,7 @@
             this.lastTrack = tracklist.isLastTrack();
 
             if (this.queueDepleted) {
-                this.trackListEvents.trigger('onDepletingQueue', null, -1);
+                this.trackListEvents.trigger('onDepletingQueue', {track: null}, -1);
                 this.queueDepleted = false;
             }
 
@@ -391,12 +393,12 @@
         isShuffle() {
             return this._isShuffle;
         },
-        *iterOverTrack() {
+        *forEachTrack() {
             for (let track of this.getTrackList().forEach()) {
                 yield track;
             }
         },
-        *iterOverQueue() {
+        *forEachTrackInQueue() {
             for (let track of this.queueList.forEach()) {
                 yield track;
             }
