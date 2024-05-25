@@ -142,10 +142,10 @@ ul {
 #muted-display {
     position: absolute;
     top: 40%;
-    left: 33%;
-    width: 35%;
+    left: 46%;
+     width: 8%;
     background: transparent;
-    text-align: center;
+    text-align: left;
     color: #f6f6f6;
     z-index: 5000;
     font-size: 176px;
