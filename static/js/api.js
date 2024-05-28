@@ -1,5 +1,4 @@
 (function(window, document, JSPlayer, undefined) {
-    console.log('JSPlayer', JSPlayer);
     const readCookie = JSPlayer.Utils.readCookie;
 
     const Api = function() {
@@ -80,7 +79,7 @@
                 callback(JSON.parse(xhr.response));
             }
         },
-        loadTrackAlbumart(track_uuid, callback) {
+        loadTrackAlbumArt(track_uuid, callback) {
             let xhr = this.getXhrPost(`${this.url}/load-track-albumart`);
             let data = JSON.stringify({
                 track_uuid: track_uuid
@@ -95,8 +94,33 @@
                 callback(JSON.parse(xhr.response));
             }
         },
-        async loadTrackAlbumartAsync(track_uuid) {
+        async loadTrackAlbumArtAsync(track_uuid) {
             const response = await fetch(`${this.url}/load-track-albumart`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    track_uuid: track_uuid
+                })
+            });
+            const parsed = await response.json();
+            return parsed;
+        },
+        loadTrackInfo(track_uuid, callback) {
+            let xhr = this.getXhrPost(`${this.url}/load-track-info`);
+            let data = JSON.stringify({
+                track_uuid: track_uuid,
+            });
+    
+            xhr.setRequestHeader('Content-type', 'application/json; charset=UTF-8');
+            xhr.setRequestHeader("X-CSRFToken", this.csrftoken);
+            xhr.send(data);
+    
+            xhr.onload = () => {
+                console.log('xhr', xhr.status);
+                callback(JSON.parse(xhr.response));
+            }
+        },
+        async loadTrackInfoAsync(track_uuid) {
+            const response = await fetch(`${this.url}/load-track-info`, {
                 method: 'POST',
                 body: JSON.stringify({
                     track_uuid: track_uuid

@@ -173,6 +173,10 @@ ul {
     padding: 16px;
     display: none;
     margin: 10% auto 0 auto;
+}
+
+.cnt-overlay .file-browser, 
+.cnt-overlay .track-browser {
     overflow: hidden;
 }
 

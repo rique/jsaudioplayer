@@ -10,7 +10,6 @@
     };
     PlayerButtonBaseItem.prototype = {
         setUpItem() {
-            console.log('Base setUpItem', {item: this});
             this.htmlItem.setClassName('inline-block action-cnt');
         },
         onSwitchState(cb, subscriber) {

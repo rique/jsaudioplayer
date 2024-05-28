@@ -21,10 +21,14 @@
         },
         async getAlbumArt(id) {
             if (!this.picture) {
-                const picture = await this.albumArtLoader.getByIdAsync(id);
-                this.picture = picture.object;
+                const object = await this.albumArtLoader.getByIdAsync(id);
+                if (object)
+                    this.picture = object.id3.picture;
             }
             return this.picture;
+        },
+        getDuration() {
+            return this.duration;
         },
         setArtist(artist) {
             this.tags.artist = artist;
@@ -37,9 +41,6 @@
         setAlbum(album) {
             this.tags.album = album;
             this._manageTags(this.tags);
-        },
-        getDuration() {
-            return this.duration;
         },
         getTags() {
             return this.tags;
@@ -71,6 +72,9 @@
         getIndex() {
             return this.index;
         },
+        getTrackUUID() {
+            return this.trackUUid;
+        },
         getTrackDuration(formated) {
             if (formated)
                 return this.formatTrackDuration();
@@ -78,6 +82,13 @@
         },
         setCurrentTime(val) {
             this.currentTime = val;
+            this._eventTrack.trigger('onCurrentTimeUpdate', val);
+        },
+        onCurrentTimeUpdate(cb, subscriber) {
+            this._eventTrack.onEventRegister({cb, subscriber}, 'onCurrentTimeUpdate');
+        },
+        onCurrentTimeUpdateUnsub(subscriber) {
+            this._eventTrack.unsubscribeEVent({eventKey: 'onCurrentTimeUpdate', subscriber})
         },
         getCurrentTime(formated) {
             if (formated)
@@ -95,9 +106,10 @@
                 const id3Tags = this.getID3Tags();
                 if (!id3Tags)
                     return;
-                this.duration = id3Tags.duration;
+                this.trackDuration = id3Tags.getDuration()
             }
-            return this._formatTime(this.trackDuration);
+            
+            return this._formatTime(this.trackDuration); 
         },
         formatCurrentTime() {
             return this._formatTime(this.getCurrentTime());

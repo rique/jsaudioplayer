@@ -6,21 +6,21 @@
     const {TrackListManager} = JSPlayer.TrackListV2;
     const TracklistGrid = JSPlayer.Grids.TracklistGrid;
     const draw = JSPlayer.Vizualizer.draw;
-    const AudioPlayer = JSPlayer.AudioPlayer;
+    const {AudioPlayer, AudioPlayerDisplay} = JSPlayer.AudioPlayer;
     const {keyCotrols, AudioPlayerKeyControls} = JSPlayer.EventsManager;
     const Fader = JSPlayer.Effects.Fader;
     const {LeftMenu, FileBrowser, Layout, layoutHTML, FileBrowserRenderer} = JSPlayer.Components;
     const {AudioPlayerProgressBar} = JSPlayer.HTMLItemsComponents;
     const {PlayerControls, PlayerButtons} = JSPlayer.PlayerControls
-
+    const {TrackListBrowser} = JSPlayer.Components;
     
-
     const imgList = [];
     const audioPlayerProgressBar = new AudioPlayerProgressBar();
     const audioPlayer = new AudioPlayer(audioPlayerProgressBar);
+    const audioPlayerDisplay = new AudioPlayerDisplay(audioPlayer);
     audioPlayerProgressBar.setAudioPlayer(audioPlayer);
 
-    const playerControls = new PlayerControls( audioPlayer);
+    const playerControls = new PlayerControls(audioPlayer);
     const playerButtons = new PlayerButtons(document.getElementById('player-controls'), playerControls);
     const api = new JSPlayer.Api();
     const audioPlayerKeyControls = new AudioPlayerKeyControls(keyCotrols);
@@ -28,7 +28,9 @@
     audioPlayerKeyControls.onFastForward(audioPlayerProgressBar.updateProgress.bind(audioPlayerProgressBar), audioPlayerProgressBar);
     audioPlayerKeyControls.onRewind(audioPlayerProgressBar.updateProgress.bind(audioPlayerProgressBar), audioPlayerProgressBar);
 
-    const tracklistGrid = new TracklistGrid('#table-content', audioPlayer);
+    const trackListBrowser = new TrackListBrowser(audioPlayer, audioPlayerDisplay);
+    const tracklistGrid = new TracklistGrid('#table-content', audioPlayer, trackListBrowser);
+    trackListBrowser.setGrid(tracklistGrid);
 
     const leftMenu = new LeftMenu();
     leftMenu.init();
@@ -130,7 +132,6 @@
     });
     keyCotrols.registerKeyUpAction('+', () => {
         volUpEvtId = setTimeout(() => {
-            //fadeOut(volumeCnt, false, 0.35);
             volumeFader.fadeOut(volumeCnt, 400, 1, 0);
         }, 568);
     });

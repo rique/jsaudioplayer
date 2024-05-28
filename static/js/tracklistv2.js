@@ -298,16 +298,16 @@
                     this.lastTrack = tracklist.isLastTrack();
                     track = tracklist.next();
                     if (this.queueDepleted) {
-                        this.trackListEvents.trigger('onDepletingQueue', {track: null}, -1);
                         this.queueDepleted = false;
+                        this.trackListEvents.trigger('onDepletingQueue', {track: null}, -1);
                     }
                 } else {
-                    this.trackListEvents.trigger('onDepletingQueue', track, this.queueList.length());
-                    if (this.queueList.length() == 0)
+                    if (!this.queueList.hasQueue())
                         this.queueDepleted = true;
+                    this.trackListEvents.trigger('onDepletingQueue', track, this.queueList.length());
                 }
             }
-            console.log('nextTrack', {track});
+            console.log('nextTrack', {track, queueDepleted: this.queueDepleted});
             return track;
         },
         getPreviousTrack() {
@@ -354,7 +354,7 @@
                 track.setIndex(index);
                 return {track, index};
             });
-            console.log('shuffleTracklist', {shuffledItems});
+
             this._isShuffle = true;
             this.shuffledTracklist.setItems(shuffledItems);
         },
@@ -380,6 +380,9 @@
                 return 0;
             return this.getTrackList().getIndex();
         },
+        isCurrentTrackFromQueue() {
+            return this.queueDepleted
+        }, 
         switchRepeatMode(repeatMode) {
             this.setRepeatTrack(repeatMode == 2);
         },

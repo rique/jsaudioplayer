@@ -12,6 +12,7 @@ urlpatterns = [
     path("create-playlist", views.createPLaylist, name="createPLaylist"),
     path("edit-track", views.editTrack, name="editTrack"),
     path("add-track-to-playlist", views.addTrackToPLaylist, name="addTrackToPLaylist"),
-    path("load-track-albumart", views.loadTrackAlbumart, name="loadTrackAlbumart")
+    path("load-track-albumart", views.loadTrackAlbumart, name="loadTrackAlbumart"),
+    path("load-track-info", views.loadTrackInfo, name="loadTrackInfo"),
 ]
 

@@ -6,7 +6,6 @@
     const DragitManager = JSPlayer.DragitManager;
     const TrackEditor = JSPlayer.Tracks.TrackEditor;
     const TrackSearch = JSPlayer.Tracks.TrackSearch;
-    const TrackListBrowser = JSPlayer.Components.TrackListBrowser;
     const {TrackListManager} = JSPlayer.TrackListV2;
 
     const BaseColumn = function() {
@@ -112,7 +111,6 @@
         removeRow(index) {
             const row = this.rows.splice(index, 1)[0];
             row.remove(); 
-            console.trace();
         },
         open() {
             this.parentCnt.style.display = 'block';
@@ -205,7 +203,7 @@
             for (let i = 0; i < sortedCells.length; ++i) {
                 this.rows.push(sortedCells[i].getParentItem());
             }
-            this.eventsList.trigger('onSortedGrid', indexedColumn.isSorted(), indexedColumn.isRever<sed());
+            this.eventsList.trigger('onSortedGrid', indexedColumn.isSorted(), indexedColumn.isReversed());
             this.render();
         },
         sortGridByCell(cell) {
@@ -219,8 +217,8 @@
             } else {
                 this.filteredRows = [];
             }
-            this.eventsList.trigger('onSortedGrid', isSorted, reversed);
             this.render();
+            this.eventsList.trigger('onSortedGrid', isSorted, reversed);
         },
         onSortedGrid(cb, subscriber) {
             this.eventsList.onEventRegister({cb, subscriber}, 'onSortedGrid');
@@ -443,7 +441,7 @@
         }
     }
 
-    const TracklistGrid = function(selector, audioPlayer) {
+    const TracklistGrid = function(selector, audioPlayer, trackListBrowser) {
         selector = selector || '#table-content';
         this.gridMaker = new GridMaker(document.querySelector(selector), true);
         this.gridMaker.setDraggable(true, true);
@@ -452,7 +450,7 @@
         this.trackSearch.onSearchVisibilityChange(this._restoreGrid.bind(this), this);
         this.trackSearch.init();
         
-        this._trackListBrowser = new TrackListBrowser(this.audioPlayer, this);
+        this._trackListBrowser = trackListBrowser;
         TrackListManager.onRemoveTrackFromTrackList(this.removeTrackFromGrid.bind(this))
     };
     TracklistGrid.prototype = {
@@ -465,6 +463,7 @@
                 this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
                 this.queuelistGrid.render(); 
             }, this);
+            this.getGrid().onSortedGrid(this.resetAfterSort.bind(this));
         },
         appendTrackToGrid({track}) {
             const index = this.getGrid().length();
@@ -481,6 +480,9 @@
             this.removeFromGrid(index);
             this.reload();
             this.queuelistGrid.render();
+        },
+        getRowByIndex(index) {
+            return this.gridMaker.getRowByIndex(index);
         },
         removeFromGrid(rowIdx) {
             this.gridMaker.removeRowFromGrid(rowIdx);
@@ -516,8 +518,11 @@
         close() {
             this._trackListBrowser.hide();
         },
-        getRowByIndex(index) {
-            return this.gridMaker.getRowByIndex(index);
+        resetAfterSort(isSorted, reversed) {
+            const {track, index} = TrackListManager.getCurrentTrack();
+            this.queuelistGrid.gridMaker.clearRows();
+            this.queuelistGrid.buildGrid(true); 
+            this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
         },
         _restoreGrid(isVisible) {
             if (!isVisible) {
@@ -691,6 +696,24 @@
                 this.render();
             }
         },
+        render() {
+            if (!this.hasQueue) {
+                console.log('QUEUE EMPTY! REMOVING QUEUE GRID');
+                this.itemHtml.remove();
+                return;
+            }
+
+            const row = this._setSiblingRow();
+            if (!row) {
+                console.error('NO ROW FOUND! REMOVING QUEUE GRID');
+                this.itemHtml.remove();
+                return;
+            }
+
+            this.itemHtml.show();
+            this.itemHtml.insertItemAfter(row);
+            this.gridMaker.render();
+        },
         setSiblingRow(row) {
             if (!this.siblingRow || this.siblingRow != row)
                 this.siblingRow = row;
@@ -707,14 +730,14 @@
             return this.gridMaker.getRowByIndex(index);
         },
         updateQueue({track}, queueLength) {
+            this.queueLength = queueLength;
             if (!this.hasQueue && queueLength > 0) {
                 this.hasQueue = true;
             }
 
             this.gridMaker.clearRows();
             if (this.isQueuePlaying) {
-                const {track} = TrackListManager.getCurrentTrack();
-                this._buildBody(track, 0);
+                this._buildBody();
                 const row = this.getGrid().getRowByIndex(0);
                 row.classAdd('currently-playing');
                 return this.render();
@@ -723,11 +746,12 @@
             this.buildGrid(true);
         },
         nextTrackInQueue({track}, queueLength) {
+            this.queueLength = queueLength;
             if (queueLength >= 0) {
                 this.isQueuePlaying = true;
                 this.trackListBrowser.setGrid(this);
                 this.gridMaker.clearRows();
-                this._buildBody(track, 0);
+                this._buildBody();
                 const row = this.getGrid().getRowByIndex(0);
                 row.classAdd('currently-playing');
                 return this.render();
@@ -737,23 +761,6 @@
             this.trackListBrowser.setGrid(this.parentGrid);
             this.itemHtml.remove();
             this.siblingRow = undefined;
-        },
-        render() {
-            if (!this.hasQueue) {
-                this.itemHtml.remove();
-                return;
-            }
-
-            const row = this._setSiblingRow();
-            if (!row) {
-                this.itemHtml.remove();
-                console.error('NO ROW FOUND! REMOVING QUEUE GRID');
-                return;
-            }
-
-            this.itemHtml.show();
-            row.render().insertAdjacentElement('afterend', this.itemHtml.render());
-            this.gridMaker.render();
         },
         _setSiblingRow() {
             if (this.siblingRow)
@@ -775,7 +782,6 @@
             this.gridMaker.removeRowFromGrid(rowIdx);
         },
         _getCellsFromTrack(track, index) {
-            console.log({index});
             return [{
                 content: `Q${parseInt(index) + 1}`,
                 width: 5,
@@ -844,15 +850,15 @@
                 unit: '%'
             }];
         },
-        _buildBody(curTrack, curIndex) {
+        _buildBody() {
             let addIdx = 0;
-            if (typeof curTrack === 'object' && typeof curIndex === 'number') {
-                this.addTrackToGrid({index: curIndex, track: curTrack});
+            if (this.isQueuePlaying) {
+                const {track} = TrackListManager.getCurrentTrack();
+                this.addTrackToGrid({track, index: 0});
                 addIdx = 1;
             }
             for (let {index, track} of TrackListManager.forEachTrackInQueue()) {
                 index += addIdx;
-                console.log('1', {index});
                 this.addTrackToGrid({index, track});
             }
         },

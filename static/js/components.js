@@ -228,11 +228,11 @@
         },
     };
 
-    const TrackListBrowser = function(audioPlayer, grid) {
+    const TrackListBrowser = function(audioPlayer, audioPlayerDisplay) {
         this._tracklistBrowserNotifications = TracklistBrowserNotifications;
         this.audioPlayer = audioPlayer;
         this.audioPlayer.onPlayerSongChange(this.setCurrentlyPlayingTrack.bind(this), this);
-        this.grid = grid;
+        this.audioPlayerDisplay = audioPlayerDisplay;
         this.overlayDiv = document.querySelector('.cnt-overlay');
         this.isVisible = false;
         TrackListManager.onAddedToQueue(this._notifyAddToQueue.bind(this), this);
@@ -260,7 +260,7 @@
         },
         playSongFromTracklist(evt) {
             const {track} = TrackListManager.getCurrentTrack();
-            track.onTagChangeUnsub(this.audioPlayer);
+            this.audioPlayerDisplay.setTrack(track);
             const cell = evt.detail.HTMLItem;
             TrackListManager.setTrackIndex(cell.getParentItem().getIndex() - 1, true);
         },
@@ -336,7 +336,7 @@
             const row = this.grid.getRowByIndex(index);
             this.clearAllCurrentlyPlaying();
             row.classAdd("currently-playing");
-            row.scrollTo(this.grid.getGrid().getParentCnt());
+            this.scrollToCurrentTrack();
         },
         clearAllCurrentlyPlaying() {
             document.querySelectorAll('.currently-playing').forEach(el => el.classList.remove('currently-playing'));
