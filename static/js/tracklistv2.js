@@ -20,6 +20,23 @@
             this.items.push({item, index: this._length});
             ++this._length;
         },
+        removeItem(item) {
+            const index = this.items.findIndex(itm => itm.item == item)
+            
+            if (!index) return;
+
+            const removed = this.items.splice(index, 1)[0];
+
+            if (index <= this.index && this.index > 0)
+                --this.index;
+
+            --this._length;
+            
+            this._reorganizeIndexes();
+
+            return removed;
+
+        },
         removeItemByIndex(index) {
             if (index >= this._length || index < 0) return;
             
@@ -29,6 +46,8 @@
                 --this.index;
 
             --this._length;
+
+            this._reorganizeIndexes();
 
             return item;
         },
@@ -138,6 +157,28 @@
             this.items.push({track, index: this._length});
             ++this._length;
             this.addToTrackListTotalDuration(track.getTrackDuration());
+        },
+        removeItem(item) {
+            const index = this.items.findIndex(itm => itm.track == item)
+            
+            if (!index) return;
+
+            const removed = this.items.splice(index, 1)[0];
+
+            if (index <= this.index && this.index > 0)
+                --this.index;
+
+            --this._length;
+            
+            this._reorganizeIndexes();
+            
+            if (removed) {
+                const {track, index} = removed;
+                this.substractTracklistTotalDuration(track.getTrackDuration());
+                return {track, index};
+            }
+            
+            return {track: undefined, index: undefined};
         },
         removeItemByIndex(index) {
             const item = IndexList.prototype.removeItemByIndex.call(this, index);
@@ -423,6 +464,10 @@
 
             if (index) {
                 const removed = this.tracklist.removeItemByIndex(index);
+                if (this.isShuffle()) {
+                    this.shuffledTracklist.removeItem(removed.track);
+                }
+
                 this.trackListEvents.trigger('onRemoveTrackFromTrackList', {index, track}, trackUUid, index);
                 return true;
             }

@@ -471,6 +471,7 @@
             this.addTrackToGrid({track, index});
             this.reload();
             this.queuelistGrid.render();
+            this._setCurrentTrack();
         },
         addTrackToGrid({track, index}) {
             const rowConfig = this._getRowConfigFromTrack(track, index);
@@ -480,6 +481,7 @@
             this.removeFromGrid(index);
             this.reload();
             this.queuelistGrid.render();
+            this._setCurrentTrack();
         },
         getRowByIndex(index) {
             return this.gridMaker.getRowByIndex(index);
@@ -508,8 +510,7 @@
         reload() {
             this.gridMaker.reload();
             this._displayTracklistInfo();
-            const {track, index} = TrackListManager.getCurrentTrack();
-            this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
+            
         },
         open() {
             this._trackListBrowser.show();
@@ -526,9 +527,17 @@
         },
         _restoreGrid(isVisible) {
             if (!isVisible) {
+                console.log('_restoreGrid');
                 this.reload();
                 this.queuelistGrid.render();
+                this._setCurrentTrack();
+            } else {
+                console.log('_restoreGrid faile');
             }
+        },
+        _setCurrentTrack() {
+            const {track, index} = TrackListManager.getCurrentTrack();
+            this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
         },
         _buildHeaders() {
             const head = [{

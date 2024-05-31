@@ -63,6 +63,7 @@ body {
     display: flex;
     margin: auto;
     /*transform: translate3d(-3px,707px,0);*/
+    transition-duration: 0.5s;
 }
 
 .row.head {
@@ -73,8 +74,12 @@ body {
     z-index: 250;
 }
 
+.row.dragged {
+    transition-duration: 0s;
+  }
+
 .row:has(.empty), .row.hovered {
-    animation: 70ms 1 forwards stretchdown
+    animation: 10ms 1 forwards stretchdown
 }
 
 .row:first-child {
@@ -87,6 +92,7 @@ body {
 
 .row.lonely:hover {
     background: var(--row-even-hover-bg-color);
+    transition-duration: 0.2s;
     /*color: var(--font-color-dropped);*/
 }
 
@@ -123,6 +129,7 @@ body {
 .row.lonely.currently-playing {
     background: var(--row-currently-playing-bg)!important;
     color: #fafafa;
+    transition-duration: 0.5s;
 }
 
 .cell {
@@ -145,6 +152,7 @@ body {
     text-overflow: initial;
     white-space: initial;
     max-width: initial;
+    transition-duration: 0.6s;
 }
 
 .cell.sorted {

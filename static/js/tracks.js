@@ -2,7 +2,7 @@
     const {ListEvents, keyCotrols} = JSPlayer.EventsManager;
     const api = new JSPlayer.Api();
     const {TrackListManager} = JSPlayer.TrackListV2;
-    const {AlbumArtLoader} = window.JSPlayer.Loaders
+    const {AlbumArtLoader} = JSPlayer.Loaders
 
     const ID3Tags = function(tags) {
         this.tags = tags;

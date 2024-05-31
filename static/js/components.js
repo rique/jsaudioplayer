@@ -325,6 +325,7 @@
             api.deleteTrack(trackUUid, (res) => {
                 if (res.success) {
                     const {index, track} = TrackListManager.removeTrackFromTracklistByUUID(trackUUid);
+                    console.log('removed', {index, track});
                 } else
                     alert('Error deleting file!');
             });
