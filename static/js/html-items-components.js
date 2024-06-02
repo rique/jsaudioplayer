@@ -122,6 +122,7 @@
         }
     }
 
+
     JSPlayer.HTMLItemsComponents = {ProgerssBar, AudioPlayerProgressBar};
 
 })(this, document, this.JSPlayer);

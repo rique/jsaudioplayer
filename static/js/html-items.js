@@ -371,6 +371,7 @@
 
     const EditInput = function() {
         HTMLItems.call(this, 'input');
+        this.render().setAttribute('type', 'text');
     };
     EditInput.prototype = {
         hidden(hidden) {

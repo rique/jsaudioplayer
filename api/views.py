@@ -329,7 +329,7 @@ def scanForMyTracks(request):
 
 
 @csrf_exempt
-def createPLaylist(request):
+def createPlaylist(request):
     if request.method != 'POST':
         return JsonResponse(data={'success': False, 'code': 'wrong_method'}, status=405, reason="Method Not Allowed")
 
@@ -388,3 +388,18 @@ def addTrackToPLaylist(request):
         'success': True,
         'playlist_uuid': playlist_uuid
     })
+
+
+@csrf_exempt
+def loadPlaylists(request):
+    if request.method != 'POST':
+        return JsonResponse(data={'success': False, 'code': 'wrong_method'}, status=405, reason="Method Not Allowed")
+    
+    playlists = [pl.convertToDict() for pl in Playlist.objects.filter().all()]
+
+    return JsonResponse(data={
+        'success': True,
+        'playlists': playlists
+    }) 
+
+

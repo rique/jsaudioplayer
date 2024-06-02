@@ -31,6 +31,16 @@ class Playlist(models.Model):
     playlist_uuid = models.CharField(max_length=36, default=str(uuid4()))
     playlist_created_date = models.DateTimeField(auto_now_add=True)
 
+    def convertToDict(self):
+        return {
+            'playlist_name': self.playlist_name,
+            'playlist_type': self.playlist_type,
+            'playlist_uuid': self.playlist_uuid,
+            'playlist_created_date': self.playlist_created_date.strftime('%Y/%m/%d %H:%M:%S'),
+            'tracks': [tr.__dict__ for tr in self.tracks.all()]
+        }
+
+
 
 class TrackInfo(models.Model):
     track_title = models.CharField(max_length=256)

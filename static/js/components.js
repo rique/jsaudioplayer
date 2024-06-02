@@ -7,7 +7,9 @@
     const clearElementInnerHTML = JSPlayer.Utils.clearElementInnerHTML;
     const Api = window.JSPlayer.Api;
 
-    const LeftMenu = function() {};
+    const LeftMenu = function() {
+        this.menuComponents = {};
+    };
     LeftMenu.prototype = {
         init() {
             this.mainMenuElem = document.getElementById('main-left-menu');
@@ -25,15 +27,20 @@
         },
         open() {
             let maxRight = 0 - 1;
-            let start = -(this.leftMenuElement.offsetWidth);
+            let start = - (this.leftMenuElement.offsetWidth);
             let step = 30;
             this._slide.bind(this)(start, maxRight, step, this.mainMenuElem, 'right');
         },
         close() {
-            let maxRight = -(this.leftMenuElement.offsetWidth) + 1;
+            let maxRight = - (this.leftMenuElement.offsetWidth) + 1;
             let start = 0;
             let step = -30;
             this._slide.bind(this)(start, maxRight, step, this.mainMenuElem, 'left');
+        },
+        addMenuComponent(component, section) {
+            if (!this.menuComponents.hasOwnProperty(section))
+                this.menuComponents[section] = [];
+            this.menuComponents[section].push(component);
         },
         _slide(start, maxRight, step, mainMenuElem, direction) {
             direction = direction || 'right';
@@ -234,6 +241,7 @@
         this.audioPlayer.onPlayerSongChange(this.setCurrentlyPlayingTrack.bind(this), this);
         this.audioPlayerDisplay = audioPlayerDisplay;
         this.overlayDiv = document.querySelector('.cnt-overlay');
+        this.windowCnt = document.getElementById('window-content');
         this.isVisible = false;
         TrackListManager.onAddedToQueue(this._notifyAddToQueue.bind(this), this);
         TrackListManager.onRemoveTrackFromTrackList(this._notifyARemovedTrack.bind(this), this);
@@ -251,11 +259,13 @@
         },
         show() {
             this.overlayDiv.style.display = 'block';
+            this.windowCnt.style.display = 'block';
             this.isVisible = true;
             this.scrollToCurrentTrack();
         },
         hide() {
             this.overlayDiv.style.display = 'none';
+            this.windowCnt.style.display = 'none';
             this.isVisible = false;
         },
         playSongFromTracklist(evt) {

@@ -13,17 +13,20 @@
     const {AudioPlayerProgressBar} = JSPlayer.HTMLItemsComponents;
     const {PlayerControls, PlayerButtons} = JSPlayer.PlayerControls
     const {TrackListBrowser} = JSPlayer.Components;
-    
+    const {PlaylistCreator} = JSPlayer.Playlists;
+    const {Library} = JSPlayer.Library;
     const imgList = [];
     const audioPlayerProgressBar = new AudioPlayerProgressBar();
     const audioPlayer = new AudioPlayer(audioPlayerProgressBar);
     const audioPlayerDisplay = new AudioPlayerDisplay(audioPlayer);
     audioPlayerProgressBar.setAudioPlayer(audioPlayer);
 
+    const library = new Library();
     const playerControls = new PlayerControls(audioPlayer);
     const playerButtons = new PlayerButtons(document.getElementById('player-controls'), playerControls);
     const api = new JSPlayer.Api();
     const audioPlayerKeyControls = new AudioPlayerKeyControls(keyCotrols);
+
     audioPlayerKeyControls.setPlayerControls(playerControls);
     audioPlayerKeyControls.onFastForward(audioPlayerProgressBar.updateProgress.bind(audioPlayerProgressBar), audioPlayerProgressBar);
     audioPlayerKeyControls.onRewind(audioPlayerProgressBar.updateProgress.bind(audioPlayerProgressBar), audioPlayerProgressBar);
@@ -34,6 +37,8 @@
 
     const leftMenu = new LeftMenu();
     leftMenu.init();
+
+    const playlistCreation = new PlaylistCreator();
 
     NotificationCenter.registerNotification({
         title: 'Tracks Loaded!!',
@@ -52,12 +57,14 @@
             let trackInfo = res['tracklist'][i];
             let track = new Track(trackInfo['track']),
                 id3Tags = new ID3Tags(trackInfo['ID3']);
+
             track.setID3Tags(id3Tags);
             track.setTrackDuration(id3Tags.getDuration());
             track.setIndex(i);
-            TrackListManager.addTrackToList(track);
+            library.addTrack({track, trackUUid: trackInfo.track['track_uuid']});
         }
         
+        TrackListManager.setPlaylist(library.getPlaylist());
         tracklistGrid.setUp();
         tracklistGrid.buildGrid();
         tracklistGrid.render();
@@ -67,6 +74,10 @@
             message: `<p>${TrackListManager.getTracksNumber()} tracks have been loaded!!<p>`
         }, 'tracks.loaded');
         NotificationCenter.displayNotification('tracks.loaded', 6000);
+    });
+
+    api.loadPlaylists((res) => {
+        console.log('load playlists',{res});
     });
 
     const windowContentElem = document.getElementById('window-folder');
@@ -111,6 +122,13 @@
     keyCotrols.registerKeyDownAction('Escape', tracklistGrid.close.bind(tracklistGrid), tracklistGrid);
 
     document.querySelector('#file-browser-action button.open-tracklist-browser').addEventListener('click', tracklistGrid.open.bind(tracklistGrid));
+
+    document.querySelector('#file-browser-action button.open-playlist-create').addEventListener(
+        'click',
+        playlistCreation.show.bind(playlistCreation)
+    );
+    
+    keyCotrols.registerKeyDownAction('n', playlistCreation.show.bind(playlistCreation));
 
     let volUpEvtId = -1;
     let volDownEvtId = -1;

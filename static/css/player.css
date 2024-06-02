@@ -711,3 +711,31 @@ tr.queued-track table.queue-table {
 table.queue-table .small-cell {
     width: 5%!important;
 }
+
+.playlist-form {
+    width: 22%;
+    padding: 22px;
+    border: 1px solid;
+    border-radius: 6px;
+    margin: 10% auto 0 auto;
+}
+
+.playlist-form input {
+    width: 84%;
+    padding: 6px;
+    margin-right: 16px;
+}
+
+.playlist-form button {
+    padding: 7px;
+    border-radius: 6px;
+    background-color: #107bb4;
+    color: #fff;
+    border: 0;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.playlist-form button:hover {
+    background: #056da5;
+}

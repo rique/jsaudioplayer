@@ -690,7 +690,8 @@
         this.trackListBrowser = trackListBrowser;
         this.setUpHTMLItem();
         this.parentGrid = parentGrid;
-        this.gridMaker = new GridMaker(this.itemHtml.render(), false);
+        this.gridMaker = new GridMaker(this.itemHtml.render(), true);
+        this.gridMaker.setDraggable(true, true);
         TrackListManager.onAddedToQueue(this.updateQueue.bind(this), this);
         TrackListManager.onDepletingQueue(this.nextTrackInQueue.bind(this), this);
     };
@@ -854,7 +855,20 @@
                 // onClick: this._trackListBrowser.playSongFromTracklist.bind(this._trackListBrowser),
                 textAlign: 'center',
             }, {
-                content: 'remove',
+                onDragged: (evt) => {
+                    this.draggedStartIndx = evt.detail.HTMLItem.getParentItem().getIndex();
+                    evt.detail.HTMLItem.innerContent('Drop!!');
+                },
+                onDropped: (evt) => {
+                    evt.stopImmediatePropagation();
+                    const htmlItem = evt.detail.HTMLItem;
+                    this.draggedEndIndx = htmlItem.getParentItem().getIndex();
+                    TrackListManager.switchTrackIndex(this.draggedStartIndx - 1, this.draggedEndIndx - 1, true);
+                    //this.render();
+                    htmlItem.innerContent('drag');
+                },
+                content: 'drag',
+                draggable: true,
                 width: 4,
                 unit: '%'
             }];

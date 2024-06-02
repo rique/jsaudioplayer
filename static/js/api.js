@@ -151,12 +151,39 @@
                 callback(JSON.parse(xhr.response));
             }
         },
-        createPlaylist(playlistName, tracklist, callback) {
+        createPlaylist(playlistName, tracklist=[], callback) {
             let xhr = this.getXhrPost(`${this.url}/create-playlist`);
             let data = JSON.stringify({
                 'playlist_name': playlistName,
                 'tracklist': tracklist
             });
+    
+            xhr.setRequestHeader('Content-type', 'application/json; charset=UTF-8');
+            xhr.send(data);
+    
+            xhr.onload = () => {
+                console.log('xhr', xhr.status);
+                callback(JSON.parse(xhr.response));
+            }
+        },
+        addTrackToPLaylist(playlistUUID, tracklist=[], callback) {
+            let xhr = this.getXhrPost(`${this.url}/add-track-to-playlist`);
+            let data = JSON.stringify({
+                'playlist_uuid': playlistUUID,
+                'tracklist': tracklist
+            });
+    
+            xhr.setRequestHeader('Content-type', 'application/json; charset=UTF-8');
+            xhr.send(data);
+    
+            xhr.onload = () => {
+                console.log('xhr', xhr.status);
+                callback(JSON.parse(xhr.response));
+            }
+        },
+        loadPlaylists(callback) {
+            let xhr = this.getXhrPost(`${this.url}/load-playlists`);
+            let data = JSON.stringify({});
     
             xhr.setRequestHeader('Content-type', 'application/json; charset=UTF-8');
             xhr.send(data);
