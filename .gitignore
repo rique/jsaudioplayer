@@ -17,4 +17,4 @@ __pycache__/
 tests1/brouillon.html
 TODO.md
 repomix-output.xml
-
+!static/albumart.svg
