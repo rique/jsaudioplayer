@@ -52,7 +52,6 @@
 
     api.loadTrackList((res) => {
         audioPlayer.init();
-        
         for (let i in res['tracklist']) {
             let trackInfo = res['tracklist'][i];
             let track = new Track(trackInfo['track']),
@@ -68,7 +67,8 @@
         tracklistGrid.setUp();
         tracklistGrid.buildGrid();
         tracklistGrid.render();
-        audioPlayer.setCurrentTrackFromTrackList(false);
+        if (TrackListManager.getTracksNumber() > 0)
+            audioPlayer.setCurrentTrackFromTrackList(false);
         
         NotificationCenter.modifyNotification({
             message: `<p>${TrackListManager.getTracksNumber()} tracks have been loaded!!<p>`

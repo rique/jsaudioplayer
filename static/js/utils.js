@@ -215,7 +215,7 @@
 
     const getFormatedDate = () => {
         const DateTime = luxon.DateTime;
-        const d = DateTime.now().setZone('Europe/Paris');
+        const d = DateTime.now().setZone('America/Caracas');
         return d.setLocale('es').toLocaleString(DateTime.TIME_WITH_SECONDS);
     }
     

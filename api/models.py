@@ -11,7 +11,7 @@ class Tracks(models.Model):
     track_date_added = models.DateTimeField(auto_now_add=True)
     
     @property
-    def __dict__(self) -> dict:
+    def dict(self) -> dict:
         return {
             'track_name': self.track_name,
             'track_uuid': self.track_uuid,
@@ -31,7 +31,7 @@ class Playlist(models.Model):
     playlist_uuid = models.CharField(max_length=36, default=str(uuid4()))
     playlist_created_date = models.DateTimeField(auto_now_add=True)
 
-    def convertToDict(self):
+    def dict(self):
         return {
             'playlist_name': self.playlist_name,
             'playlist_type': self.playlist_type,

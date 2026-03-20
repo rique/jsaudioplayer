@@ -126,7 +126,7 @@ USE_TZ = True
 
 STATICFILES_DIRS = [
     BASE_DIR / "static",
-    "/home/enriaue/git/js_audio/tests_audio1/static",
+    #  "~/git/jsaudioplayer/tests_audio1/static",
 ]
 
 # Static files (CSS, JavaScript, Images)

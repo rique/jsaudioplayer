@@ -107,7 +107,7 @@
             }
     
             if (!data || data.length == 0) {
-                imgSrc = "/static/albumart.jpg";
+                imgSrc = "/static/albumart.svg";
             } else {
                 imgSrc = `data:${format};base64,${data}`;
             }

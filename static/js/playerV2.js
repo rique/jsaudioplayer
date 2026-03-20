@@ -326,12 +326,12 @@
     
             track.getAlbumArt(track.trackUUid).then((albumart) => {
                 if (!albumart)
-                    return this.albumImg.src = "/static/albumart.jpg";
+                    return this.albumImg.src = "/static/albumart.svg";
 
                 const { data, format } = albumart;
                 
                 if (data.length == 0)
-                    return this.albumImg.src = "/static/albumart.jpg";
+                    return this.albumImg.src = "/static/albumart.svg";
                 
                 let imgData = data;
                 this.albumImg.src = `data:${format};base64,${imgData}`;

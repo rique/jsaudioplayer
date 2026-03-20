@@ -117,9 +117,9 @@
                     if (typeof cb !== 'function')
                         continue;
                     if (exclusiveCallers && exclusiveCallers.length > 0) {
-                        exclusiveCallers.forEach(clr => caller == clr && cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target}));
+                        exclusiveCallers.forEach(clr => caller == clr && cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target, type: evt.type}));
                     } else {
-                        cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target})
+                        cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target, type: evt.type});
                     }
                 }
             }
@@ -169,20 +169,22 @@
                 return;
             this.playerControls.prev();
         },
-        fastFoward({ctrlKey, repeat, shiftKey}={}) {
+        fastFoward({ctrlKey, repeat, shiftKey, type}={}) {
+            console.log('rewind', {type, ctrlKey, repeat, shiftKey});
             if (ctrlKey && repeat || shiftKey && repeat) {
                 this.playerControls.fastForward();
                 this.listEvents.trigger('onFastForward');
             }
         },
-        onFastForward(cb, subscriber) {
-            this.listEvents.onEventRegister({cb, subscriber}, 'onFastForward');
-        },
-        rewind({ctrlKey, repeat, shiftKey}={}) {
+        rewind({ctrlKey, repeat, shiftKey, type}={}) {
+            console.log('rewind', {type, ctrlKey, repeat, shiftKey});
             if (ctrlKey && repeat || shiftKey && repeat) {
                 this.playerControls.rewind();
                 this.listEvents.trigger('onRewind');
             }
+        },
+        onFastForward(cb, subscriber) {
+            this.listEvents.onEventRegister({cb, subscriber}, 'onFastForward');
         },
         onRewind(cb, subscriber) {
             this.listEvents.onEventRegister({cb, subscriber}, 'onRewind');

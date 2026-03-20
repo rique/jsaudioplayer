@@ -72,7 +72,7 @@ def addTrack(request):
     track.track_uuid = track_uuid
     track.save()
 
-    return JsonResponse(data={'success': True, 'track': track.__dict__, 'ID3': {
+    return JsonResponse(data={'success': True, 'track': track.dict, 'ID3': {
         'title': title,
         'artist': artist,
         'album': album,
@@ -210,7 +210,7 @@ def loadTrackAlbumart(request):
                     pic_format = APIC.mime
                     break
     
-    return JsonResponse(data={'success': True, 'track': track.__dict__, 'ID3': {
+    return JsonResponse(data={'success': True, 'track': track.dict, 'ID3': {
         'picture': {'data': apict, 'format': pic_format},
     } })
 
@@ -243,7 +243,7 @@ def loadTrackInfo(request):
         album = audio.get('TALB').text[0]
     
     
-    return JsonResponse(data={'success': True, 'track': track.__dict__, 'ID3': {
+    return JsonResponse(data={'success': True, 'track': track.dict, 'ID3': {
         'duration': mp3_file.info.length,
         'title': title,
         'artist': artist,
@@ -277,7 +277,7 @@ def loadTrackList(request):
             album = audio.get('TALB').text[0]
 
         duration += mp3_file.info.length
-        tracklist.append({'track': trk.__dict__, 'ID3': {
+        tracklist.append({'track': trk.dict, 'ID3': {
             'title': title,
             'artist': artist,
             'album': album,
@@ -300,13 +300,13 @@ def loadBGImages(request):
     img_dir = './static/imgc/'
     res = subprocess.run(f'find -L "{img_dir}" -type f | grep -i --include=*.{{jpg,jpeg,png,webp}} "" | sort -R', shell=True, capture_output=True, check=False)
     res_str = res.stdout.decode().strip()
-
+    print('stderr', res.stderr.decode().strip())
     return JsonResponse(data={"success": True, 'img_list': [r.replace('./', '') for r in res_str.split('\n')]})
 
 
 @csrf_exempt
 def scanForMyTracks(request):
-    base_dirs = '/mnt/ /home/enriaue/'
+    base_dirs = '/mnt/ /home/enrique/'
     shell_comand = "find " + base_dirs + " -type f -iname \"*.mp3\" -exec ls -l {} \;| awk '$5>1005128 {out = $5" "; for (i=9; i <= NF; i++) {out=out" "$i};  print  out}'" 
 
     res = subprocess.run(shell_comand, shell=True, capture_output=True)
@@ -372,7 +372,7 @@ def addTrackToPLaylist(request):
     try:
         playlist = Playlist.objects.get(playlist_uuid=playlist_uuid)
     except Playlist.DoesNotExist:
-        return JsonResponse(data={'success': False, 'code': 'dose_not_exist'}, status=404, reason=f"Object or ressource with uuid {track_uuid} not found")
+        return JsonResponse(data={'success': False, 'code': 'dose_not_exist'}, status=404, reason=f"Object or ressource with uuid {playlist_uuid} not found")
 
     if len(tracklist) > 0:
         for tr in tracklist:
@@ -395,7 +395,7 @@ def loadPlaylists(request):
     if request.method != 'POST':
         return JsonResponse(data={'success': False, 'code': 'wrong_method'}, status=405, reason="Method Not Allowed")
     
-    playlists = [pl.convertToDict() for pl in Playlist.objects.filter().all()]
+    playlists = [pl.dict() for pl in Playlist.objects.filter().all()]
 
     return JsonResponse(data={
         'success': True,
