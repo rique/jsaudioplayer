@@ -7,6 +7,8 @@ static/*
 !static/*.css
 !static/js
 !static/css
+!static/albumart.svg
+!static/mag-glass2-white.svg
 !static/tracks/.keep
 !*/**/.keep
 db.sqlite3
@@ -17,4 +19,4 @@ __pycache__/
 tests1/brouillon.html
 TODO.md
 repomix-output.xml
-!static/albumart.svg
+
