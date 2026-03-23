@@ -41,9 +41,12 @@
             if (index >= this._length || index < 0) return;
             
             const item = this.items.splice(index, 1)[0];
-            
+            console.log('removeItemByIndex', {item, index, currentIndex: this.index});
+
             if (index <= this.index && this.index > 0)
                 --this.index;
+
+            console.log('this.index', this.index);
 
             --this._length;
 
@@ -64,6 +67,7 @@
             return this._length - 1;
         },
         current() {
+            console.log('current', {index: this.index});
             if (this.index < 0)
                 return this.items[0];
             return this.items[this.index];
@@ -164,14 +168,14 @@
         },
         removeItem(item) {
             const index = this.items.findIndex(itm => itm.track == item)
-            
+            console.log('removeItem', {item, index, currentIndex: this.index});
             if (!index) return;
 
             const removed = this.items.splice(index, 1)[0];
 
             if (index <= this.index && this.index > 0)
                 --this.index;
-
+            console.log('this.index', this.index);
             --this._length;
             
             this._reorganizeIndexes();
@@ -186,7 +190,7 @@
         },
         removeItemByIndex(index) {
             const item = IndexList.prototype.removeItemByIndex.call(this, index);
-
+            
             if (item) {
                 const {track} = item;
                 this.substractTracklistTotalDuration(track.getTrackDuration());
@@ -201,14 +205,14 @@
                     console.error(`Invalid parameters`);
                     return;
                 }
-                console.log({track});
+                // console.log({track});
                 ({index} = this.items.find(itm => itm.track.trackUUid == track.trackUUid));
 
                 if (!index) {
                     console.error(`Track ${track} not found!`);
                     return;
                 }
-                console.log({index});
+                // console.log({index});
                 this.index = index;
             }
 
@@ -253,6 +257,7 @@
             return this.index >= this.maxIndex();
         },
         setTrackIndex(newIdx) {
+            console.log('TrackList.setTrackIndex', {newIdx});
             this.index = newIdx;
         },
         switchTrackIndex(oldIndex, newIndex) {
@@ -472,6 +477,7 @@
         setTrackIndex(newIdx, doSetCurTrack) {
             const tracklist = this.getTrackList();
             let oldIdx = tracklist.getIndex();
+            console.log('setTrackIndex', {oldIdx, newIdx});
             tracklist.setTrackIndex(newIdx - 1);
             this.trackListEvents.trigger('onTrackManagerIndexChange', oldIdx, newIdx);
         },
@@ -489,9 +495,9 @@
                 if (this.isShuffle()) {
                     this.shuffledTracklist.removeItem(removed.track);
                 }
-
+                console.log('removeTrackFromTracklistByUUID', {removed}, this.tracklist.getItems());
                 this.trackListEvents.trigger('onRemoveTrackFromTrackList', {index, track}, trackUUid, index);
-                return true;
+                return {index, track};
             }
 
             return false;

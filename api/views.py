@@ -262,28 +262,33 @@ def loadTrackList(request):
     nb_tracks = len(tracks)
     duration = 0
     for trk in tracks:
-        audio = ID3(f'./static/tracks/{trk.track_uuid}.mp3')
-        mp3_file = MP3(f'./static/tracks/{trk.track_uuid}.mp3')
-        keys = audio.keys()
-        
-        title = ''
-        if 'TIT2' in keys:
-            title = audio.get('TIT2').text[0]
-        artist = ''
-        if 'TPE1' in keys:
-            artist = audio.get('TPE1').text[0]
-        album = ''
-        if 'TALB' in keys:
-            album = audio.get('TALB').text[0]
+        try:
+            mp3_file_path = f'./static/tracks/{trk.track_uuid}.mp3'
+            audio = ID3(mp3_file_path)
+            mp3_file = MP3(mp3_file_path)
+            keys = audio.keys()
+            
+            title = ''
+            if 'TIT2' in keys:
+                title = audio.get('TIT2').text[0]
+            artist = ''
+            if 'TPE1' in keys:
+                artist = audio.get('TPE1').text[0]
+            album = ''
+            if 'TALB' in keys:
+                album = audio.get('TALB').text[0]
 
-        duration += mp3_file.info.length
-        tracklist.append({'track': trk.dict, 'ID3': {
-            'title': title,
-            'artist': artist,
-            'album': album,
-            'picture': {'data': '', 'format': ''},
-            'duration': mp3_file.info.length
-        } })
+            duration += mp3_file.info.length
+            tracklist.append({'track': trk.dict, 'ID3': {
+                'title': title,
+                'artist': artist,
+                'album': album,
+                'picture': {'data': '', 'format': ''},
+                'duration': mp3_file.info.length
+            } })
+        except Exception as e:
+            print(f'Exception caugth for {mp3_file_path=}: {e}, continuing')
+            continue
 
     print('duration', duration)
     return JsonResponse(data={
@@ -296,9 +301,8 @@ def loadTrackList(request):
 
 @csrf_exempt
 def loadBGImages(request):
-
     img_dir = './static/imgc/'
-    res = subprocess.run(f'find -L "{img_dir}" -type f | grep -i --include=*.{{jpg,jpeg,png,webp}} "" | sort -R', shell=True, capture_output=True, check=False)
+    res = subprocess.run(f'find -L "{img_dir}" -type f | grep -i --include=*.{{jpg,jpeg,png,webp,gif}} "" | sort -R', shell=True, capture_output=True, check=False)
     res_str = res.stdout.decode().strip()
     print('stderr', res.stderr.decode().strip())
     return JsonResponse(data={"success": True, 'img_list': [r.replace('./', '') for r in res_str.split('\n')]})

@@ -193,7 +193,7 @@
 
             console.log('playing song', {track, index});
             if (!track) {
-                console.error('Track could not be fetched from tracklist');
+                console.error('Track could not be fetched from tracklist', {prev});
                 return;
             }
             
@@ -239,9 +239,9 @@
             this.audioElem.ontimeupdate = (evt) => {
                 const target = evt.target;
                 const duration = target.duration;
-                const currentTime = target.currentTime;
                 const track = this.currentTrack;
-                track.setCurrentTime(target.currentTime);
+                const currentTime = target.currentTime;
+                track.setCurrentTime(currentTime);
                 
                 if (this._checkForNextTrack(currentTime, duration) && !this._comingNextFired) {
                     this._fireNotification();

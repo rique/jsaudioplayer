@@ -111,6 +111,15 @@
         removeRow(index) {
             const row = this.rows.splice(index, 1)[0];
             row.remove(); 
+            this.updateRowIndexFromIndex(index);
+        },
+        updateRowIndexFromIndex(index) {
+            for (let i = index; i < this.rows.length; ++i) {
+                let row = this.rows[i];
+                let rowIdx = i + 1; 
+                row.setIndex(rowIdx);
+                row.data('index', rowIdx);
+            }
         },
         open() {
             this.parentCnt.style.display = 'block';
@@ -451,7 +460,7 @@
         this.trackSearch.init();
         
         this._trackListBrowser = trackListBrowser;
-        TrackListManager.onRemoveTrackFromTrackList(this.removeTrackFromGrid.bind(this))
+        TrackListManager.onRemoveTrackFromTrackList(this.removeTrackFromGrid.bind(this));
     };
     TracklistGrid.prototype = {
         setUp() {
@@ -463,6 +472,9 @@
                 this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
                 this.queuelistGrid.render(); 
             }, this);
+
+            // TrackListManager.onRemoveTrackFromTrackList(this.removeTrackFromGrid.bind(this));
+
             this.getGrid().onSortedGrid(this.resetAfterSort.bind(this));
         },
         appendTrackToGrid({track}) {
@@ -478,6 +490,7 @@
             this.gridMaker.makeRowIdx(rowConfig, false, false, parseInt(index) + 1);
         },
         removeTrackFromGrid({index}) {
+            console.log('removeTrackFromGrid', index);
             this.removeFromGrid(index);
             this.reload();
             this.queuelistGrid.render();

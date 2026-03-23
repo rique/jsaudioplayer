@@ -136,7 +136,7 @@
 
     const FileBrowser = function(player) {
         this.overlayDiv = document.querySelector('.cnt-overlay');
-        this.baseDir = '/';
+        this.baseDir = '/home/enrique/Music/';
         this.api = new Api();
         this.browseHistory = [this.baseDir];
         this.historyIndex = 0;
@@ -269,10 +269,12 @@
             this.isVisible = false;
         },
         playSongFromTracklist(evt) {
-            const {track} = TrackListManager.getCurrentTrack();
-            this.audioPlayerDisplay.setTrack(track);
             const cell = evt.detail.HTMLItem;
+            console.log('playSongFromTracklist', {getIndex: cell.getParentItem().getIndex() - 1, cell});
             TrackListManager.setTrackIndex(cell.getParentItem().getIndex() - 1, true);
+            const {index, track} = TrackListManager.getCurrentTrack();
+            console.log('playSongFromTracklist', {index, track});
+            this.audioPlayerDisplay.setTrack(track);
         },
         showActionMenu(evt) {
             const target = evt.target;
