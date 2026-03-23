@@ -351,7 +351,7 @@ const shuffle = (list, index) => {
     return list;
 }
 
-const Utils = {
+export {
     readCookie, 
     blob2Uint8Array, 
     clearElementInnerHTML,
@@ -365,5 +365,3 @@ const Utils = {
     getPercentageWidthFromMousePosition,
     shuffle
 };
-
-export default Utils;

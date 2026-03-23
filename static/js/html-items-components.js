@@ -1,11 +1,7 @@
-const {HTMLElements} = JSPlayer.HTMLItems;
-const {getPercentageWidthFromMousePosition, whileMousePressedAndMove} = JSPlayer.Utils;
-const {ListEvents} = JSPlayer.EventsManager;
-const {TrackListManager} = JSPlayer.TrackListV2;
-export {HTMLElements} from './html-items.js';
-export {ListEvents} from './event-manager.js';
-export {TrackListManager} from './tracklistv2.js';
-export {getPercentageWidthFromMousePosition, whileMousePressedAndMove} from './utils.js';
+import {HTMLItems} from './html-items.js';
+import {ListEvents} from './event-manager.js';
+import {TrackListManager} from './tracklistv2.js';
+import {getPercentageWidthFromMousePosition, whileMousePressedAndMove} from './utils.js';
 
 const HoverEffect = function(htmlItem) {
     this.htmlItem = htmlItem;
@@ -23,6 +19,7 @@ HoverEffect.prototype = {
         });
 
         this.htmlItem.addEventListener('mouseleave', () => {
+            console.log('left', this.htmlItem);
             this.htmlItem.css({background: "#181717"});
         });
     }
@@ -30,8 +27,8 @@ HoverEffect.prototype = {
 
 const ProgerssBar = function(parentCnt) {
     this.listEvents = new ListEvents();
-    this.mainDiv = new HTMLElements('div');
-    this.subDiv = new HTMLElements('div');
+    this.mainDiv = new HTMLItems('div');
+    this.subDiv = new HTMLItems('div');
     
     this.setUp(parentCnt);
 };
@@ -49,7 +46,7 @@ ProgerssBar.prototype = {
         whileMousePressedAndMove(this.subDiv.render(), this.seek.bind(this));
     },
     seek(evt, mouseDown) {
-        percentWidth = getPercentageWidthFromMousePosition(evt.clientX, this.mainDiv);
+        const percentWidth = getPercentageWidthFromMousePosition(evt.clientX, this.mainDiv);
         this.disableProgress = mouseDown;
         this._updateProgressBar(percentWidth  * 100);
         this.listEvents.trigger('onSeek', percentWidth, mouseDown);
@@ -124,7 +121,4 @@ AudioPlayerProgressBar.prototype = {
     }
 }
 
-
-const HTMLItemsComponents = {ProgerssBar, AudioPlayerProgressBar};
-
-export default HTMLItemsComponents;
+export {ProgerssBar, AudioPlayerProgressBar};

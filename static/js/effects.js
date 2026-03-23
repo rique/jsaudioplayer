@@ -45,7 +45,5 @@ Fader.prototype = {
     }
 };
 
-const Effects = {Fader};
-
-export default Effects;
+export {Fader};
 

@@ -533,6 +533,4 @@ const TrackListManager =  {
 
 Object.setPrototypeOf(TrackList.prototype, IndexList.prototype);
 
-const TrackListV2 = {TrackListManager, TrackList};
-
-export default TrackListV2;
+export {TrackListManager, TrackList};

@@ -1,5 +1,5 @@
-export {ListEvents} from './event-manager.js';
-export {getLastParent} from './utils.js';
+import {ListEvents} from './event-manager.js';
+import {getLastParent} from './utils.js';
 
 const getOffsetLeft = (elem) => {
     let offset = 0;
@@ -21,12 +21,12 @@ const getOffsetLeft = (elem) => {
 
     }
 
-const HTMLElements = function(elementName) {
+const HTMLItems = function(elementName) {
     this.element = document.createElement(elementName);
     this.events = {};
     this.eventsHandler = {};
 };
-HTMLElements.prototype = {
+HTMLItems.prototype = {
     render(getReal) {
         return this.seekParent && !getReal ? this.getParent() : this.element;
     },
@@ -54,10 +54,11 @@ HTMLElements.prototype = {
         }
         this.render().id = id;
     },
-    width(width, unit) {
-        if (typeof width === 'number')
-            this.css({width:`${width}${unit}`});
-        else
+    width(w, unit) {
+        if (typeof w === 'number') {
+            w = w.toString() + '' + unit;
+            this.css({width: w});
+        } else
             return this.render().style.width;
     },
     height(height, unit) {
@@ -170,10 +171,16 @@ HTMLElements.prototype = {
     },
     css(style, replace) {
         style = style || {};
-        if (!replace)
-            style = {...this.render().style, ...style};
+        /*if (!replace) {
+            const styles = this.render().style;
+            for (let prop of styles) {
+                if (!style.hasOwnProperty(prop))
+                    style[prop] = styles.getPropertyValue(prop);
+            }
+            console.log('set style2', style, this);
+        }*/
 
-        Object.keys(style).forEach(k => this.render().style[k] = style[k]);
+        Object.assign(this.render().style, style);
     },
     data(name, value) {
         const isName = typeof name !== 'undefined';
@@ -225,7 +232,7 @@ HTMLElements.prototype = {
 }
 
 const HTMLIndexedItems = function(elementName) {
-    HTMLElements.call(this, elementName);
+    HTMLItems.call(this, elementName);
     this.index = 0;
     this.eventsList = new ListEvents();
 };
@@ -322,7 +329,7 @@ HTMLDraggableItems.prototype = {
     }
 }
 
-Object.setPrototypeOf(HTMLIndexedItems.prototype, HTMLElements.prototype);
+Object.setPrototypeOf(HTMLIndexedItems.prototype, HTMLItems.prototype);
 Object.setPrototypeOf(HTMLDraggableItems.prototype, HTMLIndexedItems.prototype);
 
 const DroppedAnimation = function(element) {
@@ -368,7 +375,7 @@ DroppedAnimation.prototype = {
 }
 
 const EditInput = function() {
-    HTMLElements.call(this, 'input');
+    HTMLItems.call(this, 'input');
     this.render().setAttribute('type', 'text');
 };
 EditInput.prototype = {
@@ -618,17 +625,15 @@ SortableRow.prototype = {
 
 Object.setPrototypeOf(Row.prototype, HTMLDraggableItems.prototype);
 Object.setPrototypeOf(Cell.prototype, HTMLDraggableItems.prototype);
-Object.setPrototypeOf(EditInput.prototype, HTMLElements.prototype);
+Object.setPrototypeOf(EditInput.prototype, HTMLItems.prototype);
 Object.setPrototypeOf(SortableCell.prototype, Cell.prototype);
 Object.setPrototypeOf(SortableRow.prototype, Row.prototype);
 
-const HTMLItems = {
-    HTMLElements,
+export {
+    HTMLItems,
     EditInput,
     Cell,
     Row,
     SortableCell,
     SortableRow,
-}
-
-export default HTMLItems;
+};

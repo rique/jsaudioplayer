@@ -183,7 +183,7 @@ DragitManager.prototype = {
         }
 
         const cursor = getCursor(evt);
-        drag = this._findCursorHoveredDrag(cursor);
+        const drag = this._findCursorHoveredDrag(cursor);
 
         if (drag) {
             drag.dragit(cursor, this.seekParent);

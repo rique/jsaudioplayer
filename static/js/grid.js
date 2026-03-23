@@ -1,12 +1,10 @@
-(function(window, document, JSPlayer, undefined) {
 
-    const {clearElementInnerHTML} = JSPlayer.Utils;
-    const {Cell, SortableCell, Row, SortableRow, HTMLItems} = JSPlayer.HTMLItems;
-    const ListEvents = JSPlayer.EventsManager.ListEvents;
-    const DragitManager = JSPlayer.DragitManager;
-    const TrackEditor = JSPlayer.Tracks.TrackEditor;
-    const TrackSearch = JSPlayer.Tracks.TrackSearch;
-    const {TrackListManager} = JSPlayer.TrackListV2;
+    import {clearElementInnerHTML} from './utils.js';
+    import {Cell, SortableCell, Row, SortableRow, HTMLItems} from './html-items.js';
+    import {ListEvents} from './event-manager.js';
+    import DragitManager from './dragdrop.js';
+    import {TrackEditor, TrackSearch} from './tracks.js';
+    import {TrackListManager} from './tracklistv2.js';
 
     const BaseColumn = function() {
         this.cells = [];
@@ -900,6 +898,5 @@
         },
     }
 
-   JSPlayer.Grids = {TracklistGrid};
+   export {TracklistGrid};
 
-})(this, document, this.JSPlayer);

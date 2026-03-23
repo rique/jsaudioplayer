@@ -239,6 +239,5 @@ ListEvents.prototype = {
     },
 };
 
-const EventsManager = {ListEvents, keyCotrols: new KeyCotrols(), AudioPlayerKeyControls};
-
-export default EventsManager;
+const keyCotrols = new KeyCotrols()
+export {ListEvents, keyCotrols, AudioPlayerKeyControls};

@@ -6,6 +6,10 @@
 <link href="/static/css/grid.css" rel="stylesheet">
 <link href="/static/css/progressbar.css" rel="stylesheet">
 {% endblock %}
+{% block scripts %}
+<script type="text/javascript" defer src="https://cdn.jsdelivr.net/npm/luxon@3.7.2/build/global/luxon.min.js"></script>
+<script type="module" defer src="/static/js/index.js"></script>
+{% endblock %}
 {% block content %}
 <div id="content">
   <div id="player">
@@ -81,27 +85,4 @@
 </div>
 <div id="notifications-cnt">
 </div>
-{% endblock %}
-{% block scripts %}
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/luxon@3.7.2/build/global/luxon.min.js"></script>
-<script type="text/javascript" src="/static/js/utils.js"></script>
-<script type="text/javascript" src="/static/js/event-manager.js"></script>
-<script type="text/javascript" src="/static/js/api.js"></script>
-<script type="text/javascript" src="/static/js/track-loader.js"></script>
-<script type="text/javascript" src="/static/js/tracklistv2.js"></script>
-<script type="text/javascript" src="/static/js/tracks.js"></script>
-<script type="text/javascript" src="/static/js/dragdrop.js"></script>
-<script type="text/javascript" src="/static/js/html-items.js"></script>
-<script type="text/javascript" src="/static/js/html-items-components.js"></script>
-<script type="text/javascript" src="/static/js/effects.js"></script>
-<script type="text/javascript" src="/static/js/visualizer.js"></script>
-<script type="text/javascript" src="/static/js/notifications-center.js"></script>
-<script type="text/javascript" src="/static/js/notifications.js"></script>
-<script type="text/javascript" src="/static/js/components.js"></script>
-<script type="text/javascript" src="/static/js/playlists.js"></script>
-<script type="text/javascript" src="/static/js/libary.js"></script>
-<script type="text/javascript" src="/static/js/grid.js"></script>
-<script type="text/javascript" src="/static/js/playerV2.js"></script>
-<script type="text/javascript" src="/static/js/player-controls.js"></script>
-<script type="text/javascript" src="/static/js/index.js"></script>
 {% endblock %}

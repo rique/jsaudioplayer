@@ -1,5 +1,6 @@
 
-export {api} from './api.js';
+import Api from './api.js';
+const api = new Api();
 
 const BasLoader = function() {
     this.map = {};
@@ -69,6 +70,4 @@ TrackInfoLoader.prototype = {
 Object.setPrototypeOf(AlbumArtLoader.prototype, BasLoader.prototype);
 Object.setPrototypeOf(TrackInfoLoader.prototype, BasLoader.prototype);
 
-const Loaders = {AlbumArtLoader, TrackInfoLoader};
-
-export default Loaders;
+export {AlbumArtLoader, TrackInfoLoader};

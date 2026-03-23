@@ -1,11 +1,10 @@
-(function(window, document, JSPlayer, undefined) {
 
-    const ListEvents = JSPlayer.EventsManager.ListEvents;
-    const {Track, ID3Tags} = JSPlayer.Tracks;
-    const {TrackListManager} = JSPlayer.TrackListV2;
-    const {FileBrowserNotifications, TracklistBrowserNotifications} = JSPlayer.Notifications;
-    const clearElementInnerHTML = JSPlayer.Utils.clearElementInnerHTML;
-    const Api = window.JSPlayer.Api;
+    import { ListEvents } from "./event-manager.js";
+    import {Track, ID3Tags} from './tracks.js';
+    import {TrackListManager} from './tracklistv2.js';
+    import {FileBrowserNotifications, TracklistBrowserNotifications} from './notifications.js';
+    import {clearElementInnerHTML} from './utils.js';
+    import Api from './api.js';
 
     const LeftMenu = function() {
         this.menuComponents = {};
@@ -376,13 +375,11 @@
         },
     }
 
-    JSPlayer.Components = {
+    export {
         LeftMenu,
         TrackListBrowser,
         FileBrowser,
         FileBrowserRenderer,
         Layout,
         layoutHTML,
-    }
-
-})(this, document, this.JSPlayer);
+    };

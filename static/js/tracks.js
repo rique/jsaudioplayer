@@ -1,257 +1,256 @@
-(function(window, document, JSPlayer, undefined) {
-    const {ListEvents, keyCotrols} = JSPlayer.EventsManager;
-    const api = new JSPlayer.Api();
-    const {TrackListManager} = JSPlayer.TrackListV2;
-    const {AlbumArtLoader} = JSPlayer.Loaders
+import {ListEvents, keyCotrols} from "./event-manager.js"
+import Api from "./api.js";
+import {TrackListManager} from "./tracklistv2.js";
+import {AlbumArtLoader} from "./track-loader.js";
 
-    const ID3Tags = function(tags) {
-        this.tags = tags;
-        this.albumArtLoader = new AlbumArtLoader();
-        this._manageTags(tags);
-    };
-    ID3Tags.prototype = {
-        getArtist() {
-            return this.artist;
-        },
-        getTitle() {
-            return this.title;
-        },
-        getAlbum() {
-            return this.album;
-        },
-        async getAlbumArt(id) {
-            if (!this.picture) {
-                const object = await this.albumArtLoader.getByIdAsync(id);
-                if (object)
-                    this.picture = object.id3.picture;
-            }
-            return this.picture;
-        },
-        getDuration() {
-            return this.duration;
-        },
-        setArtist(artist) {
-            this.tags.artist = artist;
-            this._manageTags(this.tags);
-        },
-        setTitle(title) {
-            this.tags.title = title;
-            this._manageTags(this.tags);
-        },
-        setAlbum(album) {
-            this.tags.album = album;
-            this._manageTags(this.tags);
-        },
-        getTags() {
-            return this.tags;
-        },
-        _manageTags(tags) {
-            this.title = tags.title;
-            this.album = tags.album;
-            this.artist = tags.artist;
-            this.duration = tags.duration;
+const api = new Api();
+
+const ID3Tags = function(tags) {
+    this.tags = tags;
+    this.albumArtLoader = new AlbumArtLoader();
+    this._manageTags(tags);
+};
+ID3Tags.prototype = {
+    getArtist() {
+        return this.artist;
+    },
+    getTitle() {
+        return this.title;
+    },
+    getAlbum() {
+        return this.album;
+    },
+    async getAlbumArt(id) {
+        if (!this.picture) {
+            const object = await this.albumArtLoader.getByIdAsync(id);
+            if (object)
+                this.picture = object.id3.picture;
         }
-    };
-    
-    const Track = function(trackInfo) {
-        this.trackName = trackInfo.track_name;
-        this.trackUUid = trackInfo.track_uuid;
-        this.trackOriginalPath = trackInfo.track_original_path;
-        this.currentTime = 0;
-        this.isPlaying = false;
-        this._eventTrack = new ListEvents();
-        this.index = 0;
-    };
-    Track.prototype = {
-        setTrackDuration(duration) {
-            this.trackDuration = duration;
-        },
-        setIndex(index) {
-            this.index = index;
-        },
-        getIndex() {
-            return this.index;
-        },
-        getTrackUUID() {
-            return this.trackUUid;
-        },
-        getTrackDuration(formated) {
-            if (formated)
-                return this.formatTrackDuration();
-            return this.trackDuration;
-        },
-        setCurrentTime(val) {
-            this.currentTime = val;
-            this._eventTrack.trigger('onCurrentTimeUpdate', val);
-        },
-        onCurrentTimeUpdate(cb, subscriber) {
-            this._eventTrack.onEventRegister({cb, subscriber}, 'onCurrentTimeUpdate');
-        },
-        onCurrentTimeUpdateUnsub(subscriber) {
-            this._eventTrack.unsubscribeEVent({eventKey: 'onCurrentTimeUpdate', subscriber})
-        },
-        getCurrentTime(formated) {
-            if (formated)
-                return this.formatCurrentTime();
-            return this.currentTime;
-        },
-        getTimeRemaining(formated) {
-            let remainigTime = this.getTrackDuration() - this.getCurrentTime();
-            if (formated)
-                return this._formatTime(remainigTime);
-            return remainigTime;
-        },
-        formatTrackDuration() {
-            if (typeof this.trackDuration === 'undefined') {
-                const id3Tags = this.getID3Tags();
-                if (!id3Tags)
-                    return;
-                this.trackDuration = id3Tags.getDuration()
-            }
-            
-            return this._formatTime(this.trackDuration); 
-        },
-        formatCurrentTime() {
-            return this._formatTime(this.getCurrentTime());
-        },
-        getArtist() {
-            return this._id3TagsInstance.getArtist();
-        },
-        getTitle() {
-            const title = this._id3TagsInstance.getTitle();
-            if (typeof title === 'undefined' || title.length == '')
-                return this.trackName;
-            return title;
-        },
-        getAlbum() {
-            return this._id3TagsInstance.getAlbum();
-        },
-        async getAlbumArt() {
-            return await this._id3TagsInstance.getAlbumArt(this.trackUUid);
-        },
-        getID3Tags() {
-            return this._id3TagsInstance.getTags();
-        },
-        setID3Tags(id3Tags) {
-            this._id3TagsInstance = id3Tags;
-        },
-        setTag(tag, value) {
-            if (tag == 'title')
-                this._id3TagsInstance.setTitle(value);
-            else if (tag == 'artist')
-                this._id3TagsInstance.setArtist(value);
-            else if (tag == 'album')
-                this._id3TagsInstance.setAlbum(value);
-            this._eventTrack.trigger('onTagChange', tag, value);
-        },
-        onTagChange(cb, subscriber) {
-            this._eventTrack.onEventRegister({cb, subscriber}, 'onTagChange');
-        },
-        onTagChangeUnsub(subscriber) {
-            this._eventTrack.unsubscribeEVent({eventKey: 'onTagChange', subscriber});
-        },
-        _formatTime(millisecTime) {
-            let secs = '0', mins = '0';
-            if (!isNaN(millisecTime)) {
-                secs = parseInt(millisecTime % 60).toString(),
-                mins = parseInt(millisecTime / 60).toString();
-            }
-            return `${mins.padStart(2, '0')}:${secs.padStart(2, '0')}`
-        },
-    };
-    
-    const TrackEditor = {
-        onclickCell() {
-            this._setExclusivity();
-        },
-        onValidate(evt, cell, value, oldValue) {
-            this._unsetExclusivity();
-            const trackUUid = cell.data('trackId');
-            const fieldType = cell.data('fieldType');
+        return this.picture;
+    },
+    getDuration() {
+        return this.duration;
+    },
+    setArtist(artist) {
+        this.tags.artist = artist;
+        this._manageTags(this.tags);
+    },
+    setTitle(title) {
+        this.tags.title = title;
+        this._manageTags(this.tags);
+    },
+    setAlbum(album) {
+        this.tags.album = album;
+        this._manageTags(this.tags);
+    },
+    getTags() {
+        return this.tags;
+    },
+    _manageTags(tags) {
+        this.title = tags.title;
+        this.album = tags.album;
+        this.artist = tags.artist;
+        this.duration = tags.duration;
+    }
+};
 
-            if (oldValue == value) {
-                cell.innerContent(oldValue);
+const Track = function(trackInfo) {
+    this.trackName = trackInfo.track_name;
+    this.trackUUid = trackInfo.track_uuid;
+    this.trackOriginalPath = trackInfo.track_original_path;
+    this.currentTime = 0;
+    this.isPlaying = false;
+    this._eventTrack = new ListEvents();
+    this.index = 0;
+};
+Track.prototype = {
+    setTrackDuration(duration) {
+        this.trackDuration = duration;
+    },
+    setIndex(index) {
+        this.index = index;
+    },
+    getIndex() {
+        return this.index;
+    },
+    getTrackUUID() {
+        return this.trackUUid;
+    },
+    getTrackDuration(formated) {
+        if (formated)
+            return this.formatTrackDuration();
+        return this.trackDuration;
+    },
+    setCurrentTime(val) {
+        this.currentTime = val;
+        this._eventTrack.trigger('onCurrentTimeUpdate', val);
+    },
+    onCurrentTimeUpdate(cb, subscriber) {
+        this._eventTrack.onEventRegister({cb, subscriber}, 'onCurrentTimeUpdate');
+    },
+    onCurrentTimeUpdateUnsub(subscriber) {
+        this._eventTrack.unsubscribeEVent({eventKey: 'onCurrentTimeUpdate', subscriber})
+    },
+    getCurrentTime(formated) {
+        if (formated)
+            return this.formatCurrentTime();
+        return this.currentTime;
+    },
+    getTimeRemaining(formated) {
+        let remainigTime = this.getTrackDuration() - this.getCurrentTime();
+        if (formated)
+            return this._formatTime(remainigTime);
+        return remainigTime;
+    },
+    formatTrackDuration() {
+        if (typeof this.trackDuration === 'undefined') {
+            const id3Tags = this.getID3Tags();
+            if (!id3Tags)
                 return;
-            }
+            this.trackDuration = id3Tags.getDuration()
+        }
+        
+        return this._formatTime(this.trackDuration); 
+    },
+    formatCurrentTime() {
+        return this._formatTime(this.getCurrentTime());
+    },
+    getArtist() {
+        return this._id3TagsInstance.getArtist();
+    },
+    getTitle() {
+        const title = this._id3TagsInstance.getTitle();
+        if (typeof title === 'undefined' || title.length == '')
+            return this.trackName;
+        return title;
+    },
+    getAlbum() {
+        return this._id3TagsInstance.getAlbum();
+    },
+    async getAlbumArt() {
+        return await this._id3TagsInstance.getAlbumArt(this.trackUUid);
+    },
+    getID3Tags() {
+        return this._id3TagsInstance.getTags();
+    },
+    setID3Tags(id3Tags) {
+        this._id3TagsInstance = id3Tags;
+    },
+    setTag(tag, value) {
+        if (tag == 'title')
+            this._id3TagsInstance.setTitle(value);
+        else if (tag == 'artist')
+            this._id3TagsInstance.setArtist(value);
+        else if (tag == 'album')
+            this._id3TagsInstance.setAlbum(value);
+        this._eventTrack.trigger('onTagChange', tag, value);
+    },
+    onTagChange(cb, subscriber) {
+        this._eventTrack.onEventRegister({cb, subscriber}, 'onTagChange');
+    },
+    onTagChangeUnsub(subscriber) {
+        this._eventTrack.unsubscribeEVent({eventKey: 'onTagChange', subscriber});
+    },
+    _formatTime(millisecTime) {
+        let secs = '0', mins = '0';
+        if (!isNaN(millisecTime)) {
+            secs = parseInt(millisecTime % 60).toString(),
+            mins = parseInt(millisecTime / 60).toString();
+        }
+        return `${mins.padStart(2, '0')}:${secs.padStart(2, '0')}`
+    },
+};
 
-            api.editTrack(fieldType, value, trackUUid, (res) => {
-                if (res.success) {
-                    cell.innerContent(value);
-                    const {track} = TrackListManager.getTrackByUUID(trackUUid);
-                    track.setTag(fieldType, value);
-                } else {
-                    cell.innerContent(oldValue);
-                }
-            });
-        },
-        _setExclusivity() {
-            keyCotrols.setExlcusivityCallerKeyUpV2(this);
-            keyCotrols.setExlcusivityCallerKeyDownV2(this);
-        },
-        _unsetExclusivity() {
-            keyCotrols.unsetExlcusivityCallerKeyUpV2();
-            keyCotrols.unsetExlcusivityCallerKeyDownV2();
-        },
-    };
+const TrackEditor = {
+    onclickCell() {
+        this._setExclusivity();
+    },
+    onValidate(evt, cell, value, oldValue) {
+        this._unsetExclusivity();
+        const trackUUid = cell.data('trackId');
+        const fieldType = cell.data('fieldType');
 
-    const TrackSearch = function(searchableGrid) {
-        this.searchEvents = new ListEvents();
-        this.term = '';
-        this.searchableGrid = searchableGrid;
-    }
-    TrackSearch.prototype = {
-        init() {
-            this.magGlassElem = document.querySelector('.tracklist-head .tracklist-search .img-cnt');
-            this.searchElemCnt = document.querySelector('.tracklist-head .tracklist-search .input-cnt');
-            this.searchInputElem = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
-            this.magGlassElem.addEventListener('click', this._toggleInputSearchVisibility.bind(this));
-            this.searchElemCnt.addEventListener('keyup', this.search.bind(this));
-        },
-        search(evt) {
-            this.result = this.searchableGrid.search(evt.target.value);
-            this.searchEvents.trigger('onSearchResult', this.result);
-        },
-        onSearchResult(cb, subscriber) {
-            this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchResult');
-        },
-        onSearchVisibilityChange(cb, subscriber) {
-            this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchVisibilityChange');
-        },
-        _isSearchVisible() {
-            return this.searchElemCnt.style.visibility == 'visible';
-        },
-        _toggleInputSearchVisibility() {
-            if (!this._isSearchVisible()) {
-                this._openSearch();
+        if (oldValue == value) {
+            cell.innerContent(oldValue);
+            return;
+        }
+
+        api.editTrack(fieldType, value, trackUUid, (res) => {
+            if (res.success) {
+                cell.innerContent(value);
+                const {track} = TrackListManager.getTrackByUUID(trackUUid);
+                track.setTag(fieldType, value);
             } else {
-                this._closeSearch();    
-                this.searchableGrid.clearSearch();
+                cell.innerContent(oldValue);
             }
-            this.searchEvents.trigger('onSearchVisibilityChange', this._isSearchVisible());
-        },
-        _openSearch() {
-            this._setExclusivity();
-            this.searchElemCnt.style.visibility = 'visible';
-            this.searchInputElem.focus();
-        },
-        _closeSearch() {
-            this._unsetExclusivity();
-            this.searchElemCnt.style.visibility = 'hidden';
-            this.term = '';
-            this.searchInputElem.value = '';
-        },
-        _setExclusivity() {
-            console.log('Setting exclusivity');
-            keyCotrols.setExlcusivityCallerKeyUpV2(this);
-            keyCotrols.setExlcusivityCallerKeyDownV2(this);
-        },
-        _unsetExclusivity() {
-            console.log('Unsetting exclusivity');
-            keyCotrols.unsetExlcusivityCallerKeyUpV2(this);
-            keyCotrols.unsetExlcusivityCallerKeyDownV2(this);
-        },
-    }
+        });
+    },
+    _setExclusivity() {
+        keyCotrols.setExlcusivityCallerKeyUpV2(this);
+        keyCotrols.setExlcusivityCallerKeyDownV2(this);
+    },
+    _unsetExclusivity() {
+        keyCotrols.unsetExlcusivityCallerKeyUpV2();
+        keyCotrols.unsetExlcusivityCallerKeyDownV2();
+    },
+};
 
-    window.JSPlayer.Tracks = {Track, ID3Tags, TrackSearch, TrackEditor};
+const TrackSearch = function(searchableGrid) {
+    this.searchEvents = new ListEvents();
+    this.term = '';
+    this.searchableGrid = searchableGrid;
+}
+TrackSearch.prototype = {
+    init() {
+        this.magGlassElem = document.querySelector('.tracklist-head .tracklist-search .img-cnt');
+        this.searchElemCnt = document.querySelector('.tracklist-head .tracklist-search .input-cnt');
+        this.searchInputElem = document.querySelector('.tracklist-head .tracklist-search .input-cnt .search-input');
+        this.magGlassElem.addEventListener('click', this._toggleInputSearchVisibility.bind(this));
+        this.searchElemCnt.addEventListener('keyup', this.search.bind(this));
+    },
+    search(evt) {
+        this.result = this.searchableGrid.search(evt.target.value);
+        this.searchEvents.trigger('onSearchResult', this.result);
+    },
+    onSearchResult(cb, subscriber) {
+        this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchResult');
+    },
+    onSearchVisibilityChange(cb, subscriber) {
+        this.searchEvents.onEventRegister({cb, subscriber}, 'onSearchVisibilityChange');
+    },
+    _isSearchVisible() {
+        return this.searchElemCnt.style.visibility == 'visible';
+    },
+    _toggleInputSearchVisibility() {
+        if (!this._isSearchVisible()) {
+            this._openSearch();
+        } else {
+            this._closeSearch();    
+            this.searchableGrid.clearSearch();
+        }
+        this.searchEvents.trigger('onSearchVisibilityChange', this._isSearchVisible());
+    },
+    _openSearch() {
+        this._setExclusivity();
+        this.searchElemCnt.style.visibility = 'visible';
+        this.searchInputElem.focus();
+    },
+    _closeSearch() {
+        this._unsetExclusivity();
+        this.searchElemCnt.style.visibility = 'hidden';
+        this.term = '';
+        this.searchInputElem.value = '';
+    },
+    _setExclusivity() {
+        console.log('Setting exclusivity');
+        keyCotrols.setExlcusivityCallerKeyUpV2(this);
+        keyCotrols.setExlcusivityCallerKeyDownV2(this);
+    },
+    _unsetExclusivity() {
+        console.log('Unsetting exclusivity');
+        keyCotrols.unsetExlcusivityCallerKeyUpV2(this);
+        keyCotrols.unsetExlcusivityCallerKeyDownV2(this);
+    },
+}
 
-})(this, document, window.JSPlayer);
+export {Track, ID3Tags, TrackSearch, TrackEditor};
