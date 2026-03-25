@@ -538,7 +538,6 @@
         },
         _restoreGrid(isVisible) {
             if (!isVisible) {
-                console.log('_restoreGrid');
                 this.reload();
                 this.queuelistGrid.render();
                 this._setCurrentTrack();

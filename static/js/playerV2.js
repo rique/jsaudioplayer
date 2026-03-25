@@ -206,25 +206,26 @@ AudioPlayer.prototype = {
         this.audioPlayerEvents.trigger('onAudioEnded', this.currentTrack);
         
         console.log('audioEnded', {repeatMode: this.repeatMode, isLastTrack: TrackListManager.isLastTrack()});
-        if (TrackListManager.isLastTrack()) {
-            if (!this.repeatMode >= 1) {
-                console.log('End of session');
-                autoPlay = false;
-            } else {
-                autoPlay = true;
-                if (this.repeatMode == 1) {
-                    if (!TrackListManager.isShuffle())
-                        TrackListManager.reset();
-                    else {
-                        TrackListManager.reShuffle();
-                        this.audioPlayerEvents.trigger('onShuffle', TrackListManager.getTrackList());
-                    }
+
+        if (!TrackListManager.isLastTrack()) {
+            return this.setCurrentTrackFromTrackList(true);
+        }
+
+        if (!this.repeatMode >= 1) {
+            console.log('End of session');
+            autoPlay = false;
+        } else {
+            autoPlay = true;
+            if (this.repeatMode == 1) {
+                if (!TrackListManager.isShuffle())
+                    TrackListManager.reset();
+                else {
+                    TrackListManager.reShuffle();
+                    this.audioPlayerEvents.trigger('onShuffle', TrackListManager.getTrackList());
                 }
             }
-        } else {
-                autoPlay = true;
         }
-        console.log({autoPlay});
+      
         this.setCurrentTrackFromTrackList(autoPlay);
     },
     onAudioEnded(cb, subscriber) {
@@ -332,10 +333,8 @@ AudioPlayerDisplay.prototype = {
             if (data.length == 0)
                 return this.albumImg.src = "/static/albumart.svg";
             
-            let imgData = data;
-            this.albumImg.src = `data:${format};base64,${imgData}`;
+            this.albumImg.src = `data:${format};base64,${data}`;
         });
-        
     },
     manageTag(tag, value) {
         switch(tag) {

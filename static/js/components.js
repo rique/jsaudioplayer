@@ -269,10 +269,8 @@
         },
         playSongFromTracklist(evt) {
             const cell = evt.detail.HTMLItem;
-            console.log('playSongFromTracklist', {getIndex: cell.getParentItem().getIndex() - 1, cell});
             TrackListManager.setTrackIndex(cell.getParentItem().getIndex() - 1, true);
-            const {index, track} = TrackListManager.getCurrentTrack();
-            console.log('playSongFromTracklist', {index, track});
+            const {track} = TrackListManager.getCurrentTrack();
             this.audioPlayerDisplay.setTrack(track);
         },
         showActionMenu(evt) {

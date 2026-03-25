@@ -49,6 +49,11 @@ const setUp = (audioPlayer, imgList) => {
 
         draw(0, true, 0);
     }
+    /*
+    c -> Alpha coefficient for the image being loaded, also used to determine when to load the next image
+    d -> is fading in or out: true -> fading in, false -> fading out
+    i -> index of the image to be loaded next
+    */
     const draw = (c, d, i) => {
 
         if (d)
@@ -77,6 +82,7 @@ const setUp = (audioPlayer, imgList) => {
         
         let width, height, x, y = 0;
         // let coef = (canvas.width / background.width) * .8;
+        // determine coeficient of the speed in which the image proportions are increased/decreased
         let coef = (canvas.height / background.height) * (1.05 + (c / 3008));
         width =  background.width * coef;
         height = background.height * coef;
@@ -110,10 +116,10 @@ const setUp = (audioPlayer, imgList) => {
             canvasCtx.textAlign = 'left';
             canvasCtx.fillStyle = `#f1f1f1`;
             canvasCtx.fillText(dateText, 10, 36);
-            /*canvasCtx.font = "15px sans-serif";
+            canvasCtx.font = "15px sans-serif";
             canvasCtx.textAlign = 'center';
             canvasCtx.fillStyle = `#f1f1f1`;
-            canvasCtx.fillText(Math.abs(Math.round(audioValue).toString()), posX + 10, posY - 5, barWidth);*/
+            canvasCtx.fillText(Math.abs(Math.round(audioValue).toString()), posX + 10, posY - 5, barWidth);
             posX += barWidth + 1;
         }
 
@@ -121,8 +127,6 @@ const setUp = (audioPlayer, imgList) => {
         requestAnimationFrame(() => {
             draw(c, d, i);
         });
-
-        //c = null, d = null, i = null, analyserNode = null, dataArray = null,  bufferLength = null, canvasCtx = null, canvas = null, background = null, imgList = null;
     };
 }
 const Vizualizer = {

@@ -19,7 +19,6 @@ HoverEffect.prototype = {
         });
 
         this.htmlItem.addEventListener('mouseleave', () => {
-            console.log('left', this.htmlItem);
             this.htmlItem.css({background: "#181717"});
         });
     }
