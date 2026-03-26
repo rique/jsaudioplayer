@@ -1,3 +1,12 @@
+/* * API Module
+ * Provides a set of methods for interacting with the backend API of the music player application.
+ * Handles operations such as browsing files, adding tracks, editing track metadata, deleting tracks, loading track album art and info, managing playlists, and more.
+ * Each method sends an appropriate HTTP request to the corresponding API endpoint and processes the response to provide feedback to the caller through callbacks or promises.
+ * The module is designed to be easily integrated with other components of the application, allowing for seamless communication between the frontend and backend.
+ * Overall, this module serves as a crucial component of the music player application, providing a robust and flexible interface for managing tracks, playlists, and related data while ensuring efficient communication with the backend API.
+ * The design allows for easy maintenance and scalability, as new API endpoints can be added by simply implementing additional methods within this module without affecting existing functionality.
+ * In summary, this module provides a comprehensive implementation of the API interactions required for the music player application, ensuring smooth communication between the frontend and backend while enhancing the overall user experience through efficient data management and retrieval.
+ */
 import {readCookie} from './utils.js';
 
 const Api = function() {

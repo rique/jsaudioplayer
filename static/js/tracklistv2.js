@@ -1,3 +1,14 @@
+/**
+ * Track List Module
+ * Provides a comprehensive implementation of the track list management system for the music player application.
+ * The module includes the TrackList class, which manages the list of tracks, their order, and playback state, as well as the TrackListManager, which orchestrates the overall behavior of the track list and its interactions with other components of the application.
+ * The TrackList class extends a base IndexList class that provides basic list management functionalities such as adding, removing, and navigating through items. The TrackList class adds specific logic for handling tracks, including loop mode, total duration calculation, and index management.
+ * The TrackListManager handles higher-level operations such as shuffling the track list, managing the queue of upcoming tracks, and triggering events when tracks are added to the queue or when the track index changes. It also provides methods for retrieving the current track and its index, as well as checking if the current track is from the queue.
+ * The module is designed to be easily integrated with other components of the application, such as the audio player and notifications, allowing for seamless management of the track list and its interactions with the user interface.
+ * Overall, this module serves as a crucial component of the music player application, providing a robust and flexible system for managing the track list while ensuring efficient interactions with other components and enhancing the overall user experience.
+ * The design allows for easy maintenance and scalability, as new features can be added to the track list management system without affecting existing functionality, ensuring that the application can continue to evolve and provide a rich user experience as new features are introduced.
+ * In summary, this module provides a comprehensive implementation of the track list management system for the music player application, ensuring seamless integration with other components and enhancing the overall user experience through efficient track list management and interactions.
+ */
 import {ListEvents} from './event-manager.js';
 import {shuffle} from './utils.js';
 

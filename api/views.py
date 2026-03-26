@@ -301,7 +301,7 @@ def loadTrackList(request):
 
 @csrf_exempt
 def loadBGImages(request):
-    img_dir = './static/imgc/'
+    img_dir = './static/imgb/'# './static/imgc/'
     res = subprocess.run(f'find -L "{img_dir}" -type f | grep -i --include=*.{{jpg,jpeg,png,webp,gif}} "" | sort -R', shell=True, capture_output=True, check=False)
     res_str = res.stdout.decode().strip()
     print('stderr', res.stderr.decode().strip())

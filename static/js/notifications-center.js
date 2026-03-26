@@ -1,4 +1,16 @@
-
+/* * Notifications Center Module
+ * Provides a centralized system for managing and displaying notifications within the application.
+ * Supports different notification levels (info, warning, error) and allows for dynamic content updates.
+ * Utilizes a templating system for consistent notification styling and behavior.
+ * Integrates with the Fader class for smooth fade-in and fade-out animations of notifications.
+ * The NotificationCenter object allows for registering, modifying, displaying, and hiding notifications using unique keys.
+ * Each notification is rendered using the NotificationRenderer class, which handles the creation and animation of notification elements in the DOM.
+ * The module also includes a TrackBoxTemplate for rendering track-related notifications with album art and metadata.
+ * Overall, this module enhances the user experience by providing timely and informative feedback about various actions and states within the music player application.
+ * The design allows for easy updates and additions to the notification system in the future, ensuring that the application can continue to provide relevant feedback as new features are introduced.
+ * The module promotes code reusability and maintainability by centralizing notification management and allowing for dynamic content updates through the use of templates and asynchronous data handling.
+ * In summary, this module serves as a crucial component of the music player application, providing a robust and flexible system for managing notifications across different contexts, ultimately enhancing the overall user experience.
+ */
 import {Fader} from './effects.js';
 import {uuidv4} from './utils.js';
 
@@ -45,26 +57,9 @@ const NotificationMainBoxTemplate = {
             cb(tplUUID);
 
     },
-    _setUpTplAsync(title, message, tplUUID, cb) {
-        message.then((msg) => {
-            this._tpl.innerHTML = `
-            <div class="notification-head">
-                <div class="notif-title inline-block">
-                    ${title}
-                </div><div class="notif-close inline-block"><div class="close-cirlce "><i class="fa-solid fa-xmark"></i></div></div>
-                </div>
-                <div class="notification-message">
-                ${msg}
-                </div>
-                <div class="notification-timer">
-                <div class="notif-prog-bar">
-                    <div class="notif-sub-prog-bar"></div>
-                </div>
-            </div>`;
-
-            if (typeof cb === 'function')
-                cb(tplUUID);
-        });
+    async _setUpTplAsync(title, messagePromise, tplUUID, cb) {
+        const message = await messagePromise;
+        this._setUpTplSync(title, message, tplUUID, cb);
     },
     _renderTpl() {
         this.notifParentNode.prepend(this._tpl);
@@ -84,36 +79,27 @@ BoxTemplateBase.prototype = {
 
 const TrackBoxTemplate = function(track) {
     this.track = track;
+    this.imgId = `img-${uuidv4()}`;
 };
 TrackBoxTemplate.prototype = {
-    async render() {
-        await this._setUpTpl(this.track);
+    render() {
+        this._setUpTpl(this.track);
         return this._tpl;
     },
-    async _setUpTpl(track) {
-        let album  = track.getAlbum();
-        let artist = track.getArtist();
-        
-        if (!artist || artist.length == 0)
-            artist = 'N/A';
-        if (!album || album.length == 0)
-            album = 'N/A';
+    _setUpTpl(track) {
+        let album  = track.getAlbum() || 'N/A';
+        let artist = track.getArtist() || 'N/A';
 
-        const albumart = await track.getAlbumArt();
-        let data, format, imgSrc;
-        
-        if (albumart) {
-            ({data, format} = albumart);
-        }
-
-        if (!data || data.length == 0) {
-            imgSrc = "/static/albumart.svg";
-        } else {
-            imgSrc = `data:${format};base64,${data}`;
-        }
-
-        this._tpl = `<div class="notif-logo"><img style="width: 100%" src="${imgSrc}"></div><div style="width: 80%; font-size: 14px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>
+        this._tpl = `<div class="notif-logo"><img style="width: 100%" id="${this.imgId}" src="/static/albumart.svg"></div><div style="width: 80%; font-size: 14px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>
         <p class="no-wrap">${artist}</p></div>`;
+
+        track.getAlbumArt().then((albumart) => {   
+            const imgElem = document.getElementById(this.imgId);
+            if (imgElem)
+                imgElem.src = albumart;
+        }).catch((err) => {
+            console.error('Error fetching album art for notification', err);
+        });
     },
 };
 
@@ -152,7 +138,7 @@ NotificationRenderer.prototype = {
         animation.onfinish = this._hideAndRemoveNotificationBox.bind(this, notificationBox);
     },
     _hideAndRemoveNotificationBox(notificationBox) {
-        this._fader.fadeOut(notificationBox, 400, notificationBox.style.opacity, 0, this._removeNotificationBox.bind(this));
+        this._fader.fadeOut(notificationBox, 400, +notificationBox.style.opacity, 0, this._removeNotificationBox.bind(this));
     },
     _removeNotificationBox(notificationBox) {
         notificationBox.remove();

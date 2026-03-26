@@ -1,3 +1,14 @@
+/* * Player Module
+ * Implements the core audio player functionality, including play/pause, next/previous track, volume control, and repeat/shuffle modes.
+ * Integrates with the TrackListManager to manage the current track and tracklist state.
+ * Provides an AudioPlayerDisplay class to handle the visual representation of the current track's metadata and album art.
+ * Utilizes event-driven architecture to allow for extensibility and separation of concerns between the player logic and UI updates.
+ * The AudioPlayer class manages the audio element and its interactions, while the AudioPlayerDisplay class updates the UI based on the current track's metadata and playback state.
+ * The module is designed to be easily integrated with other components of the application, such as the Notifications Center for displaying upcoming tracks and the TrackListBrowser for managing the tracklist.
+ * Overall, this module serves as the central component of the music player application, orchestrating the playback of tracks and ensuring a responsive and intuitive user experience when interacting with the audio player.
+ * The design allows for easy maintenance and scalability, as new features can be added to the player or display without affecting the overall functionality of the application.
+ * In summary, this module provides a comprehensive implementation of the audio player and its display, ensuring seamless integration with other components and enhancing the overall user experience of the music player application.
+ */
 import {ListEvents} from "./event-manager.js";
 import {TrackListManager} from "./tracklistv2.js";
 import {whileMousePressed, whileMousePressedAndMove} from "./utils.js";
@@ -34,6 +45,13 @@ AudioPlayer.prototype = {
         TrackListManager.onTrackManagerIndexChange(() => {
             this.setCurrentTrackFromTrackList(false);
             this.play();
+        });
+
+        TrackListManager.onAddedToQueue((track) => {
+            if (this._comingNextFired === true) {
+                this._playerNotifications.hideComingNext();
+                this._comingNextFired = false;
+            }
         });
     },
     changeVolume(evt, mouseUp) {
@@ -136,6 +154,11 @@ AudioPlayer.prototype = {
         else if (timeInSec > this.currentTrack.getTrackDuration())
             timeInSec = this.currentTrack.getTrackDuration();
         this.audioElem.currentTime = timeInSec;
+
+        if (this.currentTrack.getTrackDuration() - timeInSec > 30) {
+            this._comingNextFired = false;
+            this._playerNotifications.hideComingNext();
+        }
     },
     getCurrentTime() {
         return this.audioElem.currentTime;
@@ -325,15 +348,7 @@ AudioPlayerDisplay.prototype = {
         this.artistName.innerText = artist;
 
         track.getAlbumArt(track.trackUUid).then((albumart) => {
-            if (!albumart)
-                return this.albumImg.src = "/static/albumart.svg";
-
-            const { data, format } = albumart;
-            
-            if (data.length == 0)
-                return this.albumImg.src = "/static/albumart.svg";
-            
-            this.albumImg.src = `data:${format};base64,${data}`;
+            this.albumImg.src = albumart;
         });
     },
     manageTag(tag, value) {

@@ -1,5 +1,12 @@
-
-
+/* * Effects Module
+ * Provides utility functions for visual effects such as fading elements in and out.
+ * Utilizes the Web Animations API for smooth and efficient animations.
+ * Designed to be reusable across different components of the application, such as notifications and track displays.
+ * The Fader class includes methods for fading elements in and out, with customizable duration and opacity settings. It also includes a method to cancel ongoing animations, allowing for responsive interactions when users trigger multiple effects in quick succession.
+ * Overall, this module enhances the user experience by providing visually appealing transitions and effects, contributing to a polished and professional feel for the music player application.
+ * The design allows for easy integration with other components and can be extended in the future to include additional types of effects as needed.
+ * In summary, this module serves as a crucial component of the music player application, providing a robust and flexible system for managing visual effects across different contexts, ultimately enhancing the overall user experience.
+ */
 
 const Fader = function() {}; 
 Fader.prototype = {

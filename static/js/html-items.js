@@ -1,3 +1,15 @@
+/* * HTML Items Module
+* Provides a set of classes for creating and managing HTML elements with enhanced functionality, such as event handling, styling, and dynamic content updates.
+* The HTMLItems class serves as the base class for creating HTML elements, allowing for easy manipulation of their properties and behaviors through methods like css, classAdd, classRemove, and event listeners.
+* The HTMLIndexedItems class extends HTMLItems to include an index property, which can be used for managing collections of items and triggering events when the index is updated.
+* The HTMLDraggableItems class further extends HTMLIndexedItems to add drag-and-drop functionality, allowing elements to be draggable and dispatch custom events when dragged or dropped.
+* The DroppedAnimation class provides a visual animation effect for elements that have been dropped, enhancing the user experience during drag-and-drop interactions.
+* The EditInput class creates an input element that can be toggled between text and hidden types, with methods for managing its value and focus state.
+* The Cell class extends HTMLDraggableItems to create a specific type of element that can be made editable and dispatches a custom event when clicked.
+* Each class is designed to be easily integrated into the music player application, allowing for consistent styling and behavior across different components of the UI.
+* Overall, this module serves as a crucial part of the music player application, providing reusable and flexible HTML components that enhance the interactivity and visual appeal of the user interface.
+* The design allows for easy extension in the future, enabling additional components or enhancements to existing ones without affecting the overall structure of the application. This modular approach ensures that the application remains flexible and adaptable to future requirements and design changes.
+*/
 import {ListEvents} from './event-manager.js';
 import {getLastParent} from './utils.js';
 

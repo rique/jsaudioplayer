@@ -1,3 +1,10 @@
+/** Tracks Module
+ * Defines the Track class and related functionality for managing track metadata, album art, and interactions with the audio player and tracklist browser.
+ * The Track class encapsulates properties such as title, artist, album, duration, and current playback time, as well as methods for updating and retrieving this information.
+ * Integrates with the ID3Tags class to manage track metadata and the AlbumArtLoader for fetching album art asynchronously.
+ * Provides a TrackEditor object for handling inline editing of track metadata within the tracklist grid.
+ * The module is designed to be extensible and integrates with other components of the application, such as notifications and the audio player display.
+ */
 import {ListEvents, keyCotrols} from "./event-manager.js"
 import Api from "./api.js";
 import {TrackListManager} from "./tracklistv2.js";
@@ -7,7 +14,8 @@ const api = new Api();
 
 const ID3Tags = function(tags) {
     this.tags = tags;
-    this.albumArtLoader = new AlbumArtLoader();
+    this.albumArtLoader = AlbumArtLoader;
+    this.defaultALbumArt = "/static/albumart.svg";
     this._manageTags(tags);
 };
 ID3Tags.prototype = {
@@ -21,12 +29,15 @@ ID3Tags.prototype = {
         return this.album;
     },
     async getAlbumArt(id) {
-        if (!this.picture) {
-            const object = await this.albumArtLoader.getByIdAsync(id);
-            if (object)
-                this.picture = object.id3.picture;
-        }
-        return this.picture;
+        const objectPromise = await this.albumArtLoader.getByIdAsync(id);
+
+        const data = objectPromise?.object?.id3?.picture?.data;
+        const format = objectPromise?.object?.id3?.picture?.format;
+
+        if (data && data.length > 0 && format)
+            return `data:${format};base64,${data}`;
+        
+        return this.defaultALbumArt;
     },
     getDuration() {
         return this.duration;

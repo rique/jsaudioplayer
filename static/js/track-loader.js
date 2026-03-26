@@ -1,28 +1,52 @@
+/* * Track Loader Module
+ * Provides caching and loading mechanisms for track-related data such as album art and track info.
+ * Implements a simple LRU (Least Recently Used) cache to optimize performance and reduce redundant API calls.
+ * The AlbumArtLoader and TrackInfoLoader classes extend a common BaseLoader class that handles caching logic, while each loader implements its own asynchronous loading method to fetch the required data from the API.
+ * The module is designed to be easily integrated with other components of the application, such as the audio player display and notifications, allowing for seamless retrieval and display of track-related information.
+ * Overall, this module enhances the user experience by providing efficient and responsive loading of track data, ensuring that album art and track info are readily available when needed without causing unnecessary delays or performance issues.
+ * The design allows for easy maintenance and scalability, as new types of track-related data can be added by simply extending the BaseLoader class and implementing the appropriate loading logic.
+ * In summary, this module serves as a crucial component of the music player application, providing a robust and efficient system for managing track-related data while optimizing performance through caching strategies.
+ */
 
 import Api from './api.js';
 const api = new Api();
 
-const BasLoader = function() {
-    this.map = {};
+const BaseLoader = function(maxCacheSize) {
+    this.map = new Map();
+    this.maxCacheSize = maxCacheSize;
 };
-BasLoader.prototype = {
+BaseLoader.prototype = {
     async getByIdAsync(id) {
-        if (!this.map.hasOwnProperty(id)) {
-            this.map[id] = await this.loadAsync(id);
+        console.log('cache size', this.map.size)
+        if (this.map.has(id)) {
+            const imageDataPromise = this.map.get(id);
+            // REFRESH CACHE ENTRY AND STORE PROMISE TO AVOID MULTIPLE SIMULTANEOUS LOADS FOR THE SAME ID
+            this.map.delete(id);
+            this.map.set(id, imageDataPromise);
+            console.log('Cache hit for ID', {id, imageDataPromise});
+            return imageDataPromise;
         }
 
-        return this.map[id].object;
-    },
-    getById(id, cb) {
-        if (!this.map.hasOwnProperty(id))
-            return this.load(id, cb);
-
-        return cb(this.map[id]);
+        const imageDataPromise = this.loadAsync(id).catch((error) => {
+            this.map.delete(id);
+            console.error('Error loading albumart data for ID', {id, error});
+            throw error;
+        });
+        
+        if (this.map.size >= this.maxCacheSize) {
+            // EVICT LEAST RECENTLY USED ENTRY
+            const lruKey = this.map.keys().next().value;
+            console.log('Cache limit reached, evicting least recently used entry', {lruKey});
+            this.map.delete(lruKey);
+        }
+        console.log('Setting cache for ID', {id, imageDataPromise});
+        this.map.set(id, imageDataPromise);
+        return imageDataPromise;
     }
 }
 
-const AlbumArtLoader = function() {
-    BasLoader.call(this);
+const AlbumArtLoader = function(maxCacheSize = 50) {
+    BaseLoader.call(this, maxCacheSize);
 };
 AlbumArtLoader.prototype = {
     async loadAsync(track_uuid) {
@@ -31,21 +55,11 @@ AlbumArtLoader.prototype = {
             return {object: {id3: res.ID3}, loaded: true};
         }
         return {object: false, loaded: false};
-    },
-    load(track_uuid, cb) {
-        api.loadTrackAlbumArt(track_uuid, (res) => {
-            if (res.success) {
-                this.map[track_uuid] = {object: res.ID3, loaded: true};
-            }
-            this.map[track_uuid] = {object: false, loaded: false};
-            if (typeof cb === 'function')
-                cb(this.map[track_uuid]);
-        });
     }
 };
 
-const TrackInfoLoader = function() {
-    BasLoader.call(this);
+const TrackInfoLoader = function(maxCacheSize = 1000) {
+    BaseLoader.call(this, maxCacheSize);
 };
 TrackInfoLoader.prototype = {
     async loadAsync(track_uuid) {
@@ -55,19 +69,12 @@ TrackInfoLoader.prototype = {
         }
         return {object: false, loaded: false};
     },
-    load(track_uuid, cb) {
-        api.loadTrackInfo(track_uuid, (res) => {
-            if (res.success) {
-                this.map[track_uuid] = {object: res.ID3, loaded: true};
-            }
-            this.map[track_uuid] = {object: false, loaded: false};
-            if (typeof cb === 'function')
-                cb(this.map[track_uuid]);
-        });
-    }
 };
 
-Object.setPrototypeOf(AlbumArtLoader.prototype, BasLoader.prototype);
-Object.setPrototypeOf(TrackInfoLoader.prototype, BasLoader.prototype);
+Object.setPrototypeOf(AlbumArtLoader.prototype, BaseLoader.prototype);
+Object.setPrototypeOf(TrackInfoLoader.prototype, BaseLoader.prototype);
 
-export {AlbumArtLoader, TrackInfoLoader};
+const trackInfoLoader = new TrackInfoLoader();
+const albumArtLoader = new AlbumArtLoader();
+
+export {albumArtLoader as AlbumArtLoader, trackInfoLoader as TrackInfoLoader};

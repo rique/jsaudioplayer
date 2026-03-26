@@ -1,3 +1,9 @@
+/**
+ * This module defines the player controls and their corresponding buttons. It includes the Play/Pause, Stop, Previous, Next, Shuffle, and Repeat buttons. Each button is implemented as a separate class that extends a base button class. The Player
+ * Controls class manages the state of the audio player and triggers events when the user interacts with the buttons. The buttons are designed to be easily integrated into the user interface and can be styled using CSS. The module also allows for event listeners to be registered for each control action, enabling other components of the application to respond to user interactions with the player controls.
+ * The code is organized to ensure a clear separation of concerns, with each button handling its own rendering and state management, while the Player Controls class orchestrates the overall behavior of the audio player in response to user actions. This design allows for easy maintenance and scalability, as new controls can be added without affecting the existing functionality.
+ * Overall, this module provides a comprehensive implementation of the player controls for the music player application, ensuring a responsive and intuitive user experience when interacting with the audio player.
+ */
 import {HTMLItems} from './html-items.js';
 import {ListEvents} from './event-manager.js';
 
@@ -241,12 +247,9 @@ const PlayerButtons = function(parentCnt, playerControls) {
     this.nextBtn = new NextButtonItem();
     this.shuffleBtn = new ShuffleButtonItem();
     this.repeatBtn = new RepeatButtonItem();
-
-    this._setUp();
 };
 PlayerButtons.prototype = {
-
-    _setUp() {
+    setUp() {
         this.parentCnt.append(
             this.playPauseBtn.render(), 
             this.stopBtn.render(), 

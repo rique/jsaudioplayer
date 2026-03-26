@@ -1,3 +1,15 @@
+/**
+ * Main entry point for the application. This file is responsible for initializing the application and loading the necessary resources.
+ * It sets up the audio player, track list, notifications, and other components of the application.
+ * The main responsibilities include:
+ * - Loading the track list and album art from the server.
+ * - Initializing the audio player and its display.
+ * - Setting up event listeners for user interactions and keyboard controls.
+ * - Managing the state of the application and coordinating between different components.
+ * The code is organized to ensure a clear separation of concerns and maintainability, allowing for easy updates and feature additions in the future.
+ * It also integrates with the Notifications Center to provide feedback to the user about various actions and states of the application.
+ * Overall, this file serves as the central hub for orchestrating the different parts of the music player application.
+ */
 import {NotificationCenter} from './notifications-center.js';
 import {Track, ID3Tags} from './tracks.js';
 import {TrackListManager} from './tracklistv2.js';
@@ -22,6 +34,7 @@ audioPlayerProgressBar.setAudioPlayer(audioPlayer);
 const library = new Library();
 const playerControls = new PlayerControls(audioPlayer);
 const playerButtons = new PlayerButtons(document.getElementById('player-controls'), playerControls);
+playerButtons.setUp();
 const api = new Api();
 const audioPlayerKeyControls = new AudioPlayerKeyControls(keyCotrols);
 

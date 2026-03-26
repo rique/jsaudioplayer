@@ -29,15 +29,15 @@ DragmeMover.prototype = {
         return this.dragme.init(seekParent);
     },
     moveTo(x, y) {
-            if (this.prevX && this.prevY) {
+        if (this.prevX && this.prevY) {
             let dragX = this.dragme.offsetLeft() + (x - this.prevX),
                 dragY = this.dragme.offsetTop() + (y - this.prevY);
 
             requestAnimationFrame(this.dragme.setLeftTop.bind(this.dragme, dragX, dragY));
-            }
+        }
 
-            this.prevX = x;
-            this.prevY = y;
+        this.prevX = x;
+        this.prevY = y;
     },
     moveXTo(x) {
         if (this.prevX) {
@@ -49,7 +49,7 @@ DragmeMover.prototype = {
     },
     moveYTo(y) {
         if (this.prevY) {
-            let dragY = this.dragme.offsetLeft() + (y - this.prevY);
+            let dragY = this.dragme.offsetTop() + (y - this.prevY);
             requestAnimationFrame(this.dragme.top.bind(this.dragme, dragY, 'px'));
         }
 

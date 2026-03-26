@@ -1,4 +1,16 @@
 
+    /**
+     * Components Module
+     * Defines various components of the music player application, including the Left Menu, Layout management, File Browser, and Track List Browser.
+     * Each component is implemented as a class with its own methods for handling specific functionality and interactions within the application.
+     * The Left Menu class manages the opening and closing of the main menu and allows for adding components to different sections of the menu.
+     * The Layout class provides a structure for defining different layouts within the application and allows for rendering content based on the current layout.
+     * The File Browser class handles browsing and selecting files from the user's system, integrating with the API to retrieve file information and add tracks to the tracklist.
+     * The Track List Browser class manages the display of the current tracklist, allowing users to play songs directly from the list and access additional actions through an action menu.
+     * The module is designed to be easily integrated with other components of the application, such as the audio player and notifications, ensuring a cohesive user experience
+     * Overall, this module serves as a crucial part of the music player application, providing essential components for navigating and managing the user's music library while ensuring seamless integration with other features of the application.
+     * The design allows for easy maintenance and scalability, as new components can be added or existing ones modified without affecting the overall functionality of the application.
+     */
     import { ListEvents } from "./event-manager.js";
     import {Track, ID3Tags} from './tracks.js';
     import {TrackListManager} from './tracklistv2.js';
