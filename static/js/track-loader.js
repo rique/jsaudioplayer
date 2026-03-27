@@ -20,16 +20,17 @@ BaseLoader.prototype = {
         console.log('cache size', this.map.size)
         if (this.map.has(id)) {
             const imageDataPromise = this.map.get(id);
+            console.log('Cache hit for ID', {id, imageDataPromise});
             // REFRESH CACHE ENTRY AND STORE PROMISE TO AVOID MULTIPLE SIMULTANEOUS LOADS FOR THE SAME ID
             this.map.delete(id);
             this.map.set(id, imageDataPromise);
-            console.log('Cache hit for ID', {id, imageDataPromise});
             return imageDataPromise;
         }
 
+        console.log('Cache miss for ID', {id});
         const imageDataPromise = this.loadAsync(id).catch((error) => {
-            this.map.delete(id);
             console.error('Error loading albumart data for ID', {id, error});
+            this.map.delete(id);
             throw error;
         });
         
