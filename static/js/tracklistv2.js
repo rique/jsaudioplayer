@@ -120,13 +120,13 @@ const TrackList = function() {
     IndexList.call(this);
     this.loop = false;
     this.tracklistTotalDuration = 0;
-    this.uudiTrackMap = new Map();
+    this.UUIDTrackMap = new Map();
 };
 TrackList.prototype = {
     addItem(track) {
         const index = this.items.length;
         this.items.push(track);
-        this.uudiTrackMap.set(track.getTrackUUID(), {track, index});
+        this.UUIDTrackMap.set(track.getTrackUUID(), {track, index});
         this.addToTrackListTotalDuration(track.getTrackDuration());
     },
     removeItem(item) {
@@ -141,7 +141,7 @@ TrackList.prototype = {
         if (index <= this.index && this.index > 0)
             --this.index;
 
-        this.uudiTrackMap.delete(track.getTrackUUID());
+        this.UUIDTrackMap.delete(track.getTrackUUID());
         this.substractTracklistTotalDuration(track.getTrackDuration());
         return {track, index};
     },
@@ -150,29 +150,36 @@ TrackList.prototype = {
 
         if (item) {
             const {item: track} = item;
-            this.uudiTrackMap.delete(track.getTrackUUID());
+            this.UUIDTrackMap.delete(track.getTrackUUID());
             this.substractTracklistTotalDuration(track.getTrackDuration());
             return {track, index};
         }
         
         return {track: undefined, index: undefined};
     },
-    setCurrent({track}) {
-        if (typeof index === 'undefined') {
-            if (!track) {
-                console.error(`Invalid parameters`);
+    setCurrent({track, index}) {
+        if (typeof index === 'number') {
+            if (index >= 0 && index < this.length()) {
+                this.index = index;
                 return;
             }
-
-            const index = this.items.indexOf(track);
-            if (index === -1) {
-                console.error(`Track ${track} not found!`);
-                return;
-            }
-
-            this.index = index;
+            console.error('Index is out of bounds', {index, length: this.length()});
+            return;
+        }
+        
+        if (!track) {
+            console.error('invalid parameters, at least one of track or index should be provided', {track, index});
+            return;
         }
 
+        const entry = this.UUIDTrackMap.get(track.getTrackUUID());
+        
+        if (!entry) {
+            console.error('Track not found in tracklist', track);
+            return;
+        }
+        
+        this.index = entry.index;
     },
     enableLoop() {
         this.loop = true;
@@ -185,27 +192,25 @@ TrackList.prototype = {
         return {track: track.item, index: track.index};
     },
     next() {
-        let track = IndexList.prototype.next.call(this);
-        if (!track && this.loop) {
+        let result = IndexList.prototype.next.call(this);
+
+        if (!result && this.loop) {
             this.index = 0;
-            const item = this.items[this.index];
-            track = {track: item, index: this.index};
-        } else {
-            track = {track: track.item, index: track.index};
+            return {track: this.items[0], index: 0};
         }
 
-        return track;
+        return result ? {track: result.item, index: result.index} : false;
     },
     previous() {
         let track = IndexList.prototype.previous.call(this);
-        
+
         if (!track && this.loop) {
             this.index = this.maxIndex();
             const item = this.items[this.index];
-            track = {track: item, index: this.index};
+            return {track: item, index: this.index};
         }
 
-        return track;
+        return track ? {track: track.item, index: track.index} : false;
     },
     readNextTrack() {
         let track, 
@@ -260,7 +265,7 @@ TrackList.prototype = {
         return this.tracklistTotalDuration;
     },
     getTrackByUUID(uuid) {
-        const track = this.uudiTrackMap.get(uuid);
+        const track = this.UUIDTrackMap.get(uuid);
         if (!track) {
             console.error(`Track with uuid ${uuid} not found!`);
             return false;
@@ -398,7 +403,7 @@ const TrackListManager =  {
     shuffle(conserveCurrentTrack) {
         let currentTrack;
         if (this.isShuffle()) {
-            this.tracklist.setCurrent({track: this.shuffledTracklist.current()});
+            this.tracklist.setCurrent(this.shuffledTracklist.current());
             this.shuffledTracklist = null;
             this._isShuffle = false;
             currentTrack = this.tracklist.current();
