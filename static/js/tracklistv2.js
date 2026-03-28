@@ -129,33 +129,43 @@ TrackList.prototype = {
         this.UUIDTrackMap.set(track.getTrackUUID(), {track, index: newIndex});
         this.addToTrackListTotalDuration(track.getTrackDuration());
     },
+    setItems(items) {
+        IndexList.prototype.setItems.call(this, items);
+        this.UUIDTrackMap.clear();
+        let totalDuration = 0;
+        
+        items.forEach((track, index) => {
+            this.UUIDTrackMap.set(track.getTrackUUID(), {track, index});
+            totalDuration += track.getTrackDuration();
+        });
+
+        this.setTrackListTotalDuration(totalDuration);
+    },
     removeItem(item) {
-        const index = this.items.indexOf(item);
-        if (index === -1) return;
-
-        const [track] = this.items.splice(index, 1);
-
-         if (!track)
+        const entry = this.UUIDTrackMap.get(item.getTrackUUID());
+        if (!entry) {
+            console.error('Track not found in tracklist', item);
             return {track: undefined, index: undefined};
+        }
 
-        if (index <= this.index && this.index > 0)
-            --this.index;
-
-        this.UUIDTrackMap.delete(track.getTrackUUID());
-        this.substractTracklistTotalDuration(track.getTrackDuration());
-        return {track, index};
+        return this.removeItemByIndex(entry.index);
     },
     removeItemByIndex(index) {
-        const item = IndexList.prototype.removeItemByIndex.call(this, index);
-
-        if (item) {
-            const {item: track} = item;
+        const removedItem = IndexList.prototype.removeItemByIndex.call(this, index);
+    
+        if (removedItem && removedItem.item) {
+            const track = removedItem.item;
             this.UUIDTrackMap.delete(track.getTrackUUID());
             this.substractTracklistTotalDuration(track.getTrackDuration());
-            return {track, index};
+
+            // RE-SYNC: Only tracks from the deleted index to the end need updating
+            for (let i = index; i < this.items.length; i++) {
+                const t = this.items[i];
+                this.UUIDTrackMap.set(t.getTrackUUID(), { track: t, index: i });
+            }
+            return { track, index };
         }
-        
-        return {track: undefined, index: undefined};
+        return { track: undefined, index: undefined };
     },
     setCurrent({track, index}) {
         if (typeof index === 'number') {
@@ -232,43 +242,47 @@ TrackList.prototype = {
         this.index = newIdx;
     },
     switchTrackIndex(oldIndex, newIndex) {
-        /*const tracklist = this.getItems();
-        const trackItem = tracklist.splice(oldIndex, 1)[0];
-        
-        if (oldIndex == this.index) {
-            this.index = newIndex;
-        } else if (newIndex == this.index) {
-            if (oldIndex < newIndex) 
-                --this.index;
-            else 
-                ++this.index;
-        } else if (oldIndex > newIndex && this.index < oldIndex && this.index > newIndex) {
-            ++this.index;
-        } else if (oldIndex < newIndex && this.index > oldIndex && this.index < newIndex) {
-            --this.index;
+        if (oldIndex === newIndex) return;
+
+        // 1. Grab a reference to the track that is CURRENTLY playing
+        // before we start moving things around.
+        const playingTrack = this.items[this.index];
+
+        // 2. Perform the actual move in the Array.
+        // This changes the underlying order of the elements.
+        const [movedTrack] = this.items.splice(oldIndex, 1);
+        this.items.splice(newIndex, 0, movedTrack);
+
+        // 3. NOW we update the pointer. 
+        // Since the array order has changed, indexOf will now 
+        // return the NEW position of the playing track.
+        if (playingTrack) {
+            this.index = this.items.indexOf(playingTrack);
         }
 
-        this.moveItem(newIndex, trackItem);*/
-        const [movedItem] = this.items.splice(oldIndex, 1);
-        this.items.splice(newIndex, 0, movedItem);
-
-        // We only need to update the range that actually moved
+        // 4. Update the Map (O(1) sync)
         const start = Math.min(oldIndex, newIndex);
         const end = Math.max(oldIndex, newIndex);
         
         for (let i = start; i <= end; i++) {
-            const track = this.items[i];
-            this.UUIDTrackMap.set(track.getTrackUUID(), { track, index: i });
+            const t = this.items[i];
+            this.UUIDTrackMap.set(t.getTrackUUID(), { track: t, index: i });
         }
     },
     setTrackListTotalDuration(duration) {
-        this.tracklistTotalDuration = duration;
+        duration = parseFloat(duration);
+        if (!isNaN(duration))
+            this.tracklistTotalDuration = duration;
     },
     addToTrackListTotalDuration(duration) {
-        this.tracklistTotalDuration += duration;
+        duration = parseFloat(duration);
+        if (!isNaN(duration))
+            this.tracklistTotalDuration += duration;
     },
     substractTracklistTotalDuration(duration) {
-        this.tracklistTotalDuration -= duration;
+        duration = parseFloat(duration);
+        if (!isNaN(duration))
+            this.tracklistTotalDuration -= Math.max(0, duration)    ;
     },
     getTrackListTotalDuration(formated) {
         if (formated) 
@@ -298,10 +312,10 @@ TrackList.prototype = {
 };
 
 
-const QeueList = function() {
+const QeueuList = function() {
     this.trackList = new TrackList();
 };
-QeueList.prototype = {
+QeueuList.prototype = {
     addToQueue({track}) {
         this.trackList.addItem(track);
     },
@@ -334,7 +348,7 @@ QeueList.prototype = {
 
 
 const TrackListManager =  {
-    queueList: new QeueList(),
+    queueList: new QeueuList(),
     trackListEvents: new ListEvents(),
     setTracklist(tracklist) {
         this.tracklist = tracklist;
