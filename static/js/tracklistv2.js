@@ -15,7 +15,6 @@ import {shuffle} from './utils.js';
 
 const IndexList = function() {
     this.index = -1;
-    this._length = 0;
     this.items = [];
 };
 IndexList.prototype = {
@@ -24,64 +23,61 @@ IndexList.prototype = {
     },
     setItems(items) {
         this.items = items;
-        this._length = items.length;
     },
     addItem(item) {
-        this.items.push({item, index: this._length});
-        ++this._length;
+        this.items.push(item);
     },
     removeItem(item) {
-        const index = this.items.findIndex(itm => itm.item == item)
-        
-        if (!index) return;
+        const index = this.items.indexOf(item);
+        if (index === -1) return;
 
-        const removed = this.items.splice(index, 1)[0];
+        const [removed] = this.items.splice(index, 1);
+
+        if (!removed)
+            return {track: undefined, index: undefined};
 
         if (index <= this.index && this.index > 0)
             --this.index;
-
-        --this._length;
-        
-        this._reorganizeIndexes();
 
         return removed;
 
     },
     removeItemByIndex(index) {
-        if (index >= this._length || index < 0) return;
+        if (index >= this.items.length || index < 0) return;
         
-        const item = this.items.splice(index, 1)[0];
+        const [item] = this.items.splice(index, 1);
 
         if (index <= this.index && this.index > 0)
             --this.index;
 
-        --this._length;
-
-        this._reorganizeIndexes();
-
-        return item;
+        return {item, index};
     },
     moveItem(index, item) {
         this.items.splice(index, 0, item);
-        this._reorganizeIndexes();
     },
     getIndex() {
         return this.index;
     },
     maxIndex() {
-        if (this._length == 0)
+        if (this.items.length == 0)
             return 0;
-        return this._length - 1;
+        return this.items.length - 1;
     },
     current() {
-        if (this.index < 0)
-            return this.items[0];
-        return this.items[this.index];
+        if (this.index < 0) {
+            this.index = 0;
+        }
+        
+        const item = this.items[this.index];
+        const index = this.items.indexOf(item);
+        return {item, index};
     },
     next() {
         if (this.index < this.maxIndex()) {
             ++this.index;
-            return this.items[this.index];
+            const item = this.items[this.index];
+            const index = this.items.indexOf(item);
+            return {item, index};
         }
 
         return false;
@@ -89,7 +85,9 @@ IndexList.prototype = {
     previous() {
         if (this.index > 0) {
             --this.index;
-            return this.items[this.index];
+            const item = this.items[this.index];
+            const index = this.items.indexOf(item);
+            return {item, index};
         }
 
         return false;
@@ -110,110 +108,64 @@ IndexList.prototype = {
         return this.current();
     },
     length() {
-        return this._length;
+        return this.items.length;
     },
-    *forEach() {
+    *[Symbol.iterator]() {
         yield* this.items;
-    },
-    _reorganizeIndexes() {
-        for (let i = 0; i < this.items.length; ++i) {
-            this.items[i].index = i;
-        }
     }
 };
 
-const QeueList = function() {
-    this.indexList = new TrackList();
-};
-QeueList.prototype = {
-    addToQueue(item) {
-        this.indexList.addItem(item);
-    },
-    getCurrentItem() {
-        return this.currentItem;
-    },
-    removeFromQueue(index) {
-        return this.indexList.removeItemByIndex(index);
-    },
-    nexInQueue() {
-        this.currentItem = this.indexList.removeItemByIndex(0);
-        return this.currentItem;
-    },
-    getByIndex(index) {
-        return this.indexList.getItemByIndex(index);
-    },
-    hasQueue() {
-        return this.indexList.length() > 0;
-    },
-    length() {
-        return this.indexList.length();
-    },
-    switchTrackIndex(oldIndex, newIndex) {
-        this.indexList.switchTrackIndex(oldIndex, newIndex);
-    },
-    *forEach() {
-        let i = 0;
-        for (let {track} of this.indexList.forEach()) {
-            yield {track, index: i};
-            ++i;
-        }
-    }
-}
 
 const TrackList = function() {
     IndexList.call(this);
     this.loop = false;
     this.tracklistTotalDuration = 0;
+    this.uudiTrackMap = new Map();
 };
 TrackList.prototype = {
     addItem(track) {
-        this.items.push({track, index: this._length});
-        ++this._length;
+        const index = this.items.length;
+        this.items.push(track);
+        this.uudiTrackMap.set(track.getTrackUUID(), {track, index});
         this.addToTrackListTotalDuration(track.getTrackDuration());
     },
     removeItem(item) {
-        const index = this.items.findIndex(itm => itm.track == item)
+        const index = this.items.indexOf(item);
+        if (index === -1) return;
 
-        if (!index) return;
+        const [track] = this.items.splice(index, 1);
 
-        const removed = this.items.splice(index, 1)[0];
+         if (!track)
+            return {track: undefined, index: undefined};
 
         if (index <= this.index && this.index > 0)
             --this.index;
 
-        --this._length;
-        
-        this._reorganizeIndexes();
-        
-        if (removed) {
-            const {track, index} = removed;
-            this.substractTracklistTotalDuration(track.getTrackDuration());
-            return {track, index};
-        }
-        
-        return {track: undefined, index: undefined};
+        this.uudiTrackMap.delete(track.getTrackUUID());
+        this.substractTracklistTotalDuration(track.getTrackDuration());
+        return {track, index};
     },
     removeItemByIndex(index) {
         const item = IndexList.prototype.removeItemByIndex.call(this, index);
-        
+
         if (item) {
-            const {track} = item;
+            const {item: track} = item;
+            this.uudiTrackMap.delete(track.getTrackUUID());
             this.substractTracklistTotalDuration(track.getTrackDuration());
             return {track, index};
         }
         
         return {track: undefined, index: undefined};
     },
-    setCurrent({track, index}) {
+    setCurrent({track}) {
         if (typeof index === 'undefined') {
             if (!track) {
                 console.error(`Invalid parameters`);
                 return;
             }
 
-            ({index} = this.items.find(itm => itm.track.trackUUid == track.trackUUid));
-
-            if (!index) {
+            const index = this.items.indexOf(track);
+            if (index === -1) {
                 console.error(`Track ${track} not found!`);
                 return;
             }
@@ -228,12 +180,18 @@ TrackList.prototype = {
     disableLoop() {
         this.loop = false;
     },
+    current() {
+        let track = IndexList.prototype.current.call(this);
+        return {track: track.item, index: track.index};
+    },
     next() {
         let track = IndexList.prototype.next.call(this);
-
         if (!track && this.loop) {
             this.index = 0;
-            track = this.items[this.index];
+            const item = this.items[this.index];
+            track = {track: item, index: this.index};
+        } else {
+            track = {track: track.item, index: track.index};
         }
 
         return track;
@@ -243,20 +201,23 @@ TrackList.prototype = {
         
         if (!track && this.loop) {
             this.index = this.maxIndex();
-            track = this.items[this.index];
+            const item = this.items[this.index];
+            track = {track: item, index: this.index};
         }
 
         return track;
     },
     readNextTrack() {
-        let track;
-        if (this.index < this.maxIndex()) {
-            track = this.items[this.index + 1];
-        } else if (this.loop) {
-            track = this.items[0];
-        }
-
-        return track;
+        let track, 
+            index;
+        
+        if (this.index < this.maxIndex())
+            index = this.index + 1;
+        else if (this.loop)
+            index = 0;
+        
+        track = this.items[index];
+        return {track, index};
     },
     isLastTrack() {
         return this.index >= this.maxIndex();
@@ -268,7 +229,6 @@ TrackList.prototype = {
     switchTrackIndex(oldIndex, newIndex) {
         const tracklist = this.getItems();
         const trackItem = tracklist.splice(oldIndex, 1)[0];
-        const index1 = this.index;
         
         if (oldIndex == this.index) {
             this.index = newIndex;
@@ -299,16 +259,63 @@ TrackList.prototype = {
             return this._formatTime(this.tracklistTotalDuration);
         return this.tracklistTotalDuration;
     },
-    _formatTime(secTime) {
-        let secs = '0', mins = '0', houres = '0';
-        if (!isNaN(secTime)) {
-            houres = parseInt(secTime / 3600).toString();
-            secs = parseInt(secTime % 60).toString();
-            mins = parseInt((secTime % 3600) / 60).toString();
+    getTrackByUUID(uuid) {
+        const track = this.uudiTrackMap.get(uuid);
+        if (!track) {
+            console.error(`Track with uuid ${uuid} not found!`);
+            return false;
         }
-        return `${houres.padStart(2, '0')}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')}`
+        
+        return track;
+    },
+    _formatTime(secTime) {
+        if (isNaN(secTime)) return '00:00:00';
+
+        const houres = parseInt(secTime / 3600);
+        const mins = parseInt((secTime % 3600) / 60);
+        const secs = parseInt(secTime % 60); 
+
+        return [houres, mins, secs].map(unit => unit.toString()
+                .padStart(2, '0'))
+                .join(':');
     }
 };
+
+
+const QeueList = function() {
+    this.trackList = new TrackList();
+};
+QeueList.prototype = {
+    addToQueue({track}) {
+        this.trackList.addItem(track);
+    },
+    getCurrentItem() {
+        return this.currentItem;
+    },
+    removeFromQueue(index) {
+        return this.trackList.removeItemByIndex(index);
+    },
+    nexInQueue() {
+        this.currentItem = this.trackList.removeItemByIndex(0);
+        return this.currentItem;
+    },
+    getByIndex(index) {
+        return this.trackList.getItemByIndex(index);
+    },
+    hasQueue() {
+        return this.trackList.length() > 0;
+    },
+    length() {
+        return this.trackList.length();
+    },
+    switchTrackIndex(oldIndex, newIndex) {
+        this.trackList.switchTrackIndex(oldIndex, newIndex);
+    },
+    *[Symbol.iterator]() {
+        yield* this.trackList.getItems();
+    }
+};
+
 
 const TrackListManager =  {
     queueList: new QeueList(),
@@ -339,9 +346,9 @@ const TrackListManager =  {
         if (this.isShuffle())
             this.shuffledTracklist.addItem(track);
     },
-    addToQueue({track, index}) {
+    addToQueue(track) {
         this.queueList.addToQueue(track);
-        this.trackListEvents.trigger('onAddedToQueue', {track, index}, this.queueList.length());
+        this.trackListEvents.trigger('onAddedToQueue', track, this.queueList.length());
     },
     getNexTrack() {
         let track;
@@ -391,7 +398,7 @@ const TrackListManager =  {
     shuffle(conserveCurrentTrack) {
         let currentTrack;
         if (this.isShuffle()) {
-            this.tracklist.setCurrent({track: this.shuffledTracklist.current().track});
+            this.tracklist.setCurrent({track: this.shuffledTracklist.current()});
             this.shuffledTracklist = null;
             this._isShuffle = false;
             currentTrack = this.tracklist.current();
@@ -403,17 +410,19 @@ const TrackListManager =  {
                 curIndex = 0;
             }
             this.shuffleTracklist(trackIndex);
-            this.shuffledTracklist.setTrackIndex(curIndex);
             currentTrack = this.shuffledTracklist.current();
+            this.shuffledTracklist.setTrackIndex(curIndex);
         }
+        
         this.trackListEvents.trigger('onShuffleTracklist', currentTrack, currentTrack.index, this.isShuffle());
     },
     shuffleTracklist(trackIndex) {
         this.shuffledTracklist = new TrackList();
         this.shuffledTracklist.enableLoop();
-        const shuffledItems = shuffle([...this.tracklist.getItems()], trackIndex).map(({track}, index) => {
+        
+        const shuffledItems = shuffle([...this.tracklist.getItems()], trackIndex).map((track, index) => {
             track.setIndex(index);
-            return {track, index};
+            return track;
         });
 
         this._isShuffle = true;
@@ -421,7 +430,7 @@ const TrackListManager =  {
     },
     getNextTrackInList() {
         let track = this.queueList.getByIndex(0);
-        if (!track) {
+        if (!track.track) {
             track = this.getTrackList().readNextTrack();
         }
         return track;
@@ -433,7 +442,6 @@ const TrackListManager =  {
         const queueItem = this.queueList.getCurrentItem();
         if ((this.queueList.hasQueue() || this.queueDepleted) && queueItem.track)
             return queueItem;
-        
         return this.getTrackList().current();
     },
     getCurrentTrackIndex(forceDefaultTracklist) {
@@ -468,16 +476,18 @@ const TrackListManager =  {
         return this._isShuffle;
     },
     *forEachTrack() {
-        for (let track of this.getTrackList().forEach()) {
+        for (let track of this.getTrackList()) {
             yield track;
         }
     },
     *forEachTrackInQueue() {
-        for (let track of this.queueList.forEach()) {
-            yield track;
+        let index = 0;
+        for (let track of this.queueList) {
+            yield {track, index};
+            ++index;
         }
     },
-    setTrackIndex(newIdx, doSetCurTrack) {
+    setTrackIndex(newIdx) {
         const tracklist = this.getTrackList();
         let oldIdx = tracklist.getIndex();
         tracklist.setTrackIndex(newIdx - 1);
@@ -492,7 +502,7 @@ const TrackListManager =  {
     removeTrackFromTracklistByUUID(trackUUid) {
         const {index, track} = this.getTrackByUUID(trackUUid);
 
-        if (index) {
+        if (typeof index !== 'undefined') {
             const removed = this.tracklist.removeItemByIndex(index);
             if (this.isShuffle()) {
                 this.shuffledTracklist.removeItem(removed.track);
@@ -504,17 +514,7 @@ const TrackListManager =  {
         return false;
     },
     getTrackByUUID(trackUUid) {
-        let trackToSearch,
-            trackIndex;
-        for (let {index, track} of this.tracklist.forEach()) {
-            if (track.trackUUid == trackUUid) {
-                trackIndex = index;
-                trackToSearch = track;
-                break;
-            }
-        }
-
-        return {index: trackIndex, track: trackToSearch};
+        return this.tracklist.getTrackByUUID(trackUUid) || {index: undefined, track: undefined};
     },
     onAddedToQueue(cb, subscriber) {
         this.trackListEvents.onEventRegister({cb, subscriber}, 'onAddedToQueue');

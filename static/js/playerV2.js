@@ -265,7 +265,6 @@ AudioPlayer.prototype = {
             const track = this.currentTrack;
             const currentTime = target.currentTime;
             track.setCurrentTime(currentTime);
-            
             if (this._checkForNextTrack(currentTime, duration) && !this._comingNextFired) {
                 this._fireNotification();
                 this._comingNextFired = true;
@@ -278,13 +277,13 @@ AudioPlayer.prototype = {
         return false;
     },
     _fireNotification() {
-        this._playerNotifications.setComingNext(this._getNextTrackInList(), this.currentTrack.getTimeRemaining() * 1000);
+        const track = this._getNextTrackInList();
+        this._playerNotifications.setComingNext(track, this.currentTrack.getTimeRemaining() * 1000);
     },
     _getNextTrackInList() {
         if (this.repeatMode == 2)
             return this.currentTrack;
-        const {track} = TrackListManager.getNextTrackInList();
-        return track;
+        return TrackListManager.getNextTrackInList();
     },
     _updateVolumeBar(volume) {
         let toHundredVolume = volume * 100;

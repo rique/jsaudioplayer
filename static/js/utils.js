@@ -340,7 +340,8 @@ const getPercentageWidthFromMousePosition = (clientX, htmlItem, margin) => {
 const shuffle = (list, index) => {
     let item;
     if (!isNaN(index))
-        item = list.splice(index, 1)[0];
+        [item] = list.splice(index, 1);
+    
     for (let i = list.length - 1; i > 0; i--) {
         let j = Math.floor(getRandomInt(0, i + 1));
         //let j = Math.floor(Math.random() * (i + 1));

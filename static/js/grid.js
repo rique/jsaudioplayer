@@ -504,7 +504,6 @@ TracklistGrid.prototype = {
         this.gridMaker.makeRowIdx(rowConfig, false, false, parseInt(index) + 1);
     },
     removeTrackFromGrid({index}) {
-        console.log('removeTrackFromGrid', index);
         this.removeFromGrid(index);
         this.reload();
         this.queuelistGrid.render();
@@ -558,7 +557,7 @@ TracklistGrid.prototype = {
             this.queuelistGrid.render();
             this._setCurrentTrack();
         } else {
-            console.log('_restoreGrid faile');
+            console.error('_restoreGrid faile');
         }
     },
     _setCurrentTrack() {
@@ -700,8 +699,10 @@ TracklistGrid.prototype = {
         }];
     },
     _buildBody() {
-        for (let {index, track} of TrackListManager.forEachTrack()) {
+        let index = 0;
+        for (let track of TrackListManager.forEachTrack()) {
             this.addTrackToGrid({index, track});
+            index++;
         }
     },
     _displayTracklistInfo() {
@@ -765,7 +766,7 @@ QueuelistGrid.prototype = {
     getRowByIndex(index) {
         return this.gridMaker.getRowByIndex(index);
     },
-    updateQueue({track}, queueLength) {
+    updateQueue(track, queueLength) {
         this.queueLength = queueLength;
         if (!this.hasQueue && queueLength > 0) {
             this.hasQueue = true;

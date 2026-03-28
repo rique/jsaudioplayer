@@ -342,7 +342,7 @@
             divElem.style.display = 'none';
         },
         deleteTrackAction(liDelete, divElem, trackUUid) {
-            const api = new window.JSPlayer.Api();
+            const api = new Api();
             api.deleteTrack(trackUUid, (res) => {
                 if (res.success) {
                     const {index, track} = TrackListManager.removeTrackFromTracklistByUUID(trackUUid);
@@ -365,7 +365,6 @@
         },
         scrollToCurrentTrack() {
             const currentlyPlaying = document.querySelector('div.row.currently-playing');
-            console.log({currentlyPlaying});
             if (currentlyPlaying) {
                 const scrollTo = currentlyPlaying.offsetTop - currentlyPlaying.offsetHeight;
                 setTimeout(() => {

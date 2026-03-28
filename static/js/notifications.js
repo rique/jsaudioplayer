@@ -55,7 +55,8 @@ const PlayerNotificationCls = function() {
     }, this.comingNextKey);
 };
 PlayerNotificationCls.prototype = {
-    setComingNext(track, timeout) {
+    setComingNext({track}, timeout) {
+        console.log('PlayerNotificationCls.setComingNext', {track, timeout});
         const tpl = new TrackBoxTemplate(track);
         NotificationCenter.modifyNotification({message: tpl.render()}, this.comingNextKey);
         NotificationCenter.displayNotification(this.comingNextKey, timeout);
