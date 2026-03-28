@@ -124,9 +124,9 @@ const TrackList = function() {
 };
 TrackList.prototype = {
     addItem(track) {
-        const index = this.items.length;
+        const newIndex = this.items.length;
         this.items.push(track);
-        this.UUIDTrackMap.set(track.getTrackUUID(), {track, index});
+        this.UUIDTrackMap.set(track.getTrackUUID(), {track, index: newIndex});
         this.addToTrackListTotalDuration(track.getTrackDuration());
     },
     removeItem(item) {
@@ -232,7 +232,7 @@ TrackList.prototype = {
         this.index = newIdx;
     },
     switchTrackIndex(oldIndex, newIndex) {
-        const tracklist = this.getItems();
+        /*const tracklist = this.getItems();
         const trackItem = tracklist.splice(oldIndex, 1)[0];
         
         if (oldIndex == this.index) {
@@ -248,7 +248,18 @@ TrackList.prototype = {
             --this.index;
         }
 
-        this.moveItem(newIndex, trackItem);
+        this.moveItem(newIndex, trackItem);*/
+        const [movedItem] = this.items.splice(oldIndex, 1);
+        this.items.splice(newIndex, 0, movedItem);
+
+        // We only need to update the range that actually moved
+        const start = Math.min(oldIndex, newIndex);
+        const end = Math.max(oldIndex, newIndex);
+        
+        for (let i = start; i <= end; i++) {
+            const track = this.items[i];
+            this.UUIDTrackMap.set(track.getTrackUUID(), { track, index: i });
+        }
     },
     setTrackListTotalDuration(duration) {
         this.tracklistTotalDuration = duration;
@@ -268,7 +279,7 @@ TrackList.prototype = {
         const track = this.UUIDTrackMap.get(uuid);
         if (!track) {
             console.error(`Track with uuid ${uuid} not found!`);
-            return false;
+            return {track: undefined, index: undefined};
         }
         
         return track;
@@ -519,7 +530,7 @@ const TrackListManager =  {
         return false;
     },
     getTrackByUUID(trackUUid) {
-        return this.tracklist.getTrackByUUID(trackUUid) || {index: undefined, track: undefined};
+        return this.tracklist.getTrackByUUID(trackUUid);
     },
     onAddedToQueue(cb, subscriber) {
         this.trackListEvents.onEventRegister({cb, subscriber}, 'onAddedToQueue');
