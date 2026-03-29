@@ -97,6 +97,7 @@ IndexList.prototype = {
     },
     getItemByIndex(index) {
         const maxIndex = this.maxIndex();
+        
         if (index < 0) {
             index = 0;
         } else if (index > maxIndex) {
@@ -248,18 +249,15 @@ TrackList.prototype = {
     switchTrackIndex(oldIndex, newIndex) {
         if (oldIndex === newIndex) return;
 
-        // 1. Grab a reference to the track that is CURRENTLY playing
-        // before we start moving things around.
+        // 1. Get a reference to the track that is CURRENTLY playing
         const playingTrack = this.items[this.index];
 
-        // 2. Perform the actual move in the Array.
-        // This changes the underlying order of the elements.
+        // 2. Perform the move in the Array.
         const [movedTrack] = this.items.splice(oldIndex, 1);
         this.items.splice(newIndex, 0, movedTrack);
 
-        // 3. NOW we update the pointer. 
-        // Since the array order has changed, indexOf will now 
-        // return the NEW position of the playing track.
+        // 3. Update of the pointer this.index at the new position
+        // of the currently playing track. 
         if (playingTrack) {
             this.index = this.items.indexOf(playingTrack);
         }
@@ -269,8 +267,8 @@ TrackList.prototype = {
         const end = Math.max(oldIndex, newIndex);
         
         for (let i = start; i <= end; i++) {
-            const t = this.items[i];
-            this.UUIDTrackMap.set(t.getTrackUUID(), { track: t, index: i });
+            const trk = this.items[i];
+            this.UUIDTrackMap.set(trk.getTrackUUID(), { track: trk, index: i });
         }
     },
     setTrackListTotalDuration(duration) {
