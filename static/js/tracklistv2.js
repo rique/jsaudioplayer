@@ -132,8 +132,13 @@ TrackList.prototype = {
     setItems(items) {
         IndexList.prototype.setItems.call(this, items);
         this.UUIDTrackMap.clear();
+
+        if (items.length == 0) {
+            this.setTrackListTotalDuration(0);
+            return;
+        }
+
         let totalDuration = 0;
-        
         items.forEach((track, index) => {
             this.UUIDTrackMap.set(track.getTrackUUID(), {track, index});
             totalDuration += track.getTrackDuration();
@@ -238,7 +243,6 @@ TrackList.prototype = {
         return this.index >= this.maxIndex();
     },
     setTrackIndex(newIdx) {
-        console.log('setTrackIndex', {newIdx, maxIndex: this.maxIndex()});
         this.index = newIdx;
     },
     switchTrackIndex(oldIndex, newIndex) {
@@ -338,6 +342,9 @@ QeueuList.prototype = {
     length() {
         return this.trackList.length();
     },
+    clearQueue() {
+        this.trackList.setItems([]);
+    },
     switchTrackIndex(oldIndex, newIndex) {
         this.trackList.switchTrackIndex(oldIndex, newIndex);
     },
@@ -349,6 +356,7 @@ QeueuList.prototype = {
 
 const TrackListManager =  {
     queueList: new QeueuList(),
+    queueDepleted: true,
     trackListEvents: new ListEvents(),
     setTracklist(tracklist) {
         this.tracklist = tracklist;
@@ -381,43 +389,61 @@ const TrackListManager =  {
         this.trackListEvents.trigger('onAddedToQueue', track, this.queueList.length());
     },
     getNexTrack() {
-        let track;
+        let track = {track: undefined, index: undefined};
         const tracklist = this.getTrackList();
+
+        // Priority 1: Repeat current track?
         if (this.doRepeatTrack) {
-            track = this.queueList.getByIndex(0);
-            if (!track) {
-                track = tracklist.current();
+           track = this.getCurrentTrack();
+        // Priority 2: Next track in queue?
+        } else if (this.queueList.hasQueue()) {
+
+            if (!this.queueIsPlaying) {
+                tracklist.next();
             }
-        } else {
+
+            this.queueIsPlaying = true;
             track = this.queueList.nexInQueue();
-            if (!track.track) {
-                this.queueIsPlaying = false;
-                track = tracklist.next();
-                this.lastTrack = tracklist.isLastTrack();
-                if (this.queueDepleted) {
-                    this.queueDepleted = false;
-                    this.trackListEvents.trigger('onDepletingQueue', {track: null}, -1);
-                }
+            
+            if (!this.queueList.hasQueue())
+                this.queueDepleted = true;
+            
+            this.trackListEvents.trigger('onDepletingQueue', track, this.queueList.length());
+        // Priority 3: Normal Sequential Playback
+        } else {
+            if (this.queueIsPlaying || this.queueDepleted) {
+                track = tracklist.current();
+                this.trackListEvents.trigger('onDepletingQueue', {track: null}, -1);
             } else {
-                this.queueIsPlaying = true;
-                if (!this.queueList.hasQueue())
-                    this.queueDepleted = true;
-                this.trackListEvents.trigger('onDepletingQueue', track, this.queueList.length());
+                track = tracklist.next();
             }
+            this.queueIsPlaying = false;
+            this.queueDepleted = false;
+            
+            if (!track) {
+                track = {track: undefined, index: undefined};
+            }
+            this.lastTrack = tracklist.isLastTrack();
         }
         console.log('nextTrack', {track, queueDepleted: this.queueDepleted});
         return track;
     },
     getPreviousTrack() {
         const tracklist = this.getTrackList();
-        const track = tracklist.previous();
-        this.lastTrack = tracklist.isLastTrack();
-        this.queueIsPlaying = false;
-        if (this.queueDepleted) {
-            this.trackListEvents.trigger('onDepletingQueue', {track: null}, -1);
+        let track;
+
+        if (this.queueIsPlaying || this.queueDepleted) {
+            track = tracklist.current(); 
+            this.queueIsPlaying = false;
             this.queueDepleted = false;
+            this.queueList.clearQueue();
+            // Clean up the UI notification for the queue
+            this.trackListEvents.trigger('onDepletingQueue', {track: null}, -1);
+        } else {
+            track = tracklist.previous();
         }
 
+        this.lastTrack = tracklist.isLastTrack();
         return track;
     },
     reShuffle() {
@@ -470,7 +496,7 @@ const TrackListManager =  {
     },
     getCurrentTrack() {
         const queueItem = this.queueList.getCurrentItem();
-        if ((this.queueList.hasQueue() || this.queueDepleted) && queueItem.track)
+        if ((this.queueList.hasQueue() || this.queueDepleted) && (queueItem && queueItem.track))
             return queueItem;
         return this.getTrackList().current();
     },

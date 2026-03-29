@@ -282,7 +282,7 @@ AudioPlayer.prototype = {
     },
     _getNextTrackInList() {
         if (this.repeatMode == 2)
-            return this.currentTrack;
+            return {track: this.currentTrack};
         return TrackListManager.getNextTrackInList();
     },
     _updateVolumeBar(volume) {

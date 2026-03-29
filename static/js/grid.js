@@ -793,9 +793,10 @@ QueuelistGrid.prototype = {
             row.classAdd('currently-playing');
             return this.render();
         }
+
+        this.trackListBrowser.setGrid(this.parentGrid);
         this.hasQueue = false;
         this.isQueuePlaying = false;
-        this.trackListBrowser.setGrid(this.parentGrid);
         this.itemHtml.remove();
         this.siblingRow = undefined;
     },
