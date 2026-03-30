@@ -54,6 +54,9 @@ ID3Tags.prototype = {
         this.tags.album = album;
         this._manageTags(this.tags);
     },
+    getDefaultAlbumArt() {
+        return this.defaultALbumArt;
+    },
     getTags() {
         return this.tags;
     },
@@ -142,7 +145,7 @@ Track.prototype = {
         return await this._id3TagsInstance.getAlbumArt(this.trackUUid);
     },
     getID3Tags() {
-        return this._id3TagsInstance.getTags();
+        return this._id3TagsInstance;//.getTags();
     },
     setID3Tags(id3Tags) {
         this._id3TagsInstance = id3Tags;

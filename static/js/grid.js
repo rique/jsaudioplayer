@@ -472,24 +472,16 @@ const TracklistGrid = function(selector, audioPlayer, trackListBrowser) {
     this.trackSearch = new TrackSearch(this.getGrid());
     this.trackSearch.onSearchVisibilityChange(this._restoreGrid.bind(this), this);
     this.trackSearch.init();
-    
     this._trackListBrowser = trackListBrowser;
+    this.queuelistGrid = new QueuelistGrid(this);
     TrackListManager.onRemoveTrackFromTrackList(this.removeTrackFromGrid.bind(this));
 };
 TracklistGrid.prototype = {
     setUp() {
-        this.queuelistGrid = new QueuelistGrid(this._trackListBrowser, this);
-        TrackListManager.onShuffleTracklist((track, index) => {
-            this.gridMaker.resetDragDrop();
-            this.gridMaker.clearRows();
-            this.buildGrid(true);
-            this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
-            this.queuelistGrid.render(); 
-        }, this);
-
-        // TrackListManager.onRemoveTrackFromTrackList(this.removeTrackFromGrid.bind(this));
-
         this.getGrid().onSortedGrid(this.resetAfterSort.bind(this));
+    },
+    getQueueGrid() {
+        return this.queuelistGrid;
     },
     appendTrackToGrid({track}) {
         const index = this.getGrid().length();
@@ -523,6 +515,12 @@ TracklistGrid.prototype = {
             this.render();
         }
     },
+    redrawGrid() {
+        this.gridMaker.resetDragDrop();
+        this.gridMaker.clearRows();
+        this.buildGrid(true);
+        this.queuelistGrid.render();
+    },
     getGrid() {
         return this.gridMaker.getGrid();
     },
@@ -546,10 +544,9 @@ TracklistGrid.prototype = {
         this._trackListBrowser.hide();
     },
     resetAfterSort(isSorted, reversed) {
-        const {track, index} = TrackListManager.getCurrentTrack();
         this.queuelistGrid.gridMaker.clearRows();
         this.queuelistGrid.buildGrid(true); 
-        this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
+        TrackListManager.triggerGridRefresh();
     },
     _restoreGrid(isVisible) {
         if (!isVisible) {
@@ -561,8 +558,7 @@ TracklistGrid.prototype = {
         }
     },
     _setCurrentTrack() {
-        const {track, index} = TrackListManager.getCurrentTrack();
-        this._trackListBrowser.setCurrentlyPlayingTrack(track, index);
+        TrackListManager.triggerGridRefresh();
     },
     _buildHeaders() {
         const head = [{
@@ -713,14 +709,12 @@ TracklistGrid.prototype = {
     },
 }
 
-const QueuelistGrid = function(trackListBrowser, parentGrid) {
-    this.trackListBrowser = trackListBrowser;
+const QueuelistGrid = function(parentGrid) {
     this.setUpHTMLItem();
     this.parentGrid = parentGrid;
     this.gridMaker = new GridMaker(this.itemHtml.render(), true);
     this.gridMaker.setDraggable(true, true);
     TrackListManager.onAddedToQueue(this.updateQueue.bind(this), this);
-    TrackListManager.onDepletingQueue(this.nextTrackInQueue.bind(this), this);
 };
 QueuelistGrid.prototype = {
     setUpHTMLItem() {
@@ -782,23 +776,26 @@ QueuelistGrid.prototype = {
 
         this.buildGrid(true);
     },
-    nextTrackInQueue({track}, queueLength) {
+    syncQueue(queueLength) {
         this.queueLength = queueLength;
+        
         if (queueLength >= 0) {
             this.isQueuePlaying = true;
-            this.trackListBrowser.setGrid(this);
+            this.hasQueue = true;
             this.gridMaker.clearRows();
             this._buildBody();
-            const row = this.getGrid().getRowByIndex(0);
-            row.classAdd('currently-playing');
-            return this.render();
+            this.render();
+        } else {
+            this.deactivate();
         }
-
-        this.trackListBrowser.setGrid(this.parentGrid);
-        this.hasQueue = false;
+    },
+    deactivate() {
         this.isQueuePlaying = false;
+        this.hasQueue = false;
         this.itemHtml.remove();
         this.siblingRow = undefined;
+        // Note: We NO LONGER call this.trackListBrowser.setGrid here.
+        // The Mediator handles that switch globally.
     },
     _setSiblingRow() {
         if (this.siblingRow)

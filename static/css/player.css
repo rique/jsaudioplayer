@@ -110,15 +110,15 @@ ul {
 .action-cnt a .repeat-one {
     display: none;
     position: absolute;
-    background: #181717;
-    top: 31px;
-    left: 8px;
+    /*background: #181717;*/
+    top: 16.5px;
+    left: 12px;
     text-align: center;
-    font-size: 5px;
+    font-size: 17px;
     color: #bf1616;
     font-weight: bold;
     height: 16px;
-    filter: drop-shadow(0 0 2px rgba(6, 14, 14, 0.2));
+    /*filter: drop-shadow(0 0 2px rgba(6, 14, 14, 0.2));*/
 }
 
 #vu-meters {

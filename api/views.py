@@ -1,6 +1,7 @@
 import subprocess
 import json
 import shlex
+import os
 from uuid import uuid4
 from base64 import b64encode
 
@@ -175,7 +176,7 @@ def fileBrowser(request):
     if len(res_str) > 0:
         file_list = res_str.split('\n')
     print('file_list', file_list)# [ "08 Minha' All Mine.mp3" ]
-    return JsonResponse(data={'success': True, 'base_dir': base_dir, 'dir_list': dir_list, 'file_list': file_list, 'test': 'l  o  l'})
+    return JsonResponse(data={'success': True, 'base_dir': base_dir, 'dir_list': dir_list, 'file_list': file_list})
 
 
 @csrf_exempt
@@ -213,6 +214,40 @@ def loadTrackAlbumart(request):
     return JsonResponse(data={'success': True, 'track': track.dict, 'ID3': {
         'picture': {'data': apict, 'format': pic_format},
     } })
+
+@csrf_exempt
+def trackArtProxy(request, track_uuid):
+    # 1. Verification
+    try:
+        track = Tracks.objects.get(track_uuid=track_uuid)
+    except Tracks.DoesNotExist:
+        raise Http404("Track not found")
+
+    # 2. Path to the file
+    file_path = f'./static/tracks/{track_uuid}.mp3'
+    if not os.path.exists(file_path):
+        raise Http404("Audio file missing")
+
+    # 3. Extract ID3 Tag
+    audio = ID3(file_path)
+    apic_data = None
+    mime_type = "image/jpeg" # Default
+
+    # Look for the APIC frame (same logic as your view)
+    for key in audio.keys():
+        if key.startswith('APIC:'):
+            apic = audio.get(key)
+            if apic.data:
+                apic_data = apic.data
+                mime_type = apic.mime or "image/jpeg"
+                break
+
+    if not apic_data:
+        # Optional: Return a default placeholder image if no ID3 art exists
+        return HttpResponse(status=404)
+
+    # 4. Return RAW BINARY DATA
+    return HttpResponse(apic_data, content_type=mime_type)
 
 
 @csrf_exempt

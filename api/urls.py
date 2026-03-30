@@ -15,5 +15,6 @@ urlpatterns = [
     path("load-track-albumart", views.loadTrackAlbumart, name="loadTrackAlbumart"),
     path("load-track-info", views.loadTrackInfo, name="loadTrackInfo"),
     path("load-playlists", views.loadPlaylists, name="loadPlaylists"),
+    path('track-art/<str:track_uuid>/', views.trackArtProxy, name='track_art_proxy'),
 ]
 

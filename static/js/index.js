@@ -11,6 +11,7 @@
  * Overall, this file serves as the central hub for orchestrating the different parts of the music player application.
  */
 import {NotificationCenter} from './notifications-center.js';
+import {PlaybackMediator} from './mediators.js';
 import {Track, ID3Tags} from './tracks.js';
 import {TrackListManager} from './tracklistv2.js';
 import {TracklistGrid} from './grid.js';
@@ -45,6 +46,13 @@ audioPlayerKeyControls.onRewind(audioPlayerProgressBar.updateProgress.bind(audio
 const trackListBrowser = new TrackListBrowser(audioPlayer, audioPlayerDisplay);
 const tracklistGrid = new TracklistGrid('#table-content', audioPlayer, trackListBrowser);
 trackListBrowser.setGrid(tracklistGrid);
+
+PlaybackMediator.init(
+    trackListBrowser, 
+    tracklistGrid, 
+    tracklistGrid.getQueueGrid(), 
+    audioPlayer
+);
 
 const leftMenu = new LeftMenu();
 leftMenu.init();

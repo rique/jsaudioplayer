@@ -33,7 +33,7 @@ const setUp = (audioPlayer, imgList) => {
     canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
     let curImg = 'img1.jpg';
     let background = new Image();
-    background.src = `http://jsradio.me:3600/static/${curImg}`;
+    background.src = `https://jsradio.me/static/${curImg}`;
 
     background.onload = () => {
         console.log('img loaded', background.width, background.height, canvas.width, canvas.height);
@@ -66,7 +66,7 @@ const setUp = (audioPlayer, imgList) => {
             d = true;
             curImg = encodeURI(`${imgList[i]}`);
             background = new Image();
-            background.src = `http://jsradio.me:3600/${curImg}`;
+            background.src = `https://jsradio.me/${curImg}`;
             ++i;
             if (i >= imgList.length)
                 i = 0;

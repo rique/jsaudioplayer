@@ -249,7 +249,7 @@
     const TrackListBrowser = function(audioPlayer, audioPlayerDisplay) {
         this._tracklistBrowserNotifications = TracklistBrowserNotifications;
         this.audioPlayer = audioPlayer;
-        this.audioPlayer.onPlayerSongChange(this.setCurrentlyPlayingTrack.bind(this), this);
+        // this.audioPlayer.onPlayerSongChange(this.setCurrentlyPlayingTrack.bind(this), this);
         this.audioPlayerDisplay = audioPlayerDisplay;
         this.overlayDiv = document.querySelector('.cnt-overlay');
         this.windowCnt = document.getElementById('window-content');
@@ -354,11 +354,20 @@
         addToFavoriteAction(liFavorite, divElem, trackUUid) {
             console.log('not implemented :|', trackUUid);
         },
-        setCurrentlyPlayingTrack(track, index) {
+        setCurrentlyPlayingTrack(index) {
+            if (!this.grid)
+                return console.warn("TrackListBrowser: No grid set for the browser, cannot highlight currently playing track.");
+            
+            console.log('TrackListBrowser: Setting currently playing track index', {index});
             const row = this.grid.getRowByIndex(index);
             this.clearAllCurrentlyPlaying();
-            row.classAdd("currently-playing");
-            this.scrollToCurrentTrack();
+            
+            if (row) {
+                row.classAdd("currently-playing");
+                this.scrollToCurrentTrack();
+            } else {
+                console.warn("Mediator pointed to a grid, but row was missing at index:", {index, row}, this.grid);
+            }
         },
         clearAllCurrentlyPlaying() {
             document.querySelectorAll('.currently-playing').forEach(el => el.classList.remove('currently-playing'));

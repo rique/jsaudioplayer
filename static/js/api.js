@@ -10,7 +10,7 @@
 import {readCookie} from './utils.js';
 
 const Api = function() {
-    this.url = 'http://jsradio.me:3600/api';
+    this.url = 'https://jsradio.me/api';
     this.csrftoken = readCookie('csrftoken');
 };
 Api.prototype = {

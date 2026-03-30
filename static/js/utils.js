@@ -239,6 +239,29 @@ const blob2Uint8Array = (blob) => {
     });
 };
 
+/**
+ * If your _base64ToBlob function doesn't explicitly set a standard type like image/jpeg or image/png, or if the Base64 string has a "dirty" prefix (like data:image/webp;base64,...), the Windows Shell will reject the Blob.
+ * Try this "Safe" Base64-to-Blob conversion
+ * @param {string} base64String 
+ * @returns Blob
+ */
+const base64ToBlob = (base64String) => {
+    // 1. Strip any existing data: prefix
+    const block = base64String.split(";");
+    const contentType = block[0].split(":")[1] || 'image/jpeg';
+    const realData = block[1].split(",")[1];
+
+    // 2. Standard conversion
+    const byteCharacters = atob(realData);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+
+    // 3. Force a standard type
+    return new Blob([byteArray], {type: contentType});
+};
 
 const clearElementInnerHTML = (element) => {
     while(element.firstChild)
@@ -354,7 +377,8 @@ const shuffle = (list, index) => {
 
 export {
     readCookie, 
-    blob2Uint8Array, 
+    blob2Uint8Array,
+    base64ToBlob,
     clearElementInnerHTML,
     getFormatedDate,
     uuidv4,

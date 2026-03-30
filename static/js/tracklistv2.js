@@ -406,12 +406,10 @@ const TrackListManager =  {
             if (!this.queueList.hasQueue())
                 this.queueDepleted = true;
             
-            this.trackListEvents.trigger('onDepletingQueue', track, this.queueList.length());
         // Priority 3: Normal Sequential Playback
         } else {
             if (this.queueIsPlaying || this.queueDepleted) {
                 track = tracklist.current();
-                this.trackListEvents.trigger('onDepletingQueue', {track: null}, -1);
             } else {
                 track = tracklist.next();
             }
@@ -424,6 +422,7 @@ const TrackListManager =  {
             this.lastTrack = tracklist.isLastTrack();
         }
         console.log('nextTrack', {track, queueDepleted: this.queueDepleted});
+        this.trackListEvents.trigger('onTrackChanged', track.track, track.index, this.queueIsPlaying);
         return track;
     },
     getPreviousTrack() {
@@ -435,13 +434,12 @@ const TrackListManager =  {
             this.queueIsPlaying = false;
             this.queueDepleted = false;
             this.queueList.clearQueue();
-            // Clean up the UI notification for the queue
-            this.trackListEvents.trigger('onDepletingQueue', {track: null}, -1);
         } else {
             track = tracklist.previous();
         }
 
         this.lastTrack = tracklist.isLastTrack();
+        this.trackListEvents.trigger('onTrackChanged', track.track, track.index, this.queueIsPlaying);
         return track;
     },
     reShuffle() {
@@ -463,17 +461,19 @@ const TrackListManager =  {
                 trackIndex = this.tracklist.getIndex();
                 curIndex = 0;
             }
+            console.log('shuffle1', {trackIndex, curIndex});
             this.shuffleTracklist(trackIndex);
-            currentTrack = this.shuffledTracklist.current();
             this.shuffledTracklist.setTrackIndex(curIndex);
+            currentTrack = this.shuffledTracklist.current();
+            console.log('shuffle2', {trackIndex, curIndex, currentTrack});
         }
-        
-        this.trackListEvents.trigger('onShuffleTracklist', currentTrack, currentTrack.index, this.isShuffle());
+        console.log('shuffle3', {currentTrack});
+        this.trackListEvents.trigger('onShuffleTracklist', currentTrack.track, currentTrack.index, this.isShuffle());
     },
     shuffleTracklist(trackIndex) {
         this.shuffledTracklist = new TrackList();
         this.shuffledTracklist.enableLoop();
-        
+        console.log('shuffleTracklist', this.tracklist.getItems());
         const shuffledItems = shuffle([...this.tracklist.getItems()], trackIndex).map((track, index) => {
             track.setIndex(index);
             return track;
@@ -567,14 +567,18 @@ const TrackListManager =  {
 
         return false;
     },
+    triggerGridRefresh() {
+        const {track, index} = this.getCurrentTrack();
+        const isQueue = this.isCurrentTrackFromQueue();
+        // This is the ONE event the Mediator needs to fix the highlights
+        console.log('triggerGridRefresh', {track, index, isQueue});
+        this.trackListEvents.trigger('onGridSyncRequired', track, index, isQueue);
+    },
     getTrackByUUID(trackUUid) {
         return this.tracklist.getTrackByUUID(trackUUid);
     },
     onAddedToQueue(cb, subscriber) {
         this.trackListEvents.onEventRegister({cb, subscriber}, 'onAddedToQueue');
-    },
-    onDepletingQueue(cb, subscriber) {
-        this.trackListEvents.onEventRegister({cb, subscriber}, 'onDepletingQueue');
     },
     onTrackManagerIndexChange(cb, subscriber) {
         this.trackListEvents.onEventRegister({cb, subscriber}, 'onTrackManagerIndexChange');
@@ -584,6 +588,12 @@ const TrackListManager =  {
     },
     onRemoveTrackFromTrackList(cb, subscriber) {
         this.trackListEvents.onEventRegister({cb, subscriber}, 'onRemoveTrackFromTrackList');
+    },
+    onTrackChanged(cb, subscriber) {
+        this.trackListEvents.onEventRegister({cb, subscriber}, 'onTrackChanged');
+    },
+    onGridSyncRequired(cb, subscriber) {
+        this.trackListEvents.onEventRegister({cb, subscriber}, 'onGridSyncRequired');
     }
 };
 

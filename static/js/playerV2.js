@@ -11,7 +11,7 @@
  */
 import {ListEvents} from "./event-manager.js";
 import {TrackListManager} from "./tracklistv2.js";
-import {whileMousePressed, whileMousePressedAndMove} from "./utils.js";
+import {whileMousePressed, whileMousePressedAndMove, base64ToBlob} from "./utils.js";
 import {PlayerNotifications} from "./notifications.js";
 
 const AudioPlayer = function(audioPlayerProgressBar) {
@@ -101,16 +101,19 @@ AudioPlayer.prototype = {
         this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onPlayPause');
     },
     play() {
+        this._displayTrackInfo(this.currentTrack);
+        navigator.mediaSession.playbackState = "playing";
         this.isPaused = false;
+        this.audioPlayerEvents.trigger('onPlayPause', this.isPaused, this.currentTrack);
         this.currentTrack.isPlaying = true;
-        this.audioPlayerEvents.trigger('onPlayPause', this.isPaused);
         this.audioElem.play();
     },
     pause() {
+        this.audioElem.pause();
         this.isPaused = true;
         this.currentTrack.isPlaying = false;
-        this.audioPlayerEvents.trigger('onPlayPause', this.isPaused);
-        this.audioElem.pause();
+        this.audioPlayerEvents.trigger('onPlayPause', this.isPaused, this.currentTrack);
+        this.currentTrack.isPlaying = false;
     },
     stop() {
         this.pause();
@@ -205,9 +208,11 @@ AudioPlayer.prototype = {
         let volume = this.audioElem.volume - this.volumeStep;
         this.setVolume(volume);
     },
-    setCurrentTrackFromTrackList(autoPlay, prev) {
+    setCurrentTrackFromTrackList(autoPlay, prev, trackToPlay) {
         let track, index;
-        if (prev)
+        if (trackToPlay) {
+            ({track, index} = trackToPlay);
+        } else if (prev)
             ({track, index} = TrackListManager.getPreviousTrack());
         else
             ({track, index} = TrackListManager.getNexTrack());
@@ -302,6 +307,41 @@ AudioPlayer.prototype = {
         
         return widthPixel / totalWidth;
     },
+    _displayTrackInfo(track) {
+        console.log('PlaybackMediator: Displaying track info', {track});
+        document.title = `${track.getTitle()} - ${track.getArtist()}`;
+
+        if (!'mediaSession' in navigator) return;
+
+        // Set text metadata immediately so the UI doesn't lag
+        const defaultALbumArt = `https://jsradio.me/static${track.getID3Tags().getDefaultAlbumArt()}`;
+        console.log({defaultALbumArt});
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: track.getTitle(),
+            artist: track.getArtist(),
+            album: track.getAlbum(),
+            artwork: [{ src: defaultALbumArt, sizes: '512x512', type: "image/svg" }] // Start with empty or a default placeholder
+        });
+
+        track.getAlbumArt().then(imageData => {
+            if (!imageData) return;
+            
+            const artUrl = `/api/track-art/${track.getTrackUUID()}/`;
+            // navigator.mediaSession.playbackState = "playing";
+            // 'https://i7.vipr.im/th/00340/cjhcagp6b3tt.jpg'
+            console.log('Setting MediaSession artwork with URL:', {artUrl});
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: track.getTitle(),
+                artist: track.getArtist(),
+                album: track.getAlbum(),
+                artwork: [
+                    { src: artUrl }
+                ]
+            });
+        }).catch(err => {
+            console.error("Failed to load album art for MediaSession", err);
+        });
+    }
 };
 
 const AudioPlayerDisplay = function(audioPlayer) {
