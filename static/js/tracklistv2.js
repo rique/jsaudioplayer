@@ -445,7 +445,7 @@ const TrackListManager =  {
     reShuffle() {
         this.shuffleTracklist();
         const currentTrack = this.getTrackList().current();
-        this.trackListEvents.trigger('onShuffleTracklist', currentTrack, currentTrack.index, this.isShuffle());
+        this.trackListEvents.trigger('onShuffleTracklist', currentTrack.track, currentTrack.index, this.isShuffle());
     },
     shuffle(conserveCurrentTrack) {
         let currentTrack;
@@ -461,19 +461,16 @@ const TrackListManager =  {
                 trackIndex = this.tracklist.getIndex();
                 curIndex = 0;
             }
-            console.log('shuffle1', {trackIndex, curIndex});
             this.shuffleTracklist(trackIndex);
             this.shuffledTracklist.setTrackIndex(curIndex);
             currentTrack = this.shuffledTracklist.current();
-            console.log('shuffle2', {trackIndex, curIndex, currentTrack});
         }
-        console.log('shuffle3', {currentTrack});
+
         this.trackListEvents.trigger('onShuffleTracklist', currentTrack.track, currentTrack.index, this.isShuffle());
     },
     shuffleTracklist(trackIndex) {
         this.shuffledTracklist = new TrackList();
         this.shuffledTracklist.enableLoop();
-        console.log('shuffleTracklist', this.tracklist.getItems());
         const shuffledItems = shuffle([...this.tracklist.getItems()], trackIndex).map((track, index) => {
             track.setIndex(index);
             return track;
@@ -570,8 +567,6 @@ const TrackListManager =  {
     triggerGridRefresh() {
         const {track, index} = this.getCurrentTrack();
         const isQueue = this.isCurrentTrackFromQueue();
-        // This is the ONE event the Mediator needs to fix the highlights
-        console.log('triggerGridRefresh', {track, index, isQueue});
         this.trackListEvents.trigger('onGridSyncRequired', track, index, isQueue);
     },
     getTrackByUUID(trackUUid) {

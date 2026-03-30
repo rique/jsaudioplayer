@@ -315,7 +315,6 @@ AudioPlayer.prototype = {
 
         // Set text metadata immediately so the UI doesn't lag
         const defaultALbumArt = `https://jsradio.me/static${track.getID3Tags().getDefaultAlbumArt()}`;
-        console.log({defaultALbumArt});
         navigator.mediaSession.metadata = new MediaMetadata({
             title: track.getTitle(),
             artist: track.getArtist(),
@@ -325,10 +324,9 @@ AudioPlayer.prototype = {
 
         track.getAlbumArt().then(imageData => {
             if (!imageData) return;
-            
+
             const artUrl = `/api/track-art/${track.getTrackUUID()}/`;
-            // navigator.mediaSession.playbackState = "playing";
-            // 'https://i7.vipr.im/th/00340/cjhcagp6b3tt.jpg'
+            
             console.log('Setting MediaSession artwork with URL:', {artUrl});
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: track.getTitle(),
