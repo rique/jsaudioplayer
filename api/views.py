@@ -1,13 +1,13 @@
 import subprocess
 import json
-import shlex
+import shlex, mimetypes
 import os
 from uuid import uuid4
 from base64 import b64encode
 
 from django.shortcuts import render
 from django.template import loader
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
@@ -243,10 +243,20 @@ def trackArtProxy(request, track_uuid):
                 break
 
     if not apic_data:
-        # Optional: Return a default placeholder image if no ID3 art exists
-        return HttpResponse(status=404)
+        # 1. Correct path joining
+        default_path = os.path.join(settings.STATICFILES_DIRS[0], 'images/albumart.svg')
+        
+        # 2. Dynamically determine the MIME type (image/svg+xml)
+        content_type, _ = mimetypes.guess_type(default_path)
+        content_type = content_type or "image/jpeg" # Fallback
 
-    # 4. Return RAW BINARY DATA
+        try:
+            with open(default_path, 'rb') as f:
+                # Return the correct content type for SVG
+                return HttpResponse(f.read(), content_type=content_type)
+        except FileNotFoundError:
+            raise Http404("Default artwork file not found on disk")
+
     return HttpResponse(apic_data, content_type=mime_type)
 
 

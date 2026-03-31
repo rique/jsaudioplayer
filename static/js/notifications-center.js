@@ -13,6 +13,7 @@
  */
 import {Fader} from './effects.js';
 import {uuidv4} from './utils.js';
+import {ResourceManager} from './resources-manager.js';
 
 const NotificationMainBoxTemplate = {
     notifParentNode: document.getElementById('notifications-cnt'),
@@ -90,16 +91,11 @@ TrackBoxTemplate.prototype = {
         let album  = track.getAlbum() || 'N/A';
         let artist = track.getArtist() || 'N/A';
 
-        this._tpl = `<div class="notif-logo"><img style="width: 100%" id="${this.imgId}" src="/static/albumart.svg"></div><div style="width: 80%; font-size: 14px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>
+        let  src = ResourceManager.getAlbumArtURL(track);
+        console.log('TrackBoxTemplate._setUpTpl', {src});
+        
+        this._tpl = `<div class="notif-logo"><img style="width: 100%" id="${this.imgId}" src="${src}"></div><div style="width: 80%; font-size: 14px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>
         <p class="no-wrap">${artist}</p></div>`;
-
-        track.getAlbumArt().then((albumart) => {   
-            const imgElem = document.getElementById(this.imgId);
-            if (imgElem)
-                imgElem.src = albumart;
-        }).catch((err) => {
-            console.error('Error fetching album art for notification', err);
-        });
     },
 };
 

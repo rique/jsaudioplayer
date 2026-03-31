@@ -15,7 +15,7 @@ const api = new Api();
 const ID3Tags = function(tags) {
     this.tags = tags;
     this.albumArtLoader = AlbumArtLoader;
-    this.defaultALbumArt = "/static/albumart.svg";
+    // this.defaultALbumArt = "/static/albumart.svg";
     this._manageTags(tags);
 };
 ID3Tags.prototype = {

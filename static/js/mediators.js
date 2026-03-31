@@ -1,4 +1,5 @@
 import { TrackListManager } from "./tracklistv2.js";
+import { ResourceManager } from "./resources-manager.js";
 
 const PlaybackMediator  = {
     init(tracklistBrowser, mainGrid, queueGrid, audioPlayer) {
@@ -35,4 +36,43 @@ const PlaybackMediator  = {
     }
 };
 
-export { PlaybackMediator };
+const PlayerControlMediator = {
+    init(player, playerDisplay, progresbar, notifications) {
+        this.player = player;
+        this.playerDisplay = playerDisplay;
+        this.progressBar = progresbar;
+        this.notifications = notifications;
+
+        this._bindPlayerEvents();
+    },
+    _bindPlayerEvents() {
+        // 1. When a song starts playing
+        this.player.onPlayerSongChange((track, index) => {
+            console.log('PlayerControlMediator: Player song change event', {track, index});
+            this.playerDisplay.setTrack(track);
+
+            const nextTrack = TrackListManager.peekNext();
+            if (nextTrack) ResourceManager.preloadAlbumArt(nextTrack);
+
+            this._updateSystemMetadata(track);
+        });
+        // 2. On player time update
+        this.player.audioElem.ontimeupdate = (current, total) => {
+            this.progressBar.progress(current, total);
+        };
+    },
+    _updateSystemMetadata(track) {
+        if (!('mediaSession' in navigator)) return;
+
+        const artUrl = ResourceManager.getAlbumArtURL(track);
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: track.getTitle(),
+            artist: track.getArtist(),
+            album: track.getAlbum(),
+            artwork: [{ src: artUrl }]
+        });
+    }
+}
+
+export { PlaybackMediator, PlayerControlMediator };

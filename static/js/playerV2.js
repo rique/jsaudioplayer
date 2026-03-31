@@ -13,6 +13,7 @@ import {ListEvents} from "./event-manager.js";
 import {TrackListManager} from "./tracklistv2.js";
 import {whileMousePressed, whileMousePressedAndMove, base64ToBlob} from "./utils.js";
 import {PlayerNotifications} from "./notifications.js";
+import {ResourceManager} from "./resources-manager.js";
 
 const AudioPlayer = function(audioPlayerProgressBar) {
     this.audioElem = new Audio();
@@ -71,9 +72,11 @@ AudioPlayer.prototype = {
         return TrackListManager.getTrackList();
     },
     setPlayerSong(track, trackIdx, autoPlay) {
+        const mediaTrackURL = ResourceManager.getMediaAudioURL(track.getTrackUUID());
+        console.log('mediaTrackURL', mediaTrackURL);
         this.currentTrack = track;
         this.currentTrack.isPlaying = autoPlay;
-        this.audioElem.src = `/static/tracks/${track.trackUUid}.mp3`;
+        this.audioElem.src =  mediaTrackURL; //`/static/tracks/${track.trackUUid}.mp3`;
         this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
         this.audioPlayerEvents.trigger('onPlayerSongChange', track, trackIdx);
 
@@ -314,30 +317,14 @@ AudioPlayer.prototype = {
         if (!'mediaSession' in navigator) return;
 
         // Set text metadata immediately so the UI doesn't lag
-        const defaultALbumArt = `https://jsradio.me/static${track.getID3Tags().getDefaultAlbumArt()}`;
+        const artUrl = ResourceManager.getAlbumArtURL(track);
+
+        console.log('Setting media session metadata', {title: track.getTitle(), artist: track.getArtist(), album: track.getAlbum(), artUrl});
         navigator.mediaSession.metadata = new MediaMetadata({
             title: track.getTitle(),
             artist: track.getArtist(),
             album: track.getAlbum(),
-            artwork: [{ src: defaultALbumArt, sizes: '512x512', type: "image/svg" }] // Start with empty or a default placeholder
-        });
-
-        track.getAlbumArt().then(imageData => {
-            if (!imageData) return;
-
-            const artUrl = `/api/track-art/${track.getTrackUUID()}/`;
-            
-            console.log('Setting MediaSession artwork with URL:', {artUrl});
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: track.getTitle(),
-                artist: track.getArtist(),
-                album: track.getAlbum(),
-                artwork: [
-                    { src: artUrl }
-                ]
-            });
-        }).catch(err => {
-            console.error("Failed to load album art for MediaSession", err);
+            artwork: [{ src: artUrl, sizes: '512x512' }] // Start with empty or a default placeholder
         });
     }
 };
@@ -370,23 +357,13 @@ AudioPlayerDisplay.prototype = {
         this.updateTrackTime();
     },
     manageTags(track) {
-        let title = track.getTitle();
-        let album = track.getAlbum();
-        if (album)
-            album = ` ~ ${album}`;
+        ResourceManager.preloadAlbumArt(track);
+        this.nameAlbumElem.innerText = track.getAlbum() ? ` ~ ${track.getAlbum()}`: '';
+        this.nameTrackElem.innerText = track.getTitle();
+        this.artistName.innerText = track.getArtist() || 'N/A';
         
-        let artist = track.getArtist();
-        
-        if (!artist || typeof artist === 'undefined' || artist.length == 0)
-            artist = 'N/A';
-
-        this.nameAlbumElem.innerText = album;
-        this.nameTrackElem.innerText = title;
-        this.artistName.innerText = artist;
-
-        track.getAlbumArt(track.trackUUid).then((albumart) => {
-            this.albumImg.src = albumart;
-        });
+        this.albumImg.src = ResourceManager.getAlbumArtURL(track);
+        console.log('mahagetags', {albumImg: this.albumImg});
     },
     manageTag(tag, value) {
         switch(tag) {
