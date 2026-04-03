@@ -12,6 +12,7 @@ const Fader = JSPlayer.Effects.Fader;
 const {LeftMenu, FileBrowser, Layout, layoutHTML, FileBrowserRenderer} = JSPlayer.Components;*/
 
 import {Playlist} from './playlists.js';
+import { Track, ID3Tags } from './tracks.js';
 
 const Library = function() {
     this.tracks = {};
@@ -19,6 +20,20 @@ const Library = function() {
     this.playlist = new Playlist('library');
 };
 Library.prototype = {
+    async bootstrap(tracklist) {
+        console.log('bootstrap library', {tracklist});
+        for (let i in tracklist) {
+            let trackInfo = tracklist[i];
+            let track = new Track(trackInfo['track']),
+                id3Tags = new ID3Tags(trackInfo['ID3']);
+    
+            track.setID3Tags(id3Tags);
+            track.setTrackDuration(id3Tags.getDuration());
+            track.setIndex(i);
+            // console.log('bootstrap track', {track, trackInfo});
+            this.addTrack({track, trackUUid: trackInfo.track['track_uuid']});
+        }
+    },
     addTrack({track, trackUUid}) {
         if (this.tracks.hasOwnProperty(trackUUid))
             return console.error(`track UUID '${trackUUid}' provided for track ${track} is already set for : ${this.tracks[trackUUid]}`);
@@ -51,4 +66,6 @@ Library.prototype = {
     }
 }
 
-export default Library;
+const library = new Library();
+
+export default library;

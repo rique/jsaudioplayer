@@ -11,25 +11,30 @@ const PlaylistCreator = function() {
     this.htmlItem.innerContent('<h4>Enter playlist name</h4>');
     this.htmlItem.append(this.inputItem, this.buttonItem);
     this.inputItem.addEventListener('keydown', evt => evt.key === 'Enter' && this._validate(evt));
-    this.htmlItem.addEventListener('click', this._validate.bind(this));
+    this.buttonItem.addEventListener('click', this._validate.bind(this));
     this.buttonItem.innerContent('Save');
-    this.overlayDiv = document.querySelector('.cnt-overlay');
-    this.overlayDiv.append(this.htmlItem.render());
-    this.overlayDiv.addEventListener('click', (evt) => {
-        if (evt.target == evt.currentTarget)
-            this.hide();
-    });
 };
 PlaylistCreator.prototype = {
     show() {
-        this.overlayDiv.style.display = 'block';
+        console.log('show playlist creator');
         this.htmlItem.show();
     },
-    hide() {
-        this.overlayDiv.style.display = 'none';
+    hide(evt) {
+        if (evt && evt.target != evt.currentTarget)
+            return;
         this.htmlItem.hide();
     },
-    _validate() {
+    setVisible(visible) {
+        this.visible = visible;
+    },
+    isVisible() {
+        return this.visible;
+    },
+    getHTMLItem() {
+        return this.htmlItem;
+    },
+    _validate(evt) {
+        evt.stopPropagation();
         const playlistName = this.inputItem.value();
         if (!playlistName || playlistName.trim().length == 0)
             return;
@@ -50,6 +55,7 @@ const PlaylistManager = {
         if (this.playlists.hasOwnProperty(playlistUUID)) {
             return console.error(`playlist with id ${playlistUUID} already exists`);
         }
+        
         return new Playlist(playlistUUID);
     },
     addPlaylist(playlist, playlistUUID) {

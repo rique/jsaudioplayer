@@ -17,10 +17,8 @@ const ResourceManager = {
         if (track?.has_art === false) {
             return this.getDefaultAlbumArt(); // Zero network latency
         }
-        console.log('ResourceManager.getAlbumArtURL called with track', track);
-        const alb = `${this._baseAlbumArtURL}${track.getTrackUUID()}/`;
-        console.log('ResourceManager.getAlbumArtURL', {trackUUID: track.getTrackUUID(), alb});
-        return alb;
+        console.log('ResourceManager.getAlbumArtURL called with track', {track});
+        return `${this._baseAlbumArtURL}${track.getTrackUUID()}/`;
     },
 
     markAsMissing(trackUUID) {

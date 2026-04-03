@@ -105,21 +105,13 @@
 
     const layoutHTML = new LayoutHTML();
 
-    const FileBrowserRenderer = function(fileBrowser, layout, elemEvent) {
+    const FileBrowserRenderer = function(fileBrowser, layout) {
         this.fileBrowser = fileBrowser;
         this.layout = layout;
-        this.elemEvent = elemEvent;
         this.layout.registerRenderCallback(this._render.bind(this));
-        this._bindEVents();
         this._createElements();
     };
     FileBrowserRenderer.prototype = {
-        _bindEVents() {
-            this.elemEvent.addEventListener('click', (evt) => {
-                this._displayFileBroserLayout();
-                this.fileBrowser.loadFileBrowser.bind(this.fileBrowser)(evt);
-            });
-        },
         _createElements() {
             this.divBasePath = document.createElement('div');
             this.ulFolderList = document.createElement('ul');
@@ -145,20 +137,18 @@
     };
     
 
-    const FileBrowser = function(player) {
-        this.overlayDiv = document.querySelector('.cnt-overlay');
+    const FileBrowser = function(layout) {
         this.baseDir = '/home/enrique/Music/';
         this.api = new Api();
         this.browseHistory = [this.baseDir];
         this.historyIndex = 0;
-        this.player = player;
-        this.overlayDiv.addEventListener('click', this.closeFileBrowser.bind(this));
+        this.layout = layout;
         this.folderBrowserEvent = new ListEvents();
         this._fileBrowserNotifications = FileBrowserNotifications;
     };
     FileBrowser.prototype = {
-        closeFileBrowser(evt) {
-            if (evt.target != evt.currentTarget)
+        close(evt) {
+            if (evt && evt.target != evt.currentTarget)
                 return;
             if (this.isOpen)
                 this._closeFileBrowser();
@@ -225,6 +215,7 @@
             }
         },
         loadFileBrowser() {
+            layoutHTML.renderLayout(this.layout.layoutName);
             this.api.browseFiles(this.baseDir, this.fileBrowserCB.bind(this))
         },
         onSongAdded(cb, subscriber) {
@@ -236,12 +227,10 @@
             this.isOpen = false;
             clearElementInnerHTML(this.folderListBox);
             clearElementInnerHTML(this.fileListBox);
-            this.overlayDiv.style.display = 'none';
             this.fileExplorerBox.style.display = 'none';
         },
         _openFileBrowser() {
             this.isOpen = true;
-            this.overlayDiv.style.display = 'block';
             this.fileExplorerBox.style.display = 'block';
         },
     };
@@ -249,33 +238,26 @@
     const TrackListBrowser = function(audioPlayer, audioPlayerDisplay) {
         this._tracklistBrowserNotifications = TracklistBrowserNotifications;
         this.audioPlayer = audioPlayer;
-        // this.audioPlayer.onPlayerSongChange(this.setCurrentlyPlayingTrack.bind(this), this);
         this.audioPlayerDisplay = audioPlayerDisplay;
-        this.overlayDiv = document.querySelector('.cnt-overlay');
         this.windowCnt = document.getElementById('window-content');
         this.isVisible = false;
         TrackListManager.onAddedToQueue(this._notifyAddToQueue.bind(this), this);
         TrackListManager.onRemoveTrackFromTrackList(this._notifyARemovedTrack.bind(this), this);
-        this.overlayDiv.addEventListener('click', (evt) => {
-            if (evt.target != evt.currentTarget)
-                return;
-            if (this.isVisible) {
-                this.hide();
-            }
-        });
     };
     TrackListBrowser.prototype = {
         setGrid(grid) {
             this.grid = grid;
         },
         show() {
-            this.overlayDiv.style.display = 'block';
             this.windowCnt.style.display = 'block';
             this.isVisible = true;
             this.scrollToCurrentTrack();
         },
-        hide() {
-            this.overlayDiv.style.display = 'none';
+        hide(evt) {
+            if (evt &&evt.target != evt.currentTarget)
+                return;
+            if (!this.isVisible)
+                return
             this.windowCnt.style.display = 'none';
             this.isVisible = false;
         },
@@ -338,6 +320,7 @@
             document.querySelectorAll('.action-menu-cnt').forEach(el => el.style.display = 'none');
         },
         addToQueueAction(divElem, trackUUid) {
+            console.log('Adding track to queue with UUID:', trackUUid);
             TrackListManager.addToQueue(TrackListManager.getTrackByUUID(trackUUid));
             divElem.style.display = 'none';
         },
@@ -358,7 +341,7 @@
             if (!this.grid)
                 return console.warn("TrackListBrowser: No grid set for the browser, cannot highlight currently playing track.");
             
-            console.log('TrackListBrowser: Setting currently playing track index', {index});
+            console.log('TrackListBrowser: Setting currently playing track index', {index}, this.grid);
             const row = this.grid.getRowByIndex(index);
             this.clearAllCurrentlyPlaying();
             

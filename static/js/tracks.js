@@ -200,12 +200,12 @@ const TrackEditor = {
         });
     },
     _setExclusivity() {
-        keyCotrols.setExlcusivityCallerKeyUpV2(this);
-        keyCotrols.setExlcusivityCallerKeyDownV2(this);
+        keyCotrols.setExclusivityCallerKeyUpV2(this);
+        keyCotrols.setExclusivityCallerKeyDownV2(this);
     },
     _unsetExclusivity() {
-        keyCotrols.unsetExlcusivityCallerKeyUpV2();
-        keyCotrols.unsetExlcusivityCallerKeyDownV2();
+        keyCotrols.unsetExclusivityCallerKeyUpV2();
+        keyCotrols.unsetExclusivityCallerKeyDownV2();
     },
 };
 
@@ -257,13 +257,13 @@ TrackSearch.prototype = {
     },
     _setExclusivity() {
         console.log('Setting exclusivity');
-        keyCotrols.setExlcusivityCallerKeyUpV2(this);
-        keyCotrols.setExlcusivityCallerKeyDownV2(this);
+        keyCotrols.setExclusivityCallerKeyUpV2(this);
+        keyCotrols.setExclusivityCallerKeyDownV2(this);
     },
     _unsetExclusivity() {
         console.log('Unsetting exclusivity');
-        keyCotrols.unsetExlcusivityCallerKeyUpV2(this);
-        keyCotrols.unsetExlcusivityCallerKeyDownV2(this);
+        keyCotrols.unsetExclusivityCallerKeyUpV2(this);
+        keyCotrols.unsetExclusivityCallerKeyDownV2(this);
     },
 }
 

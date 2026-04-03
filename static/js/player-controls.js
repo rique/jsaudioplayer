@@ -21,7 +21,7 @@ PlayerButtonBaseItem.prototype = {
     onClick(cb) {
         this.htmlItem.addEventListener('click', (evt) => {
             evt.preventDefault();
-            cb();
+            cb(evt);
         });
     }
 }
@@ -251,7 +251,7 @@ const PlayerButtons = function(parentCnt, playerControls) {
 PlayerButtons.prototype = {
     setUp() {
         this.parentCnt.append(
-            this.playPauseBtn.render(), 
+            this.playPauseBtn.render(),
             this.stopBtn.render(), 
             this.prevBtn.render(),
             this.nextBtn.render(),
@@ -296,8 +296,8 @@ PlayerButtons.prototype = {
 const PlayerControls = function(audioPlayer) {
     this.listEvents = new ListEvents();
     this.audioPlayer = audioPlayer;
-    this.audioPlayer.onPlayPause((isPaysed) => {
-        this.listEvents.trigger('onPlayPause', isPaysed);
+    this.audioPlayer.onPlayPause((isPaused) => {
+        this.listEvents.trigger('onPlayPause', isPaused);
     }, this);
 }
 PlayerControls.prototype = {

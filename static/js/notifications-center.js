@@ -91,7 +91,7 @@ TrackBoxTemplate.prototype = {
         let album  = track.getAlbum() || 'N/A';
         let artist = track.getArtist() || 'N/A';
 
-        let  src = ResourceManager.getAlbumArtURL(track);
+        let  src = ResourceManager.getAlbumArtURL(track, this);
         console.log('TrackBoxTemplate._setUpTpl', {src});
         
         this._tpl = `<div class="notif-logo"><img style="width: 100%" id="${this.imgId}" src="${src}"></div><div style="width: 80%; font-size: 14px;" class="notif-body inline-block"><p class="no-wrap">${track.getTitle()} ~ ${album}</p>

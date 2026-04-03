@@ -203,7 +203,7 @@ DragitManager.prototype = {
             return;
 
         const drag = this._findHoveredDrag(this.currentDrag);
-
+        console.log('Dragging over element:', drag, 'Current drag:', this.currentDrag.getDragme());
         if (drag && drag != this.hoveredDrag) {
             if (this.hoveredDrag) {
                 if (this.seekParent)

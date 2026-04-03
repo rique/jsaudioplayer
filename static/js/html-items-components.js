@@ -87,11 +87,11 @@ ProgerssBar.prototype = {
 
 const AudioPlayerProgressBar = function() {
     this.isPaused = true;
+    this.progressBar = new ProgerssBar(document.getElementById('player'));
 };
 AudioPlayerProgressBar.prototype = {
     setAudioPlayer(audioPlayer) {
         this.audioPlayer = audioPlayer;
-        this._setUp();
     },
     togglePauseProgress(isPaused) {
         this.setPauseState(isPaused);
@@ -107,6 +107,11 @@ AudioPlayerProgressBar.prototype = {
             totalTime = this.audioPlayer.getDuration();
         this.progressBar.progress(currentTime, totalTime, this.progress.bind(this));
     },
+    doProgress(currentTime, duration) {
+        if (this.isPaused)
+            return;
+        this.progressBar.progress(currentTime, duration);
+    },
     updateProgress() {
         let currentTime = this.audioPlayer.getCurrentTime(),
             totalTime = this.audioPlayer.getDuration();
@@ -114,7 +119,8 @@ AudioPlayerProgressBar.prototype = {
     },
     seek(percentWidth) {
         const {track} = TrackListManager.getCurrentTrack();
-        this.audioPlayer.setCurrentTime(track.trackDuration * percentWidth);
+        console.log('seek', {percentWidth, trackDuration: track.getTrackDuration()});
+        this.audioPlayer.setCurrentTime(track.getTrackDuration() * percentWidth);
         this.progress();
     },
     resetProgresBar() {
@@ -122,12 +128,6 @@ AudioPlayerProgressBar.prototype = {
     },
     setPauseState(isPaused) {
         this.isPaused = isPaused;
-    },
-    _setUp() {
-        this.audioPlayer.onPlayPause(this.togglePauseProgress.bind(this), this);
-        this.audioPlayer.onStop(this.resetProgresBar.bind(this), this);
-        this.progressBar = new ProgerssBar(document.getElementById('player'));
-        this.progressBar.onSeek(this.seek.bind(this), this);
     }
 }
 

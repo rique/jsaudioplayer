@@ -67,7 +67,7 @@ IndexList.prototype = {
         if (this.index < 0) {
             this.index = 0;
         }
-        
+        console.log('current', {index: this.index})
         const item = this.items[this.index];
         const index = this.items.indexOf(item);
         return {item, index};
@@ -236,7 +236,7 @@ TrackList.prototype = {
             index = this.index + 1;
         else if (this.loop)
             index = 0;
-        
+        console.log('readNextTrack', {index, maxIndex: this.maxIndex(), loop: this.loop});
         track = this.items[index];
         return {track, index};
     },
@@ -353,6 +353,11 @@ QeueuList.prototype = {
 
 
 const TrackListManager =  {
+    playState: {
+        CONTEXT_MAIN: 'main',
+        CONTEXT_QUEUE: 'queue'
+    },
+    activeListType: 'main',
     queueList: new QeueuList(),
     queueDepleted: true,
     trackListEvents: new ListEvents(),
@@ -362,6 +367,7 @@ const TrackListManager =  {
             this.shuffledTracklist = undefined;
             this._isShuffle = false;
         }
+        this.trackListEvents.trigger('onTrackListLoaded', tracklist);
     },
     setPlaylist(playlist) {
         this.setTracklist(playlist.getTracklist());
@@ -377,7 +383,7 @@ const TrackListManager =  {
     addTrackToList(track) {
         if (!this.tracklist)
             this.tracklist = new TrackList();
-        this.tracklist.enableLoop();
+        // this.tracklist.enableLoop();
         this.tracklist.addItem(track);
         if (this.isShuffle())
             this.shuffledTracklist.addItem(track);
@@ -410,6 +416,7 @@ const TrackListManager =  {
         } else {
             if (this.queueIsPlaying || this.queueDepleted) {
                 track = tracklist.current();
+                this.trackListEvents.trigger('onQueueFinished', track.track, track.index);
             } else {
                 track = tracklist.next();
             }
@@ -434,6 +441,7 @@ const TrackListManager =  {
             this.queueIsPlaying = false;
             this.queueDepleted = false;
             this.queueList.clearQueue();
+            this.trackListEvents.trigger('onQueueFinished', track.track, track.index);
         } else {
             track = tracklist.previous();
         }
@@ -444,8 +452,10 @@ const TrackListManager =  {
     },
     reShuffle() {
         this.shuffleTracklist();
-        const currentTrack = this.getTrackList().current();
+        const tracklist = this.getTrackList();
+        const currentTrack = tracklist.current();
         this.trackListEvents.trigger('onShuffleTracklist', currentTrack.track, currentTrack.index, this.isShuffle());
+        tracklist.reset();
     },
     shuffle(conserveCurrentTrack) {
         let currentTrack;
@@ -490,24 +500,46 @@ const TrackListManager =  {
         return this.lastTrack && !this.queueList.hasQueue();
     },
     getCurrentTrack() {
-        const queueItem = this.queueList.getCurrentItem();
-        if ((this.queueList.hasQueue() || this.queueDepleted) && (queueItem && queueItem.track))
-            return queueItem;
+        if (this.queueIsPlaying && this.queueList.hasQueue())
+            return this.queueList.getCurrentItem();
         return this.getTrackList().current();
     },
     getCurrentTrackIndex(forceDefaultTracklist) {
-        if (!forceDefaultTracklist && (this.queueList.hasQueue() || this.queueDepleted))
-            return 0;
-        return this.getTrackList().getIndex();
+        if (forceDefaultTracklist || !this.queueIsPlaying) {
+            return this.getTrackList().getIndex();
+        }
+        
+        // If queue IS playing, return the queue's internal index
+        return this.queueList.getIndex();
+    },
+    getAnchorIndex() {
+        const index = this.getTrackList().getIndex();
+        
+        // If we are currently playing from the queue, the "Anchor" 
+        // in the main grid is the track we just came from.
+        if (this.queueIsPlaying) {
+            return Math.max(0, index - 1);
+        }
+        
+        return index;
     },
     isCurrentTrackFromQueue() {
-        return this.queueDepleted
+        // return this.queueDepleted;
+        return this.queueIsPlaying === true;
     }, 
     switchRepeatMode(repeatMode) {
         this.setRepeatTrack(repeatMode == 2);
+        this.trackListLoop(repeatMode == 1);
     },
     setRepeatTrack(repeate) {
+        console.log('setRepeatTrack', {repeate});
         this.doRepeatTrack = repeate;
+    },
+    trackListLoop(loop) {
+        if (loop === true)
+            this.tracklist.enableLoop();
+        else
+            this.tracklist.disableLoop();
     },
     switchTrackIndex(oldIdx, newIdx, isQueue) {
         let tracklist;
@@ -567,7 +599,7 @@ const TrackListManager =  {
     triggerGridRefresh() {
         const {track, index} = this.getCurrentTrack();
         const isQueue = this.isCurrentTrackFromQueue();
-        this.trackListEvents.trigger('onGridSyncRequired', track, index, isQueue);
+        this.trackListEvents.trigger('onGridSyncRequired', track, index, isQueue,this.queueList.length() > 0);
     },
     getTrackByUUID(trackUUid) {
         return this.tracklist.getTrackByUUID(trackUUid);
@@ -589,7 +621,13 @@ const TrackListManager =  {
     },
     onGridSyncRequired(cb, subscriber) {
         this.trackListEvents.onEventRegister({cb, subscriber}, 'onGridSyncRequired');
-    }
+    },
+    onTrackListLoaded(cb, subscriber) {
+        this.trackListEvents.onEventRegister({cb, subscriber}, 'onTrackListLoaded');
+    },
+    onQueueFinished(cb, subscriber) {
+        this.trackListEvents.onEventRegister({cb, subscriber}, 'onQueueFinished');
+    },
 };
 
 Object.setPrototypeOf(TrackList.prototype, IndexList.prototype);

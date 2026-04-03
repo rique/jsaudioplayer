@@ -19,45 +19,47 @@ KeyCotrols.prototype = {
     isEnabled() {
         return this.enabled;
     },
-    setExlcusivityCallerKeyUp(key, caller) {
+    setExclusivityCallerKeyUp(key, caller) {
         const previousCaller = this._exclusivityCallerKeyUp.filter(obj => obj.key == key);
         if (previousCaller.length != 0)
             return;
         this._exclusivityCallerKeyUp.push({key, caller});
     },
-    unsetExlcusivityCallerKeyUp(key, caller) {
+    unsetExclusivityCallerKeyUp(key, caller) {
         const previousCallerIdx = this._exclusivityCallerKeyUp.findIndex(obj => obj.key == key && obj.caller == caller);
-        if (typeof previousCallerIdx === 'undefined')
+        if (typeof previousCallerIdx === -1)
             return;
         this._exclusivityCallerKeyUp.splice(previousCallerIdx, 1);
     },
-    setExlcusivityCallerKeyDown(key, caller) {
+    setExclusivityCallerKeyDown(key, caller) {
         const previousCaller = this._exclusivityCallerKeyDown.filter(obj => obj.key == key);
         if (previousCaller.length != 0)
             return;
         this._exclusivityCallerKeyDown.push({key, caller});
     },
-    unsetExlcusivityCallerKeyDown(key, caller) {
+    unsetExclusivityCallerKeyDown(key, caller) {
         const previousCallerIdx = this._exclusivityCallerKeyDown.findIndex(obj => obj.key == key && obj.caller == caller);
-        if (typeof previousCallerIdx === 'undefined')
+        if (typeof previousCallerIdx === -1)
             return;
         this._exclusivityCallerKeyDown.splice(previousCallerIdx, 1);
     },
-    setExlcusivityCallerKeyUpV2(caller) {
-        this._exclusivityCallerKeyUpV2.push(caller);
+    setExclusivityCallerKeyUpV2(caller) {
+        if (!this._exclusivityCallerKeyUpV2.includes(caller))
+            this._exclusivityCallerKeyUpV2.push(caller);
     },
-    unsetExlcusivityCallerKeyUpV2(caller) {
+    unsetExclusivityCallerKeyUpV2(caller) {
         const previousCallerIdx = this._exclusivityCallerKeyUpV2.findIndex(obj => obj == caller);
-        if (typeof previousCallerIdx === 'undefined')
+        if (typeof previousCallerIdx === -1)
             return;
         this._exclusivityCallerKeyUpV2.splice(previousCallerIdx, 1);
     },
-    setExlcusivityCallerKeyDownV2(caller) {
-        this._exclusivityCallerKeyDownV2.push(caller);
+    setExclusivityCallerKeyDownV2(caller) {
+        if (!this._exclusivityCallerKeyDownV2.includes(caller))
+            this._exclusivityCallerKeyDownV2.push(caller);
     },
-    unsetExlcusivityCallerKeyDownV2(caller) {
+    unsetExclusivityCallerKeyDownV2(caller) {
         const previousCallerIdx = this._exclusivityCallerKeyDownV2.findIndex(obj => obj == caller);
-        if (typeof previousCallerIdx === 'undefined')
+        if (typeof previousCallerIdx === -1)
             return;
         this._exclusivityCallerKeyDownV2.splice(previousCallerIdx, 1);
     },
@@ -73,50 +75,38 @@ KeyCotrols.prototype = {
         this._keyDownActions[key].push({cb, caller});
     },
     _bindEvents() {
-        document.body.addEventListener('keyup', evt => this._dispatchActions.bind(this)(evt, 'up'));
-        document.body.addEventListener('keydown', evt => this._dispatchActions.bind(this)(evt, 'down'));
+        document.body.addEventListener('keyup', evt => this._dispatchActions(evt, 'up'));
+        document.body.addEventListener('keydown', evt => this._dispatchActions(evt, 'down'));
     },
     _dispatchActions(evt, keyType) {
-        if (keyType == 'up')
-            return this._executeKeyUpActions(evt);
-        else if (keyType == 'down')
-            return this._executeKeyDownActions(evt);
-    },
-    _executeKeyDownActions(evt) {
         if (!this.isEnabled()) return;
 
-        const key = evt.key;
+        const target = evt.target;
+        const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
-        if (!this._keyDownActions.hasOwnProperty(key)) return;
+        if (isTyping && evt.key != 'Escape' && evt.key != 'Enter')
+            return;
 
-        const exclusiveCallers = this._exclusivityCallerKeyDownV2;
-        const actions = this._keyDownActions[key];
-        
-        this._executeActions(evt, actions, exclusiveCallers);
-    },
-    _executeKeyUpActions(evt) {
-        if (!this.isEnabled()) return;
-
-        const key = evt.key;
-
-        if (!this._keyUpActions.hasOwnProperty(key)) return;
-
-        const exclusiveCallers = this._exclusivityCallerKeyUpV2;
-        const actions = this._keyUpActions[key];
-        
-        this._executeActions(evt, actions, exclusiveCallers);
+        if (keyType == 'up') return this._executeActions(evt, this._keyUpActions[evt.key], this._exclusivityCallerKeyUpV2);
+        if (keyType == 'down') return this._executeActions(evt, this._keyDownActions[evt.key], this._exclusivityCallerKeyDownV2);
     },
     _executeActions(evt, actions, exclusiveCallers) {
-        if (actions && actions.length > 0) {
-            for (let i = 0; i < actions.length; ++i) {
-                let {caller, cb} = actions[i];
-                if (typeof cb !== 'function')
-                    continue;
-                if (exclusiveCallers && exclusiveCallers.length > 0) {
-                    exclusiveCallers.forEach(clr => caller == clr && cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target, type: evt.type}));
-                } else {
-                    cb({ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target, type: evt.type});
+        if (!actions || actions.length <= 0) return;
+
+        const eventPayload = {ctrlKey: evt.ctrlKey, shiftKey: evt.shiftKey, metaKey: evt.metaKey, repeat: evt.repeat, target: evt.target, type: evt.type, evt};
+
+        for (let i = 0; i < actions.length; ++i) {
+            let {caller, cb} = actions[i];
+            if (typeof cb !== 'function') continue;
+
+            const hasExclusivityLock = exclusiveCallers && exclusiveCallers.length > 0;
+            if (hasExclusivityLock) {
+                // Only fire if the action belongs to the exclusive caller, OR if it's explicitly set to bypass
+                if (exclusiveCallers.includes(caller) || caller === 'BYPASS_EXCLUSIVITY') {
+                    cb(eventPayload);
                 }
+            } else {
+                cb(eventPayload);
             }
         }
     }
@@ -166,14 +156,12 @@ AudioPlayerKeyControls.prototype = {
         this.playerControls.prev();
     },
     fastFoward({ctrlKey, repeat, shiftKey, type}={}) {
-        console.log('rewind', {type, ctrlKey, repeat, shiftKey});
         if (ctrlKey && repeat || shiftKey && repeat) {
             this.playerControls.fastForward();
             this.listEvents.trigger('onFastForward');
         }
     },
     rewind({ctrlKey, repeat, shiftKey, type}={}) {
-        console.log('rewind', {type, ctrlKey, repeat, shiftKey});
         if (ctrlKey && repeat || shiftKey && repeat) {
             this.playerControls.rewind();
             this.listEvents.trigger('onRewind');

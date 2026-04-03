@@ -11,9 +11,9 @@
  */
 import {ListEvents} from "./event-manager.js";
 import {TrackListManager} from "./tracklistv2.js";
-import {whileMousePressed, whileMousePressedAndMove, base64ToBlob} from "./utils.js";
-import {PlayerNotifications} from "./notifications.js";
+import {whileMousePressed, whileMousePressedAndMove} from "./utils.js";
 import {ResourceManager} from "./resources-manager.js";
+import {Fader} from './effects.js';
 
 const AudioPlayer = function(audioPlayerProgressBar) {
     this.audioElem = new Audio();
@@ -26,13 +26,9 @@ const AudioPlayer = function(audioPlayerProgressBar) {
 
     this.mainVolumeBarElem = document.getElementById('main-volume-bar');
     this.volumeBarElem = document.getElementById('volume-bar');
-
     this.volUpBtn = document.querySelector('span.vol-up');
     this.volDownBtn = document.querySelector('span.vol-down');
-
     this.volumeVal = document.querySelector('span.vol-val');
-
-    this._playerNotifications = PlayerNotifications;
 };
 AudioPlayer.prototype = {
     init() {
@@ -46,13 +42,6 @@ AudioPlayer.prototype = {
         TrackListManager.onTrackManagerIndexChange(() => {
             this.setCurrentTrackFromTrackList(false);
             this.play();
-        });
-
-        TrackListManager.onAddedToQueue((track) => {
-            if (this._comingNextFired === true) {
-                this._playerNotifications.hideComingNext();
-                this._comingNextFired = false;
-            }
         });
     },
     changeVolume(evt, mouseUp) {
@@ -72,22 +61,18 @@ AudioPlayer.prototype = {
         return TrackListManager.getTrackList();
     },
     setPlayerSong(track, trackIdx, autoPlay) {
-        const mediaTrackURL = ResourceManager.getMediaAudioURL(track.getTrackUUID());
-        console.log('mediaTrackURL', mediaTrackURL);
         this.currentTrack = track;
         this.currentTrack.isPlaying = autoPlay;
-        this.audioElem.src =  mediaTrackURL; //`/static/tracks/${track.trackUUid}.mp3`;
-        this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
+        this.audioElem.src = ResourceManager.getMediaAudioURL(track.getTrackUUID());;
         this.audioPlayerEvents.trigger('onPlayerSongChange', track, trackIdx);
-
-        if (this._comingNextFired === true)
-            this._playerNotifications.hideComingNext();
-        
-        this._comingNextFired = false;
         
         if (autoPlay === true)
             return this.play();
+
         return this.stop();
+    },
+    getRepeatMode() {
+        return this.repeatMode;
     },
     onPlayerSongChange(cb, subscriber) {
         this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onPlayerSongChange');
@@ -104,8 +89,6 @@ AudioPlayer.prototype = {
         this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onPlayPause');
     },
     play() {
-        this._displayTrackInfo(this.currentTrack);
-        navigator.mediaSession.playbackState = "playing";
         this.isPaused = false;
         this.audioPlayerEvents.trigger('onPlayPause', this.isPaused, this.currentTrack);
         this.currentTrack.isPlaying = true;
@@ -134,8 +117,6 @@ AudioPlayer.prototype = {
     prev() {
         if (this.getCurrentTime() > 3.6) {
             this.setCurrentTime(0);
-            this._playerNotifications.hideComingNext();
-            this._comingNextFired = false;
             this.audioPlayerEvents.trigger('onStop');
         } else {
             this.currentTrack.onTagChangeUnsub(this);
@@ -160,11 +141,6 @@ AudioPlayer.prototype = {
         else if (timeInSec > this.currentTrack.getTrackDuration())
             timeInSec = this.currentTrack.getTrackDuration();
         this.audioElem.currentTime = timeInSec;
-
-        if (this.currentTrack.getTrackDuration() - timeInSec > 30) {
-            this._comingNextFired = false;
-            this._playerNotifications.hideComingNext();
-        }
     },
     getCurrentTime() {
         return this.audioElem.currentTime;
@@ -181,6 +157,9 @@ AudioPlayer.prototype = {
         this.audioElem.volume = volume;
         this._updateVolumeBar(volume);
         this.audioPlayerEvents.trigger('onVolumeChange', volume);
+    },
+    getVolume() {
+        return this.audioElem.volume;
     },
     onVolumeChange(cb, subscriber) {
         this.audioPlayerEvents.onEventRegister({cb, subscriber}, 'onVolumeChange');
@@ -265,28 +244,12 @@ AudioPlayer.prototype = {
     _setUpPlayer() {
         this.audioElem.autoplay = false;
         this.audioElem.preload = "auto";
-        this.audioElem.onloadedmetadata = this.audioLoaded.bind(this);
         this.audioElem.onended = this.audioEnded.bind(this);
-        this.audioElem.ontimeupdate = (evt) => {
-            const target = evt.target;
-            const duration = target.duration;
-            const track = this.currentTrack;
-            const currentTime = target.currentTime;
-            track.setCurrentTime(currentTime);
-            if (this._checkForNextTrack(currentTime, duration) && !this._comingNextFired) {
-                this._fireNotification();
-                this._comingNextFired = true;
-            }
-        };
     },
     _checkForNextTrack(currentTime, duration) {
         if (duration - currentTime <= 30) 
             return true;
         return false;
-    },
-    _fireNotification() {
-        const track = this._getNextTrackInList();
-        this._playerNotifications.setComingNext(track, this.currentTrack.getTimeRemaining() * 1000);
     },
     _getNextTrackInList() {
         if (this.repeatMode == 2)
@@ -310,41 +273,37 @@ AudioPlayer.prototype = {
         
         return widthPixel / totalWidth;
     },
-    _displayTrackInfo(track) {
-        console.log('PlaybackMediator: Displaying track info', {track});
-        document.title = `${track.getTitle()} - ${track.getArtist()}`;
-
-        if (!'mediaSession' in navigator) return;
-
-        // Set text metadata immediately so the UI doesn't lag
-        const artUrl = ResourceManager.getAlbumArtURL(track);
-
-        console.log('Setting media session metadata', {title: track.getTitle(), artist: track.getArtist(), album: track.getAlbum(), artUrl});
-        navigator.mediaSession.metadata = new MediaMetadata({
-            title: track.getTitle(),
-            artist: track.getArtist(),
-            album: track.getAlbum(),
-            artwork: [{ src: artUrl, sizes: '512x512' }] // Start with empty or a default placeholder
-        });
-    }
 };
 
 const AudioPlayerDisplay = function(audioPlayer) {
     this.audioPlayer = audioPlayer;
-    this.audioPlayer.onPlayerSongChange(this.setTrack.bind(this));
-    this.albumImg = document.getElementById('album-art');
-    this.titleTrack = document.getElementById('track-title');
-    this.artistName = document.getElementById('artist-name');
-
-    this.nameTrackElem = document.getElementById('name-track');
-    this.nameAlbumElem = document.getElementById('name-album');
-    this.timeTrackElem = document.getElementById('time-track');
-
     //0 -> static; 1 -> reverse; 2 -> forward; 
     this.displayTrackTimeMode = 1;
-    this.timeTrackElem.addEventListener('click', this.changeTrackTimeDisplayMode.bind(this));
+
+    this.setUpDisplay();
+    this.setUpOverlays();
 };
 AudioPlayerDisplay.prototype = {
+    setUpOverlays() {
+        this.volumeCnt = document.querySelector('#volume-display');
+        this.volumeCntDisplay = document.querySelector('#volume-display .vol-val');
+        this.muteCnt = document.querySelector('#muted-display');
+        this.muteOn = document.querySelector('#muted-display #mute-on');
+        this.muteOff = document.querySelector('#muted-display #mute-off');
+
+        this.volumeFader = new Fader();
+        this._volTimeout = null;
+    },
+    setUpDisplay() {
+        this.albumImg = document.getElementById('album-art');
+        this.titleTrack = document.getElementById('track-title');
+        this.artistName = document.getElementById('artist-name');
+
+        this.nameTrackElem = document.getElementById('name-track');
+        this.nameAlbumElem = document.getElementById('name-album');
+        this.timeTrackElem = document.getElementById('time-track');
+        this.timeTrackElem.addEventListener('click', this.changeTrackTimeDisplayMode.bind(this));
+    },
     setTrack(track) {
         if (this.track) {
             this.track.onTagChangeUnsub(this);
@@ -357,7 +316,6 @@ AudioPlayerDisplay.prototype = {
         this.updateTrackTime();
     },
     manageTags(track) {
-        ResourceManager.preloadAlbumArt(track);
         this.nameAlbumElem.innerText = track.getAlbum() ? ` ~ ${track.getAlbum()}`: '';
         this.nameTrackElem.innerText = track.getTitle();
         this.artistName.innerText = track.getArtist() || 'N/A';
@@ -396,6 +354,34 @@ AudioPlayerDisplay.prototype = {
             formatedTrackTime = track.getCurrentTime(true);
         
         this.timeTrackElem.innerText = ` - [${formatedTrackTime}]`;
+    },
+    updateDisplayedVolume(volume) {
+        this.volumeCntDisplay.innerText = Math.round(volume * 100);
+    },
+    showMuteOverlay(isMuted) {
+        this.muteCnt.style.display = 'block';
+
+        this.muteOn.style.display = isMuted ? 'block' : 'none';
+        this.muteOff.style.display = isMuted ? 'none' : 'block';
+
+        setTimeout(() => {
+            this.muteOn.style.display = 'none';
+            this.muteOff.style.display = 'none';
+            this.muteCnt.style.display = 'none';
+        }, 1668);
+    },
+    showVolumeOverlay(volume) {
+        this.volumeFader.cancelFade();
+        if (this._volTimeout) clearTimeout(this._volTimeout);
+        
+        this.volumeCntDisplay.innerText = Math.round(volume * 100);
+        this.volumeCnt.style.opacity = 1;
+        this.volumeCnt.style.display = 'block';
+    },
+    hideVolumeOverlay() {
+        this._volTimeout = setTimeout(() => {
+            this.volumeFader.fadeOut(this.volumeCnt, 400, 1, 0);
+        }, 568);
     }
 }
 
