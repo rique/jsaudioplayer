@@ -43,6 +43,7 @@ class Playlist(models.Model):
 
 
 class TrackInfo(models.Model):
+    track = models.OneToOneField(Tracks, on_delete=models.CASCADE)
     track_title = models.CharField(max_length=256)
     track_artist = models.CharField(max_length=256)
     track_album = models.CharField(max_length=256)
