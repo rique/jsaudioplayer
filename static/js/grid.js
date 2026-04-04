@@ -177,7 +177,7 @@ SearchableGrid.prototype = {
         
         if (this.filteredRows && this.filteredRows.length > 0)
             rows = this.filteredRows;
-        console.log('SearchableGrid render called', {rows});
+        
         rows.forEach(row => this.parentCnt.append(row.render()));
     },
     _doSearch(row, term) {
@@ -415,7 +415,6 @@ GridMaker.prototype = {
         return row;
     },
     render() {
-        console.log('GridMaker render called');
         this.grid.render();
         if (this.isDraggable())
             this._setDraggableGrid();
@@ -535,7 +534,6 @@ TracklistGrid.prototype = {
         return this.getGrid().getParentCnt();
     },
     render() {
-        console.log('TracklistGrid render called');
         this.gridMaker.render();
         this._displayTracklistInfo();
     },
@@ -559,27 +557,9 @@ TracklistGrid.prototype = {
         this.queuelistGrid.buildGrid(true); 
         TrackListManager.triggerGridRefresh();
     },
-    _restoreGridOld(isVisible) {
-        if (!isVisible) {
-            console.log('Restoring grid after search');
-            this.reloadAsync().then(() => {
-                console.log('Restoring queue grid after search');
-                console.log('Count of .queue-list in memory:', document.querySelectorAll('.queue-list').length);
-                // this.queuelistGrid.render();
-                // this.queuelistGrid.setSiblingRow(null);
-                this.queuelistGrid.render(true);
-                this._setCurrentTrack();
-            });
-        } else {
-            console.error('_restoreGrid failed');
-        }
-    },
     _restoreGrid(isVisible) {
         if (!isVisible) {
             this.reloadAsync().then(() => {
-                console.log('Restoring grid after search', {lastMainAnchor: this.lastMainAnchor});
-                const elems = document.querySelectorAll('#table-content div.row');
-                console.log('ELEMS', {elems});
                 this._syncQueuePosition(true);
                 this._setCurrentTrack();
             });
@@ -597,12 +577,11 @@ TracklistGrid.prototype = {
                 anchorRow = this.lastMainAnchor;
             }
         }
-        console.log('_syncQueuePosition 1', {anchorRow});
+
         // 2. If no anchor yet (or forced refresh), find the LIVE version via Index
         if (!anchorRow) {
             const currentIdx = TrackListManager.getAnchorIndex();
             anchorRow = this.getRowByIndex(currentIdx);
-            console.log('_syncQueuePosition 2', {anchorRow});
             // Update the sticky reference to the brand new Row object
             if (this.queuelistGrid.isQueuePlaying) {
                 this.lastMainAnchor = anchorRow;
@@ -809,10 +788,8 @@ QueuelistGrid.prototype = {
             const firstRow = this.gridMaker.getRowByIndex(0);
             if (firstRow) firstRow.classAdd('currently-playing');
         }
-        console.log('render: Still conatins 1?', this.itemHtml.render(), document.body.contains(this.itemHtml.render()));
-        console.log('Rendering Queue Grid with sibling row:', this.siblingRow);
+        
         this.gridMaker.render();
-        console.log('render: Still conatins 2?', this.itemHtml.render(), document.body.contains(this.itemHtml.render()));
     },
     syncPosition(anchorRow) {
         this.siblingRow = anchorRow;
@@ -823,15 +800,12 @@ QueuelistGrid.prototype = {
         // Use document.body.contains to ensure we are checking the live page
         const isVisibleInDOM = anchorRow && document.body.contains(anchorRow.render());
         // Validate the anchor provided by the mediator
-        console.log('[] Syncing queue position with sibling row:', {siblingRow: anchorRow, contains: anchorRow ? document.body.contains(anchorRow.render()) : 'N/A', itemHtml: this.itemHtml});
         if (isVisibleInDOM) {
             this.itemHtml.show();
             this.itemHtml.insertItemAfter(anchorRow); 
-            console.log('syncPosition: Still conatins?', document.body.contains(this.itemHtml.render()));
             // Since we moved to a new spot, refresh internal track layout
             // this.render(); 
         } else {
-            console.log('Staging queue element since no valid anchor was provided');
             // If the mediator provided no valid row (e.g. during search), 
             // we safely park the element in our internal staging.
             this.itemHtml.stageElement();
@@ -856,7 +830,6 @@ QueuelistGrid.prototype = {
         return this.gridMaker.getRowByIndex(index);
     },
     updateQueueOld(track, queueLength) {
-        console.log('Updating queue with track:', track, 'and new queue length:', queueLength);
         this.queueLength = queueLength;
         if (!this.hasQueue && queueLength > 0) {
             this.hasQueue = true;
@@ -912,7 +885,6 @@ QueuelistGrid.prototype = {
         if (currIdx < 0) {
             currIdx = 0;
         }
-        
 
         this.setSiblingRow(this.parentGrid.getRowByIndex(currIdx));
         return this.siblingRow;
@@ -1008,7 +980,7 @@ QueuelistGrid.prototype = {
     },
     _buildBody() {
         this.gridMaker.clearRows();
-        this.gridMaker.setDraggable(true, true);
+        // this.gridMaker.setDraggable(true, true);
         let addIdx = 0;
         if (this.isQueuePlaying) {
             const {track} = TrackListManager.getCurrentTrack();

@@ -153,7 +153,7 @@ const PlayerControlMediator = {
 
         this.gridElement.addEventListener('click', (evt) => {
             this._showBackDrop();
-            this.uiModules.tracklistGrid.open.bind(this.uiModules.tracklistGrid)(evt);
+            this.uiModules.tracklistGrid.open(evt);
         });
 
         this.playlistCreationElement.addEventListener('click', this._displayPlaylistCreationUI.bind(this));

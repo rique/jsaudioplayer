@@ -21,3 +21,5 @@ TODO.md
 repomix-output.xml
 yasp.md
 suggestions/
+*.code-workspace
+library_data.json

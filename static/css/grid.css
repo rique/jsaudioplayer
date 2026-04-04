@@ -78,9 +78,12 @@ body {
 }
 
 .row:has(.empty), .row.hovered {
-    animation: 70ms 1 forwards stretchdown
+    animation: 70ms 1 forwards stretchdown;
 }
-
+.hovered {
+    background: red!important;
+    color: white!important;
+}
 .row:first-child {
     border-top: 1px solid var(--grid-border-color);
 }

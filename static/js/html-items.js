@@ -64,27 +64,19 @@ HTMLItems.prototype = {
         return document.body.contains(this.render());
     },
     isChildOf(item) {
-        // Ensure we are comparing the actual DOM elements
         const parentEl = item.render();
         const childEl = this.render();
-
-        // .contains() returns true if childEl is a descendant of parentEl
-        // Note: It also returns true if childEl === parentEl. 
-        // If you want "Strictly a child", add: && childEl !== parentEl
         return parentEl !== childEl && parentEl.contains(childEl);
     },
     stageElement() {
-        // If it's already in the main grid/document, we don't need to stage it
-        // But if it's "floating" in memory, we anchor it to the body
         const el = this.render();
         if (!document.body.contains(el)) {
-            el.style.display = 'none'; // Keep it invisible while staged
+            el.style.display = 'none';
             document.body.appendChild(el);
             this._isStaged = true;
         }
     },
     unstageElement() {
-        // Only unstage if we are currently in the "Staged" state
         if (this._isStaged) {
             const el = this.render();
             if (el.parentNode) {
@@ -243,43 +235,7 @@ HTMLItems.prototype = {
     insertItemAfter(htmlItem) {
         const targetNode = htmlItem.render();
         const myNode = this.render();
-        console.log('Temporarily add to body if not already in DOM to ensure it\'s rendered and has a position', {myNode, targetNode});
-        // Create the test red div
-        console.log('insert Item does it contains 1', document.body.contains(myNode));
-        // Attach them
-        // document.body.prepend(myNode);
         targetNode.insertAdjacentElement('afterend', myNode);
-        console.log('insert Item does it contains 2', document.body.contains(myNode));
-        // testDiv.append(myNode);
-        
-        // VERIFICATION LOGS
-        console.log('--- DOM Verification ---');
-        console.log('Is myNode in DOM?', document.body.contains(myNode));
-        console.log('myNode offsetHeight:', myNode.offsetHeight);
-        console.log('myNode className:', myNode.className);
-        /*const parentWatcher = new MutationObserver((mutations) => {
-            mutations.forEach(m => {
-                if (m.removedNodes.length > 0) {
-                    for (let node of m.removedNodes) {
-                        if (node === myNode) {
-                            console.error("CRITICAL: Something just removed the Queue!");
-                            console.trace(); // This prints the full function call stack
-                        }
-                    }
-                }
-            });
-        });
-
-        parentWatcher.observe(document.body, { childList: true });
-        
-        // Also watch the element's internal parent property
-        const originalRemove = myNode.remove;
-        myNode.remove = function() {
-            console.error("CRITICAL: myNode.remove() was called!");
-            console.trace();
-            originalRemove.apply(this, arguments);
-        };*/
-        // Reset any staging flags since we are now part of the Grid
         this._isStaged = false;
     },
     addEventListener(evtName, cb) {
@@ -299,11 +255,10 @@ HTMLItems.prototype = {
     clearAllEvents() {
         Object.keys(this.eventsHandler).forEach(evtName => {
             this.eventsHandler[evtName].forEach(handlerObj => {
-                // Unbind from the actual DOM element
                 this.render().removeEventListener(evtName, handlerObj.cb);
             });
         });
-        this.eventsHandler = {}; // Clear the registry
+        this.eventsHandler = {};
     },
     createCustomEvent(evtName, options) {
         if (this.events.hasOwnProperty(evtName))
@@ -328,11 +283,10 @@ const HTMLIndexedItems = function(elementName) {
 };
 HTMLIndexedItems.prototype = {
     setIndex(index) {
-        // Only update if the value actually changed to prevent event loops
         if (this.index === index) return;
         
         this.index = index;
-        this.data('index', index); // Keep the DOM in sync for CSS selectors
+        this.data('index', index);
     },
     updateIndex(newIndex) {
         const oldIndex = this.index;

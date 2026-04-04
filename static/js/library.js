@@ -1,16 +1,3 @@
-
-
-/*const NotificationCenter = JSPlayer.NotificationCenter;
-
-const {Track, ID3Tags} = JSPlayer.Tracks;
-
-const TracklistGrid = JSPlayer.Grids.TracklistGrid;
-const draw = JSPlayer.Vizualizer.draw;
-const AudioPlayer = JSPlayer.AudioPlayer;
-const keyCotrols = JSPlayer.EventsManager.keyCotrols;
-const Fader = JSPlayer.Effects.Fader;
-const {LeftMenu, FileBrowser, Layout, layoutHTML, FileBrowserRenderer} = JSPlayer.Components;*/
-
 import {Playlist} from './playlists.js';
 import { Track, ID3Tags } from './tracks.js';
 
@@ -30,7 +17,6 @@ Library.prototype = {
             track.setID3Tags(id3Tags);
             track.setTrackDuration(id3Tags.getDuration());
             track.setIndex(i);
-            // console.log('bootstrap track', {track, trackInfo});
             this.addTrack({track, trackUUid: trackInfo.track['track_uuid']});
         }
     },
