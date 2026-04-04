@@ -28,7 +28,7 @@ class Playlist(models.Model):
     playlist_name = models.CharField(max_length=256)
     tracks = models.ManyToManyField(Tracks)
     playlist_type = models.CharField(max_length=12, choices=PLAYLIST_TYPES, default="USER")
-    playlist_uuid = models.CharField(max_length=36, default=str(uuid4()))
+    playlist_uuid = models.CharField(max_length=36, default=uuid4)
     playlist_created_date = models.DateTimeField(auto_now_add=True)
 
     def dict(self):
